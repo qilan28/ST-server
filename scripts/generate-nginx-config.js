@@ -44,8 +44,16 @@ upstream st_${user.username} {
     users.forEach(user => {
         locationBlocks += `
     # ${user.username} 的 SillyTavern 实例
+    location /${user.username}/st {
+        # 添加尾部斜杠重定向
+        return 301 /${user.username}/st/;
+    }
+    
     location /${user.username}/st/ {
-        proxy_pass http://st_${user.username}/;
+        # 使用正则替换，自动去除前缀
+        rewrite ^/${user.username}/st/(.*)$ /$1 break;
+        
+        proxy_pass http://st_${user.username};
         proxy_http_version 1.1;
         
         # WebSocket 支持
@@ -57,11 +65,9 @@ upstream st_${user.username} {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Port $server_port;
         
-        # 路径重写（移除前缀）
-        rewrite ^/${user.username}/st/(.*) /$1 break;
+        # 重要：告诉后端应用它的基础路径
+        proxy_set_header X-Forwarded-Prefix /${user.username}/st;
         
         # 缓存控制
         proxy_cache_bypass $http_upgrade;
