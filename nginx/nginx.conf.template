@@ -1,0 +1,60 @@
+# Nginx 配置文件 - SillyTavern 多开管理平台
+# 使用路径转发：http://域名:3000/用户名/st
+
+# 上游服务器配置（管理平台主服务）
+upstream st_manager {
+    server 127.0.0.1:3000;
+}
+
+# 为每个用户的 SillyTavern 实例配置上游服务器
+# 这部分由脚本自动生成
+# {{UPSTREAM_SERVERS}}
+
+server {
+    listen 80;
+    server_name localhost;  # 替换为您的域名
+    
+    # 主服务（管理平台）
+    location / {
+        proxy_pass http://st_manager;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        
+        # 增加超时时间
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+    
+    # 用户 SillyTavern 实例路径转发
+    # 匹配 /用户名/st 路径
+    # 这部分由脚本自动生成
+    # {{LOCATION_BLOCKS}}
+    
+    # WebSocket 支持
+    location ~* ^/(.+)/st/api/ws {
+        set $username $1;
+        # 需要根据用户名动态转发，由脚本生成具体配置
+    }
+}
+
+# HTTPS 配置示例（可选）
+# server {
+#     listen 443 ssl http2;
+#     server_name localhost;  # 替换为您的域名
+#     
+#     ssl_certificate /path/to/certificate.crt;
+#     ssl_certificate_key /path/to/private.key;
+#     
+#     # 其他配置与上面 HTTP 配置相同
+#     location / {
+#         proxy_pass http://st_manager;
+#         # ... 其他代理配置
+#     }
+# }

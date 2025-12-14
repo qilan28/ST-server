@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "setup": "node setup.js",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "generate-nginx": "node scripts/generate-nginx-config.js"
   },
   "keywords": [
     "sillytavern",

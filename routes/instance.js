@@ -1,13 +1,14 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { findUserByUsername } from '../database.js';
-import {
-    startInstance,
-    stopInstance,
+import { 
+    startInstance, 
+    stopInstance, 
     restartInstance,
     getInstanceStatus,
     getInstanceLogs
 } from '../pm2-manager.js';
+import { generateAccessUrl } from '../utils/url-helper.js';
 
 const router = express.Router();
 
@@ -35,7 +36,7 @@ router.get('/info', (req, res) => {
             stSetupStatus: user.st_setup_status,
             status: user.status,
             createdAt: user.created_at,
-            accessUrl: `http://localhost:${user.port}`
+            accessUrl: generateAccessUrl(user.username, user.port)
         });
     } catch (error) {
         console.error('Get user info error:', error);

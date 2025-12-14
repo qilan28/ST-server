@@ -2,17 +2,19 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { 
     getAllUsersAdmin, 
-    updateUserRole, 
+    findUserByUsername,
+    updateUserRole,
     deleteUser,
-    findUserByUsername 
+    isAdmin
 } from '../database.js';
-import {
+import { 
     startInstance,
     stopInstance,
     restartInstance,
-    deleteInstance,
-    listAllInstances
+    getAllInstancesStatus,
+    deleteInstanceData
 } from '../pm2-manager.js';
+import { generateAccessUrl } from '../utils/url-helper.js';
 import { deleteSillyTavern } from '../git-manager.js';
 import fs from 'fs';
 
@@ -37,7 +39,8 @@ router.get('/users', async (req, res) => {
             status: user.status,
             stVersion: user.st_version,
             stSetupStatus: user.st_setup_status,
-            createdAt: user.created_at
+            createdAt: user.created_at,
+            accessUrl: user.role === 'admin' ? null : generateAccessUrl(user.username, user.port)
         }));
         
         res.json({ users: safeUsers });
