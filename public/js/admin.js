@@ -401,6 +401,83 @@ async function deleteUserAccount(username) {
     }
 }
 
+// ==================== 配置管理 ====================
+
+// 加载配置
+async function loadConfig() {
+    try {
+        const response = await apiRequest(`${API_BASE}/config/nginx`);
+        if (!response || !response.ok) {
+            throw new Error('Failed to load config');
+        }
+        
+        const data = await response.json();
+        const config = data.nginx;
+        
+        // 填充表单
+        document.getElementById('nginxEnabled').checked = config.enabled || false;
+        document.getElementById('nginxDomain').value = config.domain || 'localhost';
+        document.getElementById('nginxPort').value = config.port || 80;
+    } catch (error) {
+        console.error('Load config error:', error);
+        showMessage('加载配置失败', 'error', 'configMessage');
+    }
+}
+
+// 保存 Nginx 配置
+async function saveNginxConfig() {
+    try {
+        const enabled = document.getElementById('nginxEnabled').checked;
+        const domain = document.getElementById('nginxDomain').value.trim();
+        const port = parseInt(document.getElementById('nginxPort').value);
+        
+        // 验证
+        if (!domain) {
+            showMessage('请输入域名', 'error', 'configMessage');
+            return;
+        }
+        
+        if (isNaN(port) || port < 1 || port > 65535) {
+            showMessage('端口必须在 1-65535 之间', 'error', 'configMessage');
+            return;
+        }
+        
+        const response = await apiRequest(`${API_BASE}/config/nginx`, {
+            method: 'PUT',
+            body: JSON.stringify({ enabled, domain, port })
+        });
+        
+        if (!response || !response.ok) {
+            throw new Error('Failed to save config');
+        }
+        
+        showMessage('配置保存成功', 'success', 'configMessage');
+    } catch (error) {
+        console.error('Save config error:', error);
+        showMessage('保存配置失败', 'error', 'configMessage');
+    }
+}
+
+// 生成 Nginx 配置文件
+async function generateNginxConfig() {
+    try {
+        showMessage('正在生成配置文件...', 'info', 'configMessage');
+        
+        const response = await apiRequest(`${API_BASE}/config/nginx/generate`, {
+            method: 'POST'
+        });
+        
+        if (!response || !response.ok) {
+            throw new Error('Failed to generate config');
+        }
+        
+        showMessage('Nginx 配置文件生成成功！请查看 nginx/nginx.conf', 'success', 'configMessage');
+    } catch (error) {
+        console.error('Generate config error:', error);
+        showMessage('生成配置文件失败', 'error', 'configMessage');
+    }
+}
+
 // ==================== 初始化 ====================
 
 let refreshInterval = null;
@@ -432,6 +509,7 @@ async function init() {
     await checkAdminSTStatus();
     
     // 加载数据
+    await loadConfig();
     await loadStats();
     await loadUsers();
     await loadInstances();

@@ -114,18 +114,19 @@ cp .env.example .env
 PORT=3000
 JWT_SECRET=your-secret-key-change-this-in-production
 NODE_ENV=production
-
-# 如果使用 Nginx 反向代理，请配置以下选项
-USE_NGINX=false
-NGINX_DOMAIN=localhost
-NGINX_PORT=80
 ```
 
-**使用 Nginx 模式：**
-1. 设置 `USE_NGINX=true`
-2. 配置 `NGINX_DOMAIN` 为您的域名
-3. 运行 `npm run generate-nginx` 生成配置
-4. 参考 [NGINX-SETUP.md](./NGINX-SETUP.md) 完成部署
+**配置 Nginx 反向代理：**
+1. 创建管理员账户：`npm run create-admin`
+2. 登录管理员面板
+3. 在 **⚙️ 系统配置** 中设置 Nginx 参数：
+   - 启用 Nginx 模式
+   - 配置域名
+   - 配置端口
+4. 点击 **生成 Nginx 配置文件**
+5. 参考 [NGINX-SETUP.md](./NGINX-SETUP.md) 完成部署
+
+> **注意：** Nginx 配置现在通过管理员面板管理，不再使用 `.env` 文件。
 
 ### 3. 启动服务器
 

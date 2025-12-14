@@ -20,9 +20,9 @@
 
         <main class="main">
             <!-- 管理员说明 -->
-            <div class="info-banner" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; margin-bottom: 20px; border-radius: 8px;">
-                <p style="margin: 0; color: #92400e;">
-                    <strong>📌 管理员面板说明：</strong> 此面板仅用于系统管理。管理员账户不包含 SillyTavern 实例。如需使用 SillyTavern，请注册一个普通用户账户。
+            <div class="info-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 4px solid #5a67d8; padding: 15px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <p style="margin: 0; color: #ffffff; font-size: 14px;">
+                    <strong>🔧 管理员面板说明：</strong> 此面板仅用于系统管理。管理员账户不包含 SillyTavern 实例。如需使用 SillyTavern，请注册一个普通用户账户。
                 </p>
             </div>
 
@@ -57,6 +57,53 @@
                     <div class="stat-item">
                         <div class="stat-label">总内存使用</div>
                         <div class="stat-value" id="totalMemory">0 MB</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 配置管理 -->
+            <div class="stats-card">
+                <h2>⚙️ 系统配置</h2>
+                <div id="configMessage" class="message"></div>
+                
+                <!-- Nginx 配置 -->
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🌐 Nginx 反向代理配置</h3>
+                    <div style="display: grid; gap: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                启用 Nginx 模式
+                            </label>
+                            <label class="switch">
+                                <input type="checkbox" id="nginxEnabled">
+                                <span class="slider"></span>
+                            </label>
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                启用后，访问地址格式为：http://域名/用户名/st
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                域名
+                            </label>
+                            <input type="text" id="nginxDomain" class="form-input" placeholder="例如：yourdomain.com">
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                端口
+                            </label>
+                            <input type="number" id="nginxPort" class="form-input" placeholder="80" min="1" max="65535">
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                默认 HTTP 端口为 80，HTTPS 端口为 443
+                            </small>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="saveNginxConfig()" class="btn btn-primary">保存配置</button>
+                            <button onclick="generateNginxConfig()" class="btn btn-secondary">生成 Nginx 配置文件</button>
+                        </div>
                     </div>
                 </div>
             </div>

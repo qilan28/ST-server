@@ -2,17 +2,19 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getAllUsers } from '../database.js';
+import { getNginxConfig } from '../utils/config-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 配置
-const MAIN_DOMAIN = process.env.MAIN_DOMAIN || 'localhost';
-const NGINX_PORT = process.env.NGINX_PORT || '80';
-const MANAGER_PORT = process.env.MANAGER_PORT || '3000';
-
 function generateNginxConfig() {
     console.log('正在生成 Nginx 配置文件...');
+    
+    // 读取配置
+    const nginxConfig = getNginxConfig();
+    const MAIN_DOMAIN = nginxConfig.domain || 'localhost';
+    const NGINX_PORT = nginxConfig.port || 80;
+    const MANAGER_PORT = process.env.PORT || 3000;
     
     // 读取所有用户（排除管理员）
     const allUsers = getAllUsers();

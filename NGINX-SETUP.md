@@ -38,22 +38,36 @@ sudo apt install nginx
 sudo yum install nginx
 ```
 
-### 2. 配置环境变量
+### 2. 在管理员面板配置 Nginx
 
-编辑 `.env` 文件，启用 Nginx 模式：
+1. 创建管理员账户（如果还没有）：
+   ```bash
+   npm run create-admin
+   ```
 
-```bash
-# Nginx 配置
-USE_NGINX=true
+2. 启动服务器：
+   ```bash
+   npm start
+   ```
 
-# Nginx 访问域名（替换为您的域名）
-NGINX_DOMAIN=yourdomain.com
+3. 登录管理员面板：`http://localhost:3000/admin.html`
 
-# Nginx 监听端口（80 为默认 HTTP 端口）
-NGINX_PORT=80
-```
+4. 在 **⚙️ 系统配置** 区域设置：
+   - **启用 Nginx 模式**：打开开关
+   - **域名**：输入您的域名（例如：`yourdomain.com`）
+   - **端口**：输入 Nginx 监听端口（默认 `80`）
+
+5. 点击 **保存配置**
+
+> **注意：** 配置保存在 `config.json` 文件中，不再使用 `.env` 文件。
 
 ### 3. 生成 Nginx 配置文件
+
+**方法 1：通过管理员面板（推荐）**
+
+在管理员面板的配置区域，点击 **生成 Nginx 配置文件** 按钮。
+
+**方法 2：通过命令行**
 
 运行配置生成脚本：
 
@@ -200,8 +214,23 @@ sudo certbot renew --dry-run
 
 ## 🔄 更新配置
 
+### 更改 Nginx 设置
+
+1. 登录管理员面板
+2. 在 **⚙️ 系统配置** 区域修改设置
+3. 点击 **保存配置**
+4. 点击 **生成 Nginx 配置文件**
+5. 重载 Nginx
+
+### 添加或删除用户后
+
 每次添加或删除用户后，需要重新生成 Nginx 配置：
 
+**通过管理员面板：**
+1. 点击 **生成 Nginx 配置文件** 按钮
+2. 按照提示重载 Nginx
+
+**通过命令行：**
 ```bash
 # 1. 生成新配置
 npm run generate-nginx
