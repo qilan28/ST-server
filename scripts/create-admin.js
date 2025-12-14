@@ -18,6 +18,8 @@ async function createAdmin() {
     console.log('创建管理员账户');
     console.log('='.repeat(60));
     console.log();
+    console.log('📌 说明：管理员账户仅用于管理其他用户，不会创建 SillyTavern 实例。');
+    console.log();
     
     try {
         // 获取用户名
@@ -85,9 +87,10 @@ async function createAdmin() {
         console.log(`  用户名: ${admin.username}`);
         console.log(`  邮箱: ${admin.email}`);
         console.log(`  角色: 管理员`);
-        console.log(`  端口: ${admin.port}`);
         console.log();
         console.log('您现在可以使用此账户登录并访问管理员面板。');
+        console.log('注意：管理员账户仅用于管理其他用户，不包含 SillyTavern 实例。');
+        console.log();
         console.log('登录地址: http://localhost:3000/login.html');
         console.log('管理面板: http://localhost:3000/admin.html');
         console.log();

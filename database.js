@@ -161,29 +161,20 @@ export const isAdmin = (username) => {
     return user && user.role === 'admin';
 };
 
-// 创建管理员用户
+// 创建管理员用户（管理员不需要 SillyTavern 实例）
 export const createAdminUser = (username, hashedPassword, email) => {
-    const port = findAvailablePort();
-    const dataDir = path.join(__dirname, 'data', username);
-    
-    // 创建用户数据目录
-    if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
-    }
-    
+    // 管理员不需要端口和数据目录，使用占位值
     const stmt = db.prepare(`
-        INSERT INTO users (username, password, email, port, data_dir, role)
-        VALUES (?, ?, ?, ?, ?, 'admin')
+        INSERT INTO users (username, password, email, port, data_dir, role, st_setup_status)
+        VALUES (?, ?, ?, 0, 'N/A', 'admin', 'N/A')
     `);
     
-    const result = stmt.run(username, hashedPassword, email, port, dataDir);
+    const result = stmt.run(username, hashedPassword, email);
     
     return {
         id: result.lastInsertRowid,
         username,
         email,
-        port,
-        dataDir,
         role: 'admin'
     };
 };

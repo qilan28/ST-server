@@ -94,6 +94,12 @@ async function loadUserInfo() {
         const data = await response.json();
         
         if (response.ok) {
+            // 如果是纯管理员用户（没有 SillyTavern 实例），重定向到管理员面板
+            if (data.role === 'admin' && data.stSetupStatus === 'N/A') {
+                window.location.href = '/admin.html';
+                return;
+            }
+            
             // 检查 ST 是否已设置
             if (data.stSetupStatus === 'pending') {
                 // 重定向到设置页面

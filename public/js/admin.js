@@ -405,8 +405,31 @@ async function deleteUserAccount(username) {
 
 let refreshInterval = null;
 
+// 检查当前管理员是否有 ST 实例
+async function checkAdminSTStatus() {
+    try {
+        const response = await apiRequest(`${API_BASE}/instance/info`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        // 如果管理员有 ST 实例，显示返回用户面板按钮
+        if (data.stSetupStatus !== 'N/A' && data.stSetupStatus !== 'pending') {
+            const backBtn = document.getElementById('backToDashboard');
+            if (backBtn) {
+                backBtn.style.display = 'inline-block';
+            }
+        }
+    } catch (error) {
+        console.error('Check admin ST status error:', error);
+    }
+}
+
 async function init() {
     if (!checkAuth()) return;
+    
+    // 检查管理员是否有 ST 实例
+    await checkAdminSTStatus();
     
     // 加载数据
     await loadStats();
