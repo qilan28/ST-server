@@ -22,8 +22,11 @@ const createUsersTable = () => {
             email TEXT UNIQUE NOT NULL,
             port INTEGER UNIQUE NOT NULL,
             data_dir TEXT NOT NULL,
+            st_dir TEXT,
+            st_version TEXT,
             subdomain TEXT,
             status TEXT DEFAULT 'stopped',
+            st_setup_status TEXT DEFAULT 'pending',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
@@ -96,6 +99,22 @@ export const findUserById = (id) => {
 // 更新用户状态
 export const updateUserStatus = (username, status) => {
     const stmt = db.prepare('UPDATE users SET status = ? WHERE username = ?');
+    stmt.run(status, username);
+};
+
+// 更新用户 ST 信息
+export const updateUserSTInfo = (username, stDir, stVersion, setupStatus = 'completed') => {
+    const stmt = db.prepare(`
+        UPDATE users 
+        SET st_dir = ?, st_version = ?, st_setup_status = ?
+        WHERE username = ?
+    `);
+    stmt.run(stDir, stVersion, setupStatus, username);
+};
+
+// 更新 ST 安装状态
+export const updateSTSetupStatus = (username, status) => {
+    const stmt = db.prepare('UPDATE users SET st_setup_status = ? WHERE username = ?');
     stmt.run(status, username);
 };
 

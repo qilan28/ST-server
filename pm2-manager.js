@@ -25,17 +25,17 @@ const disconnectPM2 = () => {
 };
 
 // 启动SillyTavern实例
-export const startInstance = async (username, port, dataDir) => {
+export const startInstance = async (username, port, stDir, dataDir) => {
     await connectPM2();
     
     return new Promise((resolve, reject) => {
-        const stServerPath = path.join(__dirname, '..', 'SillyTavern', 'server.js');
+        const stServerPath = path.join(stDir, 'server.js');
         
         pm2.start({
             name: `st-${username}`,
             script: stServerPath,
             args: `--port ${port} --dataRoot ${dataDir}`,
-            cwd: path.join(__dirname, '..', 'SillyTavern'),
+            cwd: stDir,
             interpreter: 'node',
             env: {
                 NODE_ENV: 'production'

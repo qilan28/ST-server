@@ -86,6 +86,13 @@ async function loadUserInfo() {
         const data = await response.json();
         
         if (response.ok) {
+            // 检查 ST 是否已设置
+            if (data.stSetupStatus === 'pending') {
+                // 重定向到设置页面
+                window.location.href = '/setup.html';
+                return;
+            }
+            
             // 更新页面信息
             document.getElementById('currentUsername').textContent = data.username;
             document.getElementById('username').textContent = data.username;
@@ -97,6 +104,13 @@ async function loadUserInfo() {
             const accessLink = document.getElementById('accessUrl');
             accessLink.textContent = accessUrl;
             accessLink.href = accessUrl;
+            
+            // 显示 ST 版本
+            if (data.stVersion) {
+                document.getElementById('createdAt').insertAdjacentHTML('afterend', 
+                    `<div class="info-item"><span class="label">ST版本：</span><span class="value">${data.stVersion}</span></div>`
+                );
+            }
             
             // 更新状态
             updateStatusUI(data.status);

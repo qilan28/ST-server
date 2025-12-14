@@ -68,9 +68,17 @@ npm start
 2. 填写用户名、邮箱、密码
 3. 注册成功后自动登录并分配端口
 
+### 选择 SillyTavern 版本
+
+1. 首次登录会自动跳转到版本选择页面
+2. 系统自动从 GitHub 获取所有可用版本
+3. 选择"正式版本"（稳定）或"开发分支"（最新功能）
+4. 点击"选择此版本"开始安装
+5. 等待克隆仓库和安装依赖（约3-5分钟）
+
 ### 管理实例
 
-1. 登录后进入控制台
+1. 安装完成后自动进入控制台
 2. 点击"启动实例"启动您的 SillyTavern
 3. 使用显示的访问地址打开 SillyTavern
 4. 可以随时停止或重启实例
@@ -80,10 +88,15 @@ npm start
 每个用户的数据存储在独立目录：
 ```
 ST-server/data/用户名/
-├── characters/
-├── chats/
-├── settings.json
-└── ...
+├── sillytavern/        # SillyTavern 代码
+│   ├── server.js
+│   ├── public/
+│   └── ...
+└── st-data/           # SillyTavern 数据
+    ├── characters/
+    ├── chats/
+    ├── settings.json
+    └── ...
 ```
 
 ## 🔧 项目结构
@@ -92,26 +105,37 @@ ST-server/data/用户名/
 ST-server/
 ├── database.js              # 数据库操作
 ├── pm2-manager.js          # PM2进程管理
+├── github-api.js           # GitHub API (获取版本)
+├── git-manager.js          # Git管理 (clone/update)
 ├── server.js               # 主服务器
+├── setup.js                # 初始化脚本
 ├── middleware/
 │   └── auth.js            # JWT认证中间件
 ├── routes/
 │   ├── auth.js            # 认证路由
-│   └── instance.js        # 实例管理路由
+│   ├── instance.js        # 实例管理路由
+│   └── version.js         # 版本管理路由
 ├── public/
 │   ├── index.html         # 登录/注册页面
 │   ├── dashboard.html     # 管理面板
+│   ├── setup.html         # 版本选择页面
 │   ├── css/
 │   │   └── style.css     # 样式文件
 │   └── js/
 │       ├── auth.js        # 认证逻辑
-│       └── dashboard.js   # 控制台逻辑
+│       ├── dashboard.js   # 控制台逻辑
+│       └── setup.js       # 版本选择逻辑
 ├── data/                   # 用户数据目录（自动创建）
+│   └── 用户名/
+│       ├── sillytavern/  # ST代码
+│       └── st-data/      # ST数据
 ├── logs/                   # 日志目录（自动创建）
 ├── database.sqlite        # SQLite数据库（自动创建）
 ├── package.json
 ├── .env.example
-└── README.md
+├── .gitignore
+├── README.md
+└── QUICKSTART.md
 ```
 
 ## 🗄️ 数据库结构
@@ -126,8 +150,11 @@ ST-server/
 | email | TEXT | 邮箱（唯一） |
 | port | INTEGER | 分配的端口（3001-4000） |
 | data_dir | TEXT | 数据目录路径 |
+| st_dir | TEXT | SillyTavern 代码目录 |
+| st_version | TEXT | SillyTavern 版本 |
 | subdomain | TEXT | 子域名（可选） |
 | status | TEXT | 实例状态（running/stopped） |
+| st_setup_status | TEXT | ST安装状态（pending/installing/completed/failed） |
 | created_at | DATETIME | 创建时间 |
 
 ## 🔌 API 接口
@@ -145,12 +172,22 @@ ST-server/
 - `POST /api/instance/restart` - 重启实例
 - `GET /api/instance/status` - 获取实例状态
 
+### 版本管理接口
+
+- `GET /api/version/list` - 获取 SillyTavern 版本列表（公开）
+- `GET /api/version/repo-info` - 获取仓库信息（公开）
+- `GET /api/version/check-git` - 检查 Git 是否可用（公开）
+- `POST /api/version/setup` - 安装指定版本（需要认证）
+- `GET /api/version/setup-status` - 获取安装状态（需要认证）
+
 ## 🔒 安全建议
 
 1. **修改 JWT 密钥** - 在生产环境中修改 `.env` 文件中的 `JWT_SECRET`
 2. **使用 HTTPS** - 在生产环境中使用 HTTPS
 3. **定期备份** - 定期备份 `database.sqlite` 和 `data/` 目录
 4. **限制注册** - 根据需要添加注册限制（如邮箱验证、邀请码等）
+5. **安装 Git** - 服务器需要安装 Git 才能克隆 SillyTavern 仓库
+6. **磁盘空间** - 确保有足够的磁盘空间（每个用户约 500MB-1GB）
 
 ## 📝 开发
 
@@ -177,13 +214,32 @@ pm2 delete all
 ## 🐛 常见问题
 
 ### Q: 实例启动失败？
-A: 检查 SillyTavern 路径是否正确，确保 `../SillyTavern/server.js` 存在
+A: 
+1. 检查是否已经选择并安装了 SillyTavern 版本
+2. 查看 PM2 日志：`pm2 logs`
+3. 确认端口未被占用
+
+### Q: 版本安装失败？
+A: 
+1. 检查服务器是否安装了 Git：`git --version`
+2. 检查网络连接是否正常（需要访问 GitHub）
+3. 确认有足够的磁盘空间
+4. 查看服务器日志获取详细错误信息
+
+### Q: 无法加载版本列表？
+A: 
+1. 检查服务器网络连接
+2. GitHub API 可能被限流，稍后再试
+3. 检查防火墙设置
 
 ### Q: 端口冲突？
 A: 平台使用端口 3000，用户实例使用 3001-4000，确保这些端口未被占用
 
 ### Q: 数据丢失？
-A: 用户数据存储在 `data/用户名/` 目录，请定期备份
+A: 用户数据存储在 `data/用户名/st-data/` 目录，请定期备份
+
+### Q: 安装速度慢？
+A: 首次安装需要从 GitHub 克隆仓库并安装依赖，根据网络情况可能需要 3-10 分钟
 
 ## 📄 许可证
 

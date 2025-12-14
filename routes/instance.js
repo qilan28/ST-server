@@ -28,6 +28,9 @@ router.get('/info', (req, res) => {
             email: user.email,
             port: user.port,
             dataDir: user.data_dir,
+            stDir: user.st_dir,
+            stVersion: user.st_version,
+            stSetupStatus: user.st_setup_status,
             status: user.status,
             createdAt: user.created_at,
             accessUrl: `http://localhost:${user.port}`
@@ -47,13 +50,24 @@ router.post('/start', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
+        // 检查 ST 是否已设置
+        if (user.st_setup_status !== 'completed') {
+            return res.status(400).json({ 
+                error: 'SillyTavern not set up yet. Please select and install a version first.',
+                setup_status: user.st_setup_status
+            });
+        }
+        
         // 检查是否已经在运行
         const status = await getInstanceStatus(user.username);
         if (status && status.status === 'online') {
             return res.status(400).json({ error: 'Instance is already running' });
         }
         
-        await startInstance(user.username, user.port, user.data_dir);
+        // 数据目录
+        const dataDir = user.data_dir.replace(/sillytavern$/, 'st-data');
+        
+        await startInstance(user.username, user.port, user.st_dir, dataDir);
         
         res.json({
             message: 'Instance started successfully',
