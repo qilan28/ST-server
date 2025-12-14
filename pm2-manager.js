@@ -1,5 +1,6 @@
 import pm2 from 'pm2';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { updateUserStatus } from './database.js';
 
@@ -162,4 +163,45 @@ export const listAllInstances = async () => {
             }
         });
     });
+};
+
+// 获取日志内容
+export const getInstanceLogs = (username, logType = 'out', lines = 100) => {
+    const logFileName = logType === 'error' 
+        ? `${username}-error.log` 
+        : `${username}-out.log`;
+    const logFilePath = path.join(__dirname, 'logs', logFileName);
+    
+    return new Promise((resolve, reject) => {
+        // 检查日志文件是否存在
+        if (!fs.existsSync(logFilePath)) {
+            resolve({ logs: [], exists: false });
+            return;
+        }
+        
+        try {
+            // 读取文件内容
+            const content = fs.readFileSync(logFilePath, 'utf-8');
+            const allLines = content.split('\n').filter(line => line.trim());
+            
+            // 获取最后N行
+            const lastLines = allLines.slice(-lines);
+            
+            resolve({
+                logs: lastLines,
+                exists: true,
+                totalLines: allLines.length
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+// 获取日志文件路径
+export const getLogFilePath = (username, logType = 'out') => {
+    const logFileName = logType === 'error' 
+        ? `${username}-error.log` 
+        : `${username}-out.log`;
+    return path.join(__dirname, 'logs', logFileName);
 };

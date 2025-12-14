@@ -54,14 +54,21 @@ function showMessage(text, type = 'error', elementId = 'controlMessage') {
 function formatUptime(milliseconds) {
     if (!milliseconds) return '0分钟';
     
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    const minutes = totalMinutes % 60;
+    const seconds = totalSeconds % 60;
     
-    if (days > 0) return `${days}天`;
-    if (hours > 0) return `${hours}小时`;
-    if (minutes > 0) return `${minutes}分钟`;
+    if (days > 0) {
+        return hours > 0 ? `${days}天${hours}小时` : `${days}天`;
+    }
+    if (totalHours > 0) {
+        return minutes > 0 ? `${totalHours}小时${minutes}分钟` : `${totalHours}小时`;
+    }
+    if (totalMinutes > 0) return `${totalMinutes}分钟`;
     return `${seconds}秒`;
 }
 
@@ -535,6 +542,140 @@ async function handleDeleteVersion() {
     }
 }
 
+// ==================== 日志查看功能 ====================
+
+let currentLogType = 'out';
+let autoRefreshInterval = null;
+let isAutoRefreshing = false;
+
+// 加载日志
+async function loadLogs(type = currentLogType, lines = 100) {
+    try {
+        const response = await apiRequest(`${API_BASE}/instance/logs?type=${type}&lines=${lines}`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        const logsContent = document.getElementById('logsContent');
+        const logsStatus = document.getElementById('logsStatus');
+        const logsTotalLines = document.getElementById('logsTotalLines');
+        
+        if (!data.exists) {
+            logsContent.textContent = '日志文件不存在（实例可能未启动过）';
+            logsStatus.textContent = '日志状态: 不存在';
+            logsTotalLines.textContent = '';
+            return;
+        }
+        
+        if (data.logs.length === 0) {
+            logsContent.textContent = '暂无日志内容';
+            logsStatus.textContent = '日志状态: 空';
+            logsTotalLines.textContent = '';
+            return;
+        }
+        
+        // 格式化日志内容
+        const formattedLogs = data.logs.map(line => {
+            // 简单的日志高亮
+            if (line.toLowerCase().includes('error') || line.toLowerCase().includes('err')) {
+                return `<div class="log-line error">${escapeHtml(line)}</div>`;
+            } else if (line.toLowerCase().includes('warn') || line.toLowerCase().includes('warning')) {
+                return `<div class="log-line warn">${escapeHtml(line)}</div>`;
+            } else if (line.toLowerCase().includes('info')) {
+                return `<div class="log-line info">${escapeHtml(line)}</div>`;
+            }
+            return `<div class="log-line">${escapeHtml(line)}</div>`;
+        }).join('');
+        
+        logsContent.innerHTML = formattedLogs;
+        logsStatus.textContent = `日志状态: ${type === 'out' ? '标准输出' : '错误日志'}`;
+        logsTotalLines.textContent = `总行数: ${data.totalLines} | 显示: ${data.logs.length}`;
+        
+        // 自动滚动到底部
+        const container = document.getElementById('logsContainer');
+        container.scrollTop = container.scrollHeight;
+        
+    } catch (error) {
+        console.error('Load logs error:', error);
+        document.getElementById('logsContent').textContent = '加载日志失败';
+    }
+}
+
+// HTML转义（防止XSS）
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 切换日志类型
+function switchLogType(type) {
+    currentLogType = type;
+    
+    // 更新按钮样式
+    const outBtn = document.getElementById('outLogBtn');
+    const errorBtn = document.getElementById('errorLogBtn');
+    
+    if (type === 'out') {
+        outBtn.className = 'btn btn-sm btn-primary';
+        errorBtn.className = 'btn btn-sm btn-secondary';
+    } else {
+        outBtn.className = 'btn btn-sm btn-secondary';
+        errorBtn.className = 'btn btn-sm btn-primary';
+    }
+    
+    loadLogs(type);
+}
+
+// 刷新日志
+function refreshLogs() {
+    loadLogs(currentLogType);
+}
+
+// 清空日志显示
+function clearLogsDisplay() {
+    document.getElementById('logsContent').textContent = '已清空显示（点击刷新重新加载）';
+    document.getElementById('logsStatus').textContent = '已清空';
+    document.getElementById('logsTotalLines').textContent = '';
+}
+
+// 切换自动刷新
+function toggleAutoRefresh() {
+    const btn = document.getElementById('autoRefreshBtn');
+    
+    if (isAutoRefreshing) {
+        // 停止自动刷新
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        isAutoRefreshing = false;
+        btn.textContent = '▶️ 自动刷新';
+        btn.className = 'btn btn-sm btn-success';
+    } else {
+        // 开始自动刷新
+        loadLogs(); // 立即加载一次
+        autoRefreshInterval = setInterval(() => {
+            loadLogs(currentLogType);
+        }, 3000); // 每3秒刷新一次
+        isAutoRefreshing = true;
+        btn.textContent = '⏸️ 停止刷新';
+        btn.className = 'btn btn-sm btn-danger';
+    }
+}
+
+// 停止自动刷新
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        isAutoRefreshing = false;
+        const btn = document.getElementById('autoRefreshBtn');
+        if (btn) {
+            btn.textContent = '▶️ 自动刷新';
+            btn.className = 'btn btn-sm btn-success';
+        }
+    }
+}
+
 // ==================== 初始化 ====================
 
 // 页面初始化
@@ -543,10 +684,16 @@ async function init() {
     
     await loadUserInfo();
     startStatusCheck();
+    
+    // 初始加载日志
+    loadLogs('out');
 }
 
-// 页面卸载时停止状态检查
-window.addEventListener('beforeunload', stopStatusCheck);
+// 页面卸载时停止状态检查和自动刷新
+window.addEventListener('beforeunload', () => {
+    stopStatusCheck();
+    stopAutoRefresh();
+});
 
 // 页面加载完成后初始化
 init();

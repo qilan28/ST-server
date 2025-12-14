@@ -5,7 +5,8 @@ import {
     startInstance,
     stopInstance,
     restartInstance,
-    getInstanceStatus
+    getInstanceStatus,
+    getInstanceLogs
 } from '../pm2-manager.js';
 
 const router = express.Router();
@@ -151,6 +152,32 @@ router.get('/status', async (req, res) => {
     } catch (error) {
         console.error('Get instance status error:', error);
         res.status(500).json({ error: 'Failed to get instance status' });
+    }
+});
+
+// 获取实例日志
+router.get('/logs', async (req, res) => {
+    try {
+        const user = findUserByUsername(req.user.username);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const logType = req.query.type || 'out'; // 'out' 或 'error'
+        const lines = parseInt(req.query.lines) || 100;
+        
+        const logData = await getInstanceLogs(user.username, logType, lines);
+        
+        res.json({
+            logs: logData.logs,
+            exists: logData.exists,
+            totalLines: logData.totalLines,
+            type: logType
+        });
+    } catch (error) {
+        console.error('Get instance logs error:', error);
+        res.status(500).json({ error: 'Failed to get instance logs' });
     }
 });
 

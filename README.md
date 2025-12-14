@@ -7,6 +7,8 @@
 - 🔐 **用户认证系统** - 用户注册、登录、JWT认证
 - 🚀 **实例管理** - 启动、停止、重启 SillyTavern 实例
 - 📊 **资源监控** - 实时查看 CPU、内存、运行时间等
+- 📦 **版本管理** - 切换版本、重装依赖、依赖检测
+- 📄 **实时日志** - 查看标准输出和错误日志，支持自动刷新
 - 🔒 **数据隔离** - 每个用户拥有独立的数据目录
 - 🎨 **现代化UI** - 简洁美观的管理界面
 - ⚡ **自动化部署** - 基于 PM2 的进程管理
@@ -186,6 +188,7 @@ ST-server/
 - `POST /api/instance/stop` - 停止实例
 - `POST /api/instance/restart` - 重启实例
 - `GET /api/instance/status` - 获取实例状态
+- `GET /api/instance/logs` - 获取实例日志（参数：type=out|error, lines=数量）
 
 ### 版本管理接口
 
@@ -194,6 +197,10 @@ ST-server/
 - `GET /api/version/check-git` - 检查 Git 是否可用（公开）
 - `POST /api/version/setup` - 安装指定版本（需要认证）
 - `GET /api/version/setup-status` - 获取安装状态（需要认证）
+- `GET /api/version/check-dependencies` - 检查依赖状态（需要认证）
+- `POST /api/version/reinstall-dependencies` - 重装依赖（需要认证）
+- `POST /api/version/delete` - 删除当前版本（需要认证）
+- `POST /api/version/switch` - 切换版本（需要认证）
 
 ## 🔒 安全建议
 
