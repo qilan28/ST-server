@@ -171,11 +171,13 @@ async function loadUsers() {
                 <td>${formatDate(user.createdAt)}</td>
                 <td>
                     <div class="action-buttons">
-                        ${user.status === 'stopped' ? 
-                            `<button onclick="startUserInstance('${user.username}')" class="btn-action btn-start" title="启动">▶️</button>` : 
-                            `<button onclick="stopUserInstance('${user.username}')" class="btn-action btn-stop" title="停止">⏸️</button>`
-                        }
-                        <button onclick="restartUserInstance('${user.username}')" class="btn-action btn-restart" title="重启">🔄</button>
+                        ${user.role !== 'admin' ? `
+                            ${user.status === 'stopped' ? 
+                                `<button onclick="startUserInstance('${user.username}')" class="btn-action btn-start" title="启动">▶️</button>` : 
+                                `<button onclick="stopUserInstance('${user.username}')" class="btn-action btn-stop" title="停止">⏸️</button>`
+                            }
+                            <button onclick="restartUserInstance('${user.username}')" class="btn-action btn-restart" title="重启">🔄</button>
+                        ` : ''}
                         <button onclick="toggleUserRole('${user.username}', '${user.role}')" class="btn-action btn-role" title="切换角色">
                             ${user.role === 'admin' ? '👤' : '👑'}
                         </button>

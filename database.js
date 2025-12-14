@@ -54,6 +54,7 @@ const migrateAddRoleField = () => {
 export const initDatabase = () => {
     createUsersTable();
     migrateAddRoleField();
+    fixAdminUserPorts();
     console.log('Database initialized successfully');
 };
 
@@ -183,6 +184,35 @@ export const createAdminUser = (username, hashedPassword, email) => {
 export const updateUserRole = (username, role) => {
     const stmt = db.prepare('UPDATE users SET role = ? WHERE username = ?');
     return stmt.run(role, username);
+};
+
+// 更新用户端口
+export const updateUserPort = (username, port) => {
+    const stmt = db.prepare('UPDATE users SET port = ? WHERE username = ?');
+    return stmt.run(port, username);
+};
+
+// 更新用户安装状态
+export const updateUserSetupStatus = (username, status) => {
+    const stmt = db.prepare('UPDATE users SET st_setup_status = ? WHERE username = ?');
+    return stmt.run(status, username);
+};
+
+// 修复管理员用户数据（确保端口为0）
+const fixAdminUserPorts = () => {
+    try {
+        const stmt = db.prepare(`
+            UPDATE users 
+            SET port = 0, data_dir = 'N/A', st_setup_status = 'N/A'
+            WHERE role = 'admin' AND port != 0
+        `);
+        const result = stmt.run();
+        if (result.changes > 0) {
+            console.log(`Fixed ${result.changes} admin user(s) port configuration`);
+        }
+    } catch (error) {
+        console.error('Error fixing admin user ports:', error);
+    }
 };
 
 // 删除用户

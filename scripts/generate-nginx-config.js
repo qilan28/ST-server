@@ -16,11 +16,17 @@ function generateNginxConfig() {
     const NGINX_PORT = nginxConfig.port || 80;
     const MANAGER_PORT = process.env.PORT || 3000;
     
-    // 读取所有用户（排除管理员）
+    // 读取所有用户（排除管理员和没有端口的用户）
     const allUsers = getAllUsers();
-    const users = allUsers.filter(user => user.role !== 'admin');
+    const users = allUsers.filter(user => {
+        // 排除管理员
+        if (user.role === 'admin') return false;
+        // 排除没有分配端口的用户
+        if (!user.port || user.port === 0) return false;
+        return true;
+    });
     
-    console.log(`找到 ${users.length} 个用户需要配置`);
+    console.log(`找到 ${users.length} 个普通用户需要配置`);
     
     // 生成 upstream 块
     let upstreamServers = '';

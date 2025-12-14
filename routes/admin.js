@@ -173,9 +173,10 @@ router.put('/users/:username/role', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
+        const allUsers = getAllUsersAdmin();
+        
         // 防止删除最后一个管理员
         if (user.role === 'admin' && role === 'user') {
-            const allUsers = getAllUsersAdmin();
             const adminCount = allUsers.filter(u => u.role === 'admin').length;
             
             if (adminCount <= 1) {
@@ -186,7 +187,27 @@ router.put('/users/:username/role', async (req, res) => {
             }
         }
         
+        // 限制只能有一个管理员
+        if (user.role === 'user' && role === 'admin') {
+            const adminCount = allUsers.filter(u => u.role === 'admin').length;
+            
+            if (adminCount >= 1) {
+                return res.status(400).json({ 
+                    error: 'Only one admin user is allowed',
+                    message: '系统只允许有一个管理员用户'
+                });
+            }
+        }
+        
         updateUserRole(username, role);
+        
+        // 如果用户被设置为管理员，清除其端口和实例相关数据
+        if (role === 'admin') {
+            const { updateUserPort, updateUserSetupStatus } = await import('../database.js');
+            updateUserPort(username, 0);
+            updateUserSetupStatus(username, 'N/A');
+        }
+        
         res.json({ message: 'User role updated successfully', role });
     } catch (error) {
         console.error('Update role error:', error);
