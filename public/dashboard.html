@@ -69,6 +69,58 @@
                 <div id="controlMessage" class="message"></div>
             </div>
 
+            <div class="version-card">
+                <h2>📦 版本管理</h2>
+                <div class="version-info">
+                    <div class="info-item">
+                        <span class="label">当前版本：</span>
+                        <span class="value" id="currentVersion">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">安装状态：</span>
+                        <span class="value" id="setupStatus">
+                            <span class="status-badge">-</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">依赖状态：</span>
+                        <span class="value" id="dependencyStatus">
+                            <span class="status-badge">检查中...</span>
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="version-actions">
+                    <button class="btn btn-primary" onclick="showVersionSelector()">
+                        🔄 切换版本
+                    </button>
+                    <button class="btn btn-warning" onclick="handleReinstallDependencies()">
+                        📦 重装依赖
+                    </button>
+                    <button class="btn btn-danger" onclick="handleDeleteVersion()">
+                        🗑️ 删除版本
+                    </button>
+                </div>
+                
+                <div id="versionMessage" class="message"></div>
+                
+                <!-- 版本选择器（隐藏） -->
+                <div id="versionSelector" class="version-selector" style="display: none;">
+                    <h3>选择新版本</h3>
+                    <div class="version-list-container">
+                        <div class="version-category">
+                            <h4>正式版本</h4>
+                            <div id="releasesList" class="version-list">加载中...</div>
+                        </div>
+                        <div class="version-category">
+                            <h4>开发分支</h4>
+                            <div id="branchesList" class="version-list">加载中...</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="hideVersionSelector()">取消</button>
+                </div>
+            </div>
+
             <div class="stats-card">
                 <h2>资源使用</h2>
                 <div class="stats-grid">

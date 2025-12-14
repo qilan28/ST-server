@@ -633,6 +633,148 @@ body {
     padding: 16px 32px;
 }
 
+/* 版本管理卡片 */
+.version-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: var(--shadow);
+    margin-bottom: 30px;
+}
+
+.version-card h2 {
+    margin-bottom: 25px;
+    color: var(--text-color);
+    font-size: 1.5rem;
+}
+
+.version-info {
+    background: var(--bg-color);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.version-info .info-item {
+    margin-bottom: 12px;
+}
+
+.version-info .info-item:last-child {
+    margin-bottom: 0;
+}
+
+.version-actions {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.version-selector {
+    margin-top: 25px;
+    padding: 25px;
+    background: var(--bg-color);
+    border-radius: 8px;
+    border: 2px solid var(--border-color);
+}
+
+.version-selector h3 {
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+.version-list-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.version-category h4 {
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.version-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg);
+}
+
+.version-item {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.version-item:last-child {
+    border-bottom: none;
+}
+
+.version-item:hover {
+    background: var(--bg-color);
+}
+
+.version-name {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.version-date {
+    font-size: 0.85rem;
+    color: #718096;
+    margin-top: 5px;
+}
+
+.version-item .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.status-badge.status-completed {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.status-badge.status-installing {
+    background: #fef3c7;
+    color: #78350f;
+}
+
+.status-badge.status-failed {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.status-badge.status-pending {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.status-badge.status-installed {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.status-badge.status-not-installed {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .header-content {
@@ -661,5 +803,17 @@ body {
     
     .version-item .btn {
         width: 100%;
+    }
+    
+    .version-actions {
+        flex-direction: column;
+    }
+    
+    .version-actions .btn {
+        width: 100%;
+    }
+    
+    .version-list-container {
+        grid-template-columns: 1fr;
     }
 }

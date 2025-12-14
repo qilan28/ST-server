@@ -38,8 +38,9 @@ async function apiRequest(url, options = {}) {
 }
 
 // 显示消息
-function showMessage(text, type = 'error') {
-    const messageEl = document.getElementById('controlMessage');
+function showMessage(text, type = 'error', elementId = 'controlMessage') {
+    const messageEl = document.getElementById(elementId);
+    if (!messageEl) return;
     messageEl.textContent = text;
     messageEl.className = `message show ${type}`;
     
@@ -105,12 +106,8 @@ async function loadUserInfo() {
             accessLink.textContent = accessUrl;
             accessLink.href = accessUrl;
             
-            // 显示 ST 版本
-            if (data.stVersion) {
-                document.getElementById('createdAt').insertAdjacentHTML('afterend', 
-                    `<div class="info-item"><span class="label">ST版本：</span><span class="value">${data.stVersion}</span></div>`
-                );
-            }
+            // 更新版本管理区域
+            updateVersionInfo(data);
             
             // 更新状态
             updateStatusUI(data.status);
@@ -309,6 +306,236 @@ function checkAuth() {
     }
     return true;
 }
+
+// ==================== 版本管理功能 ====================
+
+let availableVersions = { releases: [], branches: [] };
+
+// 更新版本信息显示
+function updateVersionInfo(data) {
+    // 显示当前版本
+    const currentVersionEl = document.getElementById('currentVersion');
+    if (data.stVersion) {
+        currentVersionEl.textContent = data.stVersion;
+    } else {
+        currentVersionEl.textContent = '未安装';
+    }
+    
+    // 显示安装状态
+    const setupStatusEl = document.getElementById('setupStatus').querySelector('.status-badge');
+    const statusMap = {
+        'pending': { text: '未安装', class: 'status-pending' },
+        'installing': { text: '安装中', class: 'status-installing' },
+        'completed': { text: '已完成', class: 'status-completed' },
+        'failed': { text: '失败', class: 'status-failed' }
+    };
+    
+    const statusInfo = statusMap[data.stSetupStatus] || statusMap['pending'];
+    setupStatusEl.textContent = statusInfo.text;
+    setupStatusEl.className = `status-badge ${statusInfo.class}`;
+    
+    // 检查依赖状态
+    checkDependencies();
+}
+
+// 检查依赖状态
+async function checkDependencies() {
+    try {
+        const response = await apiRequest(`${API_BASE}/version/check-dependencies`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        const depStatusEl = document.getElementById('dependencyStatus').querySelector('.status-badge');
+        if (data.installed) {
+            depStatusEl.textContent = '已安装';
+            depStatusEl.className = 'status-badge status-installed';
+        } else {
+            depStatusEl.textContent = '未安装';
+            depStatusEl.className = 'status-badge status-not-installed';
+        }
+    } catch (error) {
+        console.error('Check dependencies error:', error);
+    }
+}
+
+// 显示版本选择器
+async function showVersionSelector() {
+    const selector = document.getElementById('versionSelector');
+    selector.style.display = 'block';
+    
+    // 加载版本列表（如果还没加载）
+    if (availableVersions.releases.length === 0 && availableVersions.branches.length === 0) {
+        await loadVersionList();
+    }
+}
+
+// 隐藏版本选择器
+function hideVersionSelector() {
+    const selector = document.getElementById('versionSelector');
+    selector.style.display = 'none';
+}
+
+// 加载版本列表
+async function loadVersionList() {
+    try {
+        const response = await fetch(`${API_BASE}/version/list`);
+        if (!response.ok) {
+            throw new Error('Failed to load versions');
+        }
+        
+        const data = await response.json();
+        availableVersions = data;
+        
+        // 渲染正式版本
+        const releasesList = document.getElementById('releasesList');
+        if (data.releases.length > 0) {
+            releasesList.innerHTML = data.releases.map(version => `
+                <div class="version-item">
+                    <div>
+                        <div class="version-name">${version.name}</div>
+                        <div class="version-date">${new Date(version.published_at).toLocaleDateString('zh-CN')}</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="handleSwitchVersion('${version.name}')">
+                        选择
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            releasesList.innerHTML = '<div style="padding: 15px; text-align: center; color: #718096;">暂无版本</div>';
+        }
+        
+        // 渲染开发分支
+        const branchesList = document.getElementById('branchesList');
+        if (data.branches.length > 0) {
+            branchesList.innerHTML = data.branches.map(branch => `
+                <div class="version-item">
+                    <div>
+                        <div class="version-name">${branch.name}</div>
+                        <div class="version-date">最新提交: ${new Date(branch.commit.date).toLocaleDateString('zh-CN')}</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="handleSwitchVersion('${branch.name}')">
+                        选择
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            branchesList.innerHTML = '<div style="padding: 15px; text-align: center; color: #718096;">暂无分支</div>';
+        }
+        
+    } catch (error) {
+        console.error('Load versions error:', error);
+        showMessage('加载版本列表失败', 'error', 'versionMessage');
+    }
+}
+
+// 切换版本
+async function handleSwitchVersion(version) {
+    if (!confirm(`确定要切换到版本 ${version} 吗？\n\n这将删除当前版本并安装新版本，请确保已停止实例。`)) {
+        return;
+    }
+    
+    hideVersionSelector();
+    showMessage(`正在切换到版本 ${version}，请稍候...`, 'info', 'versionMessage');
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/version/switch`, {
+            method: 'POST',
+            body: JSON.stringify({ version })
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage(`版本切换已开始，请等待安装完成（约3-5分钟）`, 'success', 'versionMessage');
+            
+            // 定期检查安装状态
+            const checkInterval = setInterval(async () => {
+                await loadUserInfo();
+                const statusEl = document.getElementById('setupStatus').querySelector('.status-badge');
+                
+                if (statusEl.textContent === '已完成') {
+                    clearInterval(checkInterval);
+                    showMessage('版本切换完成！', 'success', 'versionMessage');
+                } else if (statusEl.textContent === '失败') {
+                    clearInterval(checkInterval);
+                    showMessage('版本切换失败，请查看日志', 'error', 'versionMessage');
+                }
+            }, 5000);
+        } else {
+            showMessage(data.error || '切换版本失败', 'error', 'versionMessage');
+        }
+    } catch (error) {
+        console.error('Switch version error:', error);
+        showMessage('切换版本失败，请重试', 'error', 'versionMessage');
+    }
+}
+
+// 重装依赖
+async function handleReinstallDependencies() {
+    if (!confirm('确定要重新安装依赖吗？\n\n请确保已停止实例。这可能需要几分钟时间。')) {
+        return;
+    }
+    
+    showMessage('正在重新安装依赖...', 'info', 'versionMessage');
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/version/reinstall-dependencies`, {
+            method: 'POST'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('依赖重装已开始，请等待完成（约2-3分钟）', 'success', 'versionMessage');
+            
+            // 5秒后重新检查依赖状态
+            setTimeout(async () => {
+                await checkDependencies();
+            }, 5000);
+        } else {
+            showMessage(data.error || '重装依赖失败', 'error', 'versionMessage');
+        }
+    } catch (error) {
+        console.error('Reinstall dependencies error:', error);
+        showMessage('重装依赖失败，请重试', 'error', 'versionMessage');
+    }
+}
+
+// 删除版本
+async function handleDeleteVersion() {
+    if (!confirm('确定要删除当前版本吗？\n\n这将删除所有 SillyTavern 代码文件，但不会删除您的数据。\n请确保已停止实例。')) {
+        return;
+    }
+    
+    showMessage('正在删除版本...', 'info', 'versionMessage');
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/version/delete`, {
+            method: 'POST'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('版本已删除', 'success', 'versionMessage');
+            await loadUserInfo();
+        } else {
+            showMessage(data.error || '删除版本失败', 'error', 'versionMessage');
+        }
+    } catch (error) {
+        console.error('Delete version error:', error);
+        showMessage('删除版本失败，请重试', 'error', 'versionMessage');
+    }
+}
+
+// ==================== 初始化 ====================
 
 // 页面初始化
 async function init() {

@@ -220,3 +220,51 @@ export const setupSillyTavern = async (targetDir, version, onProgress) => {
         throw error;
     }
 };
+
+// 删除 SillyTavern 目录
+export const deleteSillyTavern = async (stDir) => {
+    try {
+        if (!fs.existsSync(stDir)) {
+            return true; // 目录不存在，认为删除成功
+        }
+        
+        // 删除整个目录
+        fs.rmSync(stDir, { recursive: true, force: true });
+        
+        return true;
+    } catch (error) {
+        console.error('Delete SillyTavern failed:', error);
+        throw new Error(`Failed to delete SillyTavern: ${error.message}`);
+    }
+};
+
+// 检查依赖是否已安装
+export const checkDependenciesInstalled = (stDir) => {
+    try {
+        if (!fs.existsSync(stDir)) {
+            return { installed: false, reason: 'Directory does not exist' };
+        }
+        
+        const nodeModulesPath = path.join(stDir, 'node_modules');
+        const packageJsonPath = path.join(stDir, 'package.json');
+        
+        if (!fs.existsSync(packageJsonPath)) {
+            return { installed: false, reason: 'package.json not found' };
+        }
+        
+        if (!fs.existsSync(nodeModulesPath)) {
+            return { installed: false, reason: 'node_modules not found' };
+        }
+        
+        // 检查 node_modules 是否为空
+        const files = fs.readdirSync(nodeModulesPath);
+        if (files.length === 0) {
+            return { installed: false, reason: 'node_modules is empty' };
+        }
+        
+        return { installed: true, reason: 'Dependencies are installed' };
+    } catch (error) {
+        console.error('Check dependencies failed:', error);
+        return { installed: false, reason: error.message };
+    }
+};

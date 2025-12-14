@@ -4,7 +4,14 @@ import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
 import { findUserByUsername, updateUserSTInfo, updateSTSetupStatus } from '../database.js';
 import { getSillyTavernVersions, getSillyTavernRepoInfo } from '../github-api.js';
-import { setupSillyTavern, checkGitAvailable } from '../git-manager.js';
+import { 
+    setupSillyTavern, 
+    checkGitAvailable, 
+    deleteSillyTavern, 
+    checkDependenciesInstalled,
+    installDependencies 
+} from '../git-manager.js';
+import { getInstanceStatus, stopInstance } from '../pm2-manager.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -62,10 +69,10 @@ router.post('/setup', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        // 检查是否已经设置过
-        if (user.st_setup_status === 'completed') {
+        // 检查是否正在安装
+        if (user.st_setup_status === 'installing') {
             return res.status(400).json({ 
-                error: 'SillyTavern already set up. Please delete the old version first.' 
+                error: 'Installation already in progress' 
             });
         }
         
@@ -126,6 +133,164 @@ router.get('/setup-status', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Check setup status error:', error);
         res.status(500).json({ error: 'Failed to check setup status' });
+    }
+});
+
+// 检查依赖状态
+router.get('/check-dependencies', authenticateToken, async (req, res) => {
+    try {
+        const user = findUserByUsername(req.user.username);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        if (!user.st_dir) {
+            return res.json({ installed: false, reason: 'SillyTavern not set up' });
+        }
+        
+        const result = checkDependenciesInstalled(user.st_dir);
+        res.json(result);
+    } catch (error) {
+        console.error('Check dependencies error:', error);
+        res.status(500).json({ error: 'Failed to check dependencies' });
+    }
+});
+
+// 重新安装依赖
+router.post('/reinstall-dependencies', authenticateToken, async (req, res) => {
+    try {
+        const user = findUserByUsername(req.user.username);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        if (!user.st_dir) {
+            return res.status(400).json({ error: 'SillyTavern not set up' });
+        }
+        
+        // 检查实例是否在运行
+        const status = await getInstanceStatus(user.username);
+        if (status && status.status === 'online') {
+            return res.status(400).json({ 
+                error: 'Please stop the instance before reinstalling dependencies' 
+            });
+        }
+        
+        // 异步重新安装
+        installDependencies(user.st_dir, (progress) => {
+            console.log(`[${user.username}] ${progress}`);
+        }).then(() => {
+            console.log(`[${user.username}] Dependencies reinstalled successfully`);
+        }).catch((error) => {
+            console.error(`[${user.username}] Reinstall dependencies failed:`, error);
+        });
+        
+        res.json({ message: 'Dependencies reinstallation started' });
+    } catch (error) {
+        console.error('Reinstall dependencies error:', error);
+        res.status(500).json({ error: 'Failed to reinstall dependencies: ' + error.message });
+    }
+});
+
+// 删除当前版本
+router.post('/delete', authenticateToken, async (req, res) => {
+    try {
+        const user = findUserByUsername(req.user.username);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        if (!user.st_dir) {
+            return res.status(400).json({ error: 'No SillyTavern installation found' });
+        }
+        
+        // 检查实例是否在运行
+        const status = await getInstanceStatus(user.username);
+        if (status && status.status === 'online') {
+            return res.status(400).json({ 
+                error: 'Please stop the instance before deleting' 
+            });
+        }
+        
+        // 删除目录
+        await deleteSillyTavern(user.st_dir);
+        
+        // 更新数据库
+        updateUserSTInfo(user.username, null, null, 'pending');
+        
+        res.json({ message: 'SillyTavern deleted successfully' });
+    } catch (error) {
+        console.error('Delete SillyTavern error:', error);
+        res.status(500).json({ error: 'Failed to delete SillyTavern: ' + error.message });
+    }
+});
+
+// 切换版本（删除旧版本 + 安装新版本）
+router.post('/switch', authenticateToken, async (req, res) => {
+    try {
+        const { version } = req.body;
+        
+        if (!version) {
+            return res.status(400).json({ error: 'Version is required' });
+        }
+        
+        const user = findUserByUsername(req.user.username);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // 检查实例是否在运行
+        const status = await getInstanceStatus(user.username);
+        if (status && status.status === 'online') {
+            return res.status(400).json({ 
+                error: 'Please stop the instance before switching versions' 
+            });
+        }
+        
+        // 检查 Git 是否可用
+        const gitAvailable = await checkGitAvailable();
+        if (!gitAvailable) {
+            return res.status(500).json({ error: 'Git is not available on this system' });
+        }
+        
+        // 设置目录路径
+        const userBaseDir = path.join(__dirname, '..', 'data', user.username);
+        const stDir = path.join(userBaseDir, 'sillytavern');
+        
+        // 删除旧版本（如果存在）
+        if (user.st_dir) {
+            try {
+                await deleteSillyTavern(user.st_dir);
+            } catch (error) {
+                console.error('Failed to delete old version:', error);
+                // 继续安装新版本
+            }
+        }
+        
+        // 更新状态为安装中
+        updateSTSetupStatus(user.username, 'installing');
+        
+        // 异步安装新版本
+        setupSillyTavern(stDir, version, (progress) => {
+            console.log(`[${user.username}] ${progress}`);
+        }).then(() => {
+            // 更新数据库
+            updateUserSTInfo(user.username, stDir, version, 'completed');
+            console.log(`[${user.username}] Switched to SillyTavern ${version}`);
+        }).catch((error) => {
+            console.error(`[${user.username}] Switch version failed:`, error);
+            updateSTSetupStatus(user.username, 'failed');
+        });
+        
+        res.json({
+            message: 'Version switch started',
+            version: version,
+            status: 'installing'
+        });
+        
+    } catch (error) {
+        console.error('Switch version error:', error);
+        res.status(500).json({ error: 'Failed to switch version: ' + error.message });
     }
 });
 
