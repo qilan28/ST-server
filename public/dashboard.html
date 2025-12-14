@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>控制台 - SillyTavern 多开管理平台</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1>🎭 SillyTavern 控制台</h1>
+                <div class="user-info">
+                    <span id="currentUsername"></span>
+                    <button class="btn btn-secondary" onclick="handleLogout()">退出登录</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-main">
+            <div class="info-card">
+                <h2>实例信息</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">用户名：</span>
+                        <span class="value" id="username">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">邮箱：</span>
+                        <span class="value" id="email">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">端口：</span>
+                        <span class="value" id="port">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">状态：</span>
+                        <span class="value" id="status">
+                            <span class="status-badge status-stopped">已停止</span>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">访问地址：</span>
+                        <span class="value">
+                            <a id="accessUrl" href="#" target="_blank" class="access-link">-</a>
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">创建时间：</span>
+                        <span class="value" id="createdAt">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-card">
+                <h2>实例控制</h2>
+                <div class="control-buttons">
+                    <button class="btn btn-success" onclick="handleStart()" id="startBtn">
+                        ▶️ 启动实例
+                    </button>
+                    <button class="btn btn-warning" onclick="handleRestart()" id="restartBtn">
+                        🔄 重启实例
+                    </button>
+                    <button class="btn btn-danger" onclick="handleStop()" id="stopBtn">
+                        ⏹️ 停止实例
+                    </button>
+                </div>
+                <div id="controlMessage" class="message"></div>
+            </div>
+
+            <div class="stats-card">
+                <h2>资源使用</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">CPU使用率</div>
+                        <div class="stat-value" id="cpuUsage">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">内存使用</div>
+                        <div class="stat-value" id="memoryUsage">0 MB</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">运行时间</div>
+                        <div class="stat-value" id="uptime">0分钟</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">重启次数</div>
+                        <div class="stat-value" id="restarts">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tips-card">
+                <h3>💡 使用提示</h3>
+                <ul>
+                    <li>首次启动可能需要几秒钟时间，请耐心等待</li>
+                    <li>点击访问地址打开您的专属 SillyTavern 实例</li>
+                    <li>您的数据存储在独立的目录中，与其他用户完全隔离</li>
+                    <li>如遇到问题，可以尝试重启实例</li>
+                    <li>不使用时请停止实例以节省服务器资源</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/dashboard.js"></script>
+</body>
+</html>
