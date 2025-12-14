@@ -86,12 +86,22 @@ async function loadUserInfo() {
         const data = await response.json();
         
         if (response.ok) {
-            // 检查 ST 是否已设置
+            // 检查 ST 安装状态
             if (data.stSetupStatus === 'pending') {
-                // 重定向到设置页面
-                window.location.href = '/setup.html';
+                // 显示安装提示卡片
+                document.getElementById('stSetupCard').style.display = 'block';
+                return;
+            } else if (data.stSetupStatus === 'installing') {
+                // 显示安装中卡片
+                document.getElementById('stInstallingCard').style.display = 'block';
+                // 开始轮询检查安装状态
+                startSetupStatusCheck();
                 return;
             }
+            
+            // ST 已安装，隐藏安装卡片
+            document.getElementById('stSetupCard').style.display = 'none';
+            document.getElementById('stInstallingCard').style.display = 'none';
             
             // 更新页面信息
             document.getElementById('currentUsername').textContent = data.username;
@@ -320,6 +330,48 @@ async function init() {
 
 // 页面卸载时停止状态检查
 window.addEventListener('beforeunload', stopStatusCheck);
+
+// 跳转到版本选择页面
+function goToSetup() {
+    window.location.href = '/setup.html';
+}
+
+// 轮询检查安装状态
+let setupStatusInterval = null;
+
+function startSetupStatusCheck() {
+    // 每3秒检查一次
+    setupStatusInterval = setInterval(checkSetupStatus, 3000);
+    checkSetupStatus(); // 立即执行一次
+}
+
+function stopSetupStatusCheck() {
+    if (setupStatusInterval) {
+        clearInterval(setupStatusInterval);
+        setupStatusInterval = null;
+    }
+}
+
+async function checkSetupStatus() {
+    try {
+        const response = await apiRequest(`${API_BASE}/version/setup-status`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (data.status === 'completed') {
+            stopSetupStatusCheck();
+            // 安装完成，刷新页面
+            window.location.reload();
+        } else if (data.status === 'failed') {
+            stopSetupStatusCheck();
+            alert('SillyTavern 安装失败，请重试');
+            window.location.reload();
+        }
+    } catch (error) {
+        console.error('Check setup status error:', error);
+    }
+}
 
 // 页面加载完成后初始化
 init();

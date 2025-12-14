@@ -19,6 +19,27 @@
         </header>
 
         <main class="dashboard-main">
+            <!-- SillyTavern 安装状态卡片 -->
+            <div class="info-card" id="stSetupCard" style="display: none;">
+                <h2>📦 SillyTavern 安装</h2>
+                <div class="setup-status-content">
+                    <p class="setup-notice">您还没有安装 SillyTavern，请先选择并安装一个版本。</p>
+                    <button class="btn btn-primary" onclick="goToSetup()">
+                        选择 SillyTavern 版本 →
+                    </button>
+                </div>
+            </div>
+
+            <!-- 安装中状态卡片 -->
+            <div class="info-card" id="stInstallingCard" style="display: none;">
+                <h2>⚙️ SillyTavern 安装中</h2>
+                <div class="installing-content">
+                    <div class="spinner"></div>
+                    <p>正在安装 SillyTavern，这可能需要几分钟...</p>
+                    <p class="install-tip">请不要关闭页面，安装完成后会自动刷新</p>
+                </div>
+            </div>
+
             <div class="info-card">
                 <h2>实例信息</h2>
                 <div class="info-grid">

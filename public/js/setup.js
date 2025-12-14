@@ -230,6 +230,11 @@ async function checkSetupStatus() {
 function showInstallComplete() {
     document.getElementById('installCard').style.display = 'none';
     document.getElementById('completeCard').style.display = 'block';
+    
+    // 3秒后自动跳转到控制台
+    setTimeout(() => {
+        goToDashboard();
+    }, 3000);
 }
 
 // 显示安装失败
