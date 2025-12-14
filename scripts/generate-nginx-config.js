@@ -85,29 +85,85 @@ upstream st_${user.username} {
         sub_filter_once off;
         sub_filter_types text/html text/css text/javascript application/javascript application/json;
         
-        # 重写绝对路径为相对于子路径的路径
+        # 注入 base 标签到 HTML 以确保所有相对路径正确
+        sub_filter '<head>' '<head><base href="/${user.username}/st/">';
+        
+        # 重写 HTML 属性中的绝对路径
         sub_filter 'src="/' 'src="/${user.username}/st/';
         sub_filter 'href="/' 'href="/${user.username}/st/';
         sub_filter "src='/" "src='/${user.username}/st/";
         sub_filter "href='/" "href='/${user.username}/st/";
+        sub_filter 'action="/' 'action="/${user.username}/st/';
+        sub_filter 'data-src="/' 'data-src="/${user.username}/st/';
+        
+        # 重写 CSS 中的路径
         sub_filter 'url(/' 'url(/${user.username}/st/';
         sub_filter 'url("/' 'url("/${user.username}/st/';
         sub_filter "url('/" "url('/${user.username}/st/";
+        sub_filter '@import "/' '@import "/${user.username}/st/';
+        sub_filter "@import '/" "@import '/${user.username}/st/";
         
-        # 重写 JavaScript 中的路径
+        # 重写 JavaScript 中的常见路径模式
         sub_filter '"/api/' '"/${user.username}/st/api/';
+        sub_filter "'/api/" "'/${user.username}/st/api/";
         sub_filter '"/scripts/' '"/${user.username}/st/scripts/';
+        sub_filter "'/scripts/" "'/${user.username}/st/scripts/";
         sub_filter '"/css/' '"/${user.username}/st/css/';
+        sub_filter "'/css/" "'/${user.username}/st/css/";
         sub_filter '"/lib/' '"/${user.username}/st/lib/';
+        sub_filter "'/lib/" "'/${user.username}/st/lib/";
         sub_filter '"/public/' '"/${user.username}/st/public/';
+        sub_filter "'/public/" "'/${user.username}/st/public/";
         sub_filter '"/img/' '"/${user.username}/st/img/';
+        sub_filter "'/img/" "'/${user.username}/st/img/";
         sub_filter '"/thumbnail/' '"/${user.username}/st/thumbnail/';
+        sub_filter "'/thumbnail/" "'/${user.username}/st/thumbnail/";
+        sub_filter '"/assets/' '"/${user.username}/st/assets/';
+        sub_filter "'/assets/" "'/${user.username}/st/assets/";
+        sub_filter '"/data/' '"/${user.username}/st/data/';
+        sub_filter "'/data/" "'/${user.username}/st/data/";
+        sub_filter '"/user/' '"/${user.username}/st/user/';
+        sub_filter "'/user/" "'/${user.username}/st/user/";
+        sub_filter '"/uploads/' '"/${user.username}/st/uploads/';
+        sub_filter "'/uploads/" "'/${user.username}/st/uploads/";
+        
+        # 重写 fetch/XMLHttpRequest 等 API 调用
+        sub_filter 'fetch("/' 'fetch("/${user.username}/st/';
+        sub_filter "fetch('/" "fetch('/${user.username}/st/";
+        sub_filter '.open("GET", "/' '.open("GET", "/${user.username}/st/';
+        sub_filter ".open('GET', '/" ".open('GET', '/${user.username}/st/";
+        sub_filter '.open("POST", "/' '.open("POST", "/${user.username}/st/';
+        sub_filter ".open('POST', '/" ".open('POST', '/${user.username}/st/";
+        
+        # 重写常见的根路径引用
+        sub_filter '="/"' '="/${user.username}/st/"';
+        sub_filter "='/"" "='/${user.username}/st/'";
         
         # 处理重定向
         proxy_redirect / /${user.username}/st/;
         
         # 缓存控制
         proxy_cache_bypass $http_upgrade;
+    }
+    
+    # ${user.username} - 静态资源专门处理（优化性能）
+    location ~ ^/${user.username}/st/(scripts|css|lib|img|assets|public|data|uploads)/ {
+        rewrite ^/${user.username}/st/(.*)$ /$1 break;
+        proxy_pass http://st_${user.username};
+        proxy_http_version 1.1;
+        
+        # 静态资源不需要 sub_filter，直接代理
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # 启用缓存
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+        
+        # 关闭缓冲提高性能
+        proxy_buffering off;
     }
 `;
     });
