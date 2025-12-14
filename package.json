@@ -10,6 +10,7 @@
     "setup": "node setup.js",
     "create-admin": "node scripts/create-admin.js",
     "generate-nginx": "node scripts/generate-nginx-config.js",
+    "deploy-nginx": "sudo bash scripts/deploy-nginx.sh",
     "reset-pm2": "node scripts/reset-pm2.js"
   },
   "keywords": [

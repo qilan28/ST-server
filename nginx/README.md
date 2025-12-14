@@ -9,17 +9,23 @@
 
 ## 🚀 快速使用
 
-### 1. 配置环境变量
+### 1. 在管理员面板配置
 
-编辑项目根目录的 `.env` 文件：
+1. 登录管理员面板：`http://你的IP:3000/admin.html`
+2. 在 **⚙️ 系统配置** 区域设置：
+   - 启用 Nginx 模式（打开开关）
+   - 域名：输入您的 IP 或域名
+   - 端口：输入 Nginx 监听端口
+3. 点击 **保存配置**
 
-```env
-USE_NGINX=true
-NGINX_DOMAIN=yourdomain.com
-NGINX_PORT=80
-```
+> **注意：** Nginx 配置现在通过管理员面板管理，不再使用 `.env` 文件
 
 ### 2. 生成配置文件
+
+**通过管理员面板：**
+- 点击 **生成 Nginx 配置文件** 按钮
+
+**或通过命令行：**
 
 ```bash
 npm run generate-nginx
@@ -29,7 +35,24 @@ npm run generate-nginx
 
 ### 3. 部署配置
 
-#### Linux
+#### 🚀 自动部署（推荐）
+
+使用自动部署脚本，一键完成所有步骤：
+
+```bash
+npm run deploy-nginx
+```
+
+这个脚本会自动：
+- ✅ 备份现有配置
+- ✅ 复制新配置到 Nginx 目录
+- ✅ 创建符号链接（如需要）
+- ✅ 测试配置
+- ✅ 重载 Nginx
+
+#### 手动部署
+
+**Ubuntu/Debian:**
 ```bash
 # 复制配置文件
 sudo cp nginx.conf /etc/nginx/sites-available/sillytavern
@@ -42,7 +65,19 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-#### Windows
+**CentOS/RHEL:**
+```bash
+# 复制配置文件
+sudo cp nginx.conf /etc/nginx/conf.d/sillytavern.conf
+
+# 测试配置
+sudo nginx -t
+
+# 重载 Nginx
+sudo systemctl reload nginx
+```
+
+**Windows:**
 ```bash
 # 复制配置文件
 copy nginx.conf C:\nginx\conf\nginx.conf

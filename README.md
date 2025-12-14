@@ -323,6 +323,17 @@ npm run reset-pm2
 
 ## 🐛 常见问题
 
+### Q: 访问用户实例显示 ERR_EMPTY_RESPONSE？
+A: 
+这是最常见的问题，通常是因为**用户实例未启动**。
+
+**快速解决：**
+1. 登录管理员面板检查用户状态
+2. 如果显示"已停止"，点击启动按钮
+3. 如果实例已运行，运行 `npm run deploy-nginx` 部署配置
+
+详细解决方案请查看 **[QUICK-FIX.md](./QUICK-FIX.md)**
+
 ### Q: 遇到 "SyntaxError: Unexpected token '?'" 错误？
 A: 
 这是 **Node.js 版本过低**导致的。SillyTavern 需要 Node.js v20.11.0 或更高版本。
