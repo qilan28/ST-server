@@ -11,8 +11,8 @@ import {
     startInstance,
     stopInstance,
     restartInstance,
-    getAllInstancesStatus,
-    deleteInstanceData
+    listAllInstances,
+    deleteInstance
 } from '../pm2-manager.js';
 import { generateAccessUrl } from '../utils/url-helper.js';
 import { deleteSillyTavern } from '../git-manager.js';
