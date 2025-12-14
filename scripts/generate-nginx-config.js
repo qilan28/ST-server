@@ -95,10 +95,18 @@ upstream st_${user.username} {
     console.log(`   管理平台端口: ${MANAGER_PORT}`);
     console.log(`   用户数量: ${users.length}`);
     console.log();
-    console.log('🔧 使用方法：');
-    console.log('   1. 复制生成的配置文件到 Nginx 配置目录');
-    console.log('   2. 测试配置: nginx -t');
-    console.log('   3. 重载配置: nginx -s reload');
+    console.log('🔧 部署方法：');
+    console.log();
+    console.log('   方法 1：一键自动部署（推荐）');
+    console.log('   npm run deploy-nginx');
+    console.log();
+    console.log('   方法 2：直接使用生成的配置');
+    console.log('   sudo nginx -c ' + outputPath);
+    console.log('   注意：使用此方法前请先停止现有 Nginx');
+    console.log();
+    console.log('   方法 3：复制到标准配置目录');
+    console.log('   sudo cp nginx/nginx.conf /etc/nginx/nginx.conf');
+    console.log('   sudo nginx -t && sudo nginx -s reload');
     console.log();
     console.log('🌐 访问地址示例：');
     if (users.length > 0) {

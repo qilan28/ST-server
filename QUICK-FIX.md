@@ -47,7 +47,7 @@
 
 ### ✅ 解决方案 2：部署 Nginx 配置
 
-#### 一键部署（最简单）
+#### 方法 1：一键部署（最简单，推荐）
 
 ```bash
 cd /root/ST-server
@@ -59,7 +59,25 @@ npm run generate-nginx
 npm run deploy-nginx
 ```
 
-#### 手动部署
+#### 方法 2：直接使用生成的配置启动
+
+生成的配置文件现在是**完整的独立配置**，可以直接使用：
+
+```bash
+cd /root/ST-server
+
+# 生成配置
+npm run generate-nginx
+
+# 停止现有 Nginx（如果有）
+sudo systemctl stop nginx
+# 或 sudo pkill nginx
+
+# 直接使用配置启动
+sudo nginx -c /root/ST-server/nginx/nginx.conf
+```
+
+#### 方法 3：手动部署到系统目录
 
 ```bash
 cd /root/ST-server
