@@ -7,6 +7,31 @@ const execPromise = promisify(exec);
 
 const REPO_URL = 'https://github.com/SillyTavern/SillyTavern.git';
 
+// 检查 Node.js 版本是否满足要求
+const checkNodeVersion = () => {
+    const requiredVersion = '20.11.0';
+    const currentVersion = process.versions.node;
+    
+    const [reqMajor, reqMinor, reqPatch] = requiredVersion.split('.').map(Number);
+    const [curMajor, curMinor, curPatch] = currentVersion.split('.').map(Number);
+    
+    if (curMajor < reqMajor || 
+        (curMajor === reqMajor && curMinor < reqMinor) ||
+        (curMajor === reqMajor && curMinor === reqMinor && curPatch < reqPatch)) {
+        return {
+            isValid: false,
+            current: currentVersion,
+            required: requiredVersion
+        };
+    }
+    
+    return {
+        isValid: true,
+        current: currentVersion,
+        required: requiredVersion
+    };
+};
+
 // 检查 git 是否可用
 export const checkGitAvailable = async () => {
     try {
@@ -141,6 +166,22 @@ export const installDependencies = async (stDir, onProgress) => {
     try {
         if (!fs.existsSync(stDir)) {
             throw new Error(`Directory does not exist: ${stDir}`);
+        }
+        
+        // 检查 Node.js 版本
+        const versionCheck = checkNodeVersion();
+        if (!versionCheck.isValid) {
+            const errorMsg = `Node.js 版本过低！\n` +
+                `当前版本: v${versionCheck.current}\n` +
+                `需要版本: v${versionCheck.required} 或更高\n\n` +
+                `SillyTavern 需要 Node.js v20.11.0 或更高版本。\n` +
+                `请参考 NODEJS-UPGRADE.md 文件升级 Node.js。\n\n` +
+                `快速升级方法：\n` +
+                `1. 使用 NVM: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash && nvm install 20\n` +
+                `2. 或访问: https://nodejs.org/`;
+            
+            console.error(errorMsg);
+            throw new Error(errorMsg);
         }
         
         if (onProgress) onProgress('安装依赖...');

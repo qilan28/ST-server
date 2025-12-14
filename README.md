@@ -25,6 +25,21 @@
 - Fetch API
 - 响应式设计
 
+## ⚠️ 系统要求
+
+- **Node.js >= v20.11.0** (必需)
+- **npm >= v10.0.0**
+- **Git** (用于克隆 SillyTavern)
+
+> **重要提示**：如果您的 Node.js 版本低于 v20.11.0，请先参考 [NODEJS-UPGRADE.md](./NODEJS-UPGRADE.md) 升级 Node.js，否则会遇到语法错误。
+
+检查版本：
+```bash
+node --version  # 应该 >= v20.11.0
+npm --version   # 应该 >= v10.0.0
+git --version
+```
+
 ## 🚀 快速开始
 
 ### 1. 安装依赖
@@ -212,6 +227,13 @@ pm2 delete all
 ```
 
 ## 🐛 常见问题
+
+### Q: 遇到 "SyntaxError: Unexpected token '?'" 错误？
+A: 
+这是 **Node.js 版本过低**导致的。SillyTavern 需要 Node.js v20.11.0 或更高版本。
+1. 检查当前版本：`node --version`
+2. 参考 [NODEJS-UPGRADE.md](./NODEJS-UPGRADE.md) 升级 Node.js
+3. 推荐使用 NVM 安装：`curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash && nvm install 20`
 
 ### Q: 实例启动失败？
 A: 
