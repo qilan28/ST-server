@@ -68,54 +68,6 @@ function hideError() {
     errorEl.style.display = 'none';
 }
 
-// 检查系统环境
-async function checkSystemEnvironment() {
-    try {
-        const response = await fetch(`${API_BASE}/version/check-git`);
-        if (!response.ok) {
-            console.error('Failed to check environment');
-            return;
-        }
-        
-        const data = await response.json();
-        
-        // 检查 Node.js 版本
-        if (data.node && !data.node.isCompatible) {
-            showError(
-                `⚠️ Node.js 版本过低！无法安装 SillyTavern\n\n` +
-                `当前版本: ${data.node.current}\n` +
-                `需要版本: ${data.node.required}+\n\n` +
-                `SillyTavern 1.12.0+ 使用了现代 JavaScript 语法（如 ?? 空值合并运算符），\n` +
-                `需要 Node.js 18 或更高版本才能运行。\n\n` +
-                `解决方案：\n` +
-                `1. 升级到 Node.js 18 LTS: https://nodejs.org/\n` +
-                `2. 查看详细升级指南: NODEJS-UPGRADE.md\n` +
-                `3. 升级后重启平台并重新安装`
-            );
-            // 禁用所有版本选择按钮
-            setTimeout(() => {
-                document.querySelectorAll('.version-item button').forEach(btn => {
-                    btn.disabled = true;
-                    btn.textContent = 'Node.js 版本不兼容';
-                    btn.style.backgroundColor = '#e74c3c';
-                });
-            }, 100);
-            return false;
-        }
-        
-        // 检查 Git
-        if (!data.git) {
-            showError('⚠️ Git 未安装或不可用，无法克隆 SillyTavern 仓库！');
-            return false;
-        }
-        
-        return true;
-    } catch (error) {
-        console.error('Check environment error:', error);
-        return true; // 检查失败不阻止继续
-    }
-}
-
 // 加载版本列表
 async function loadVersions() {
     try {
@@ -278,35 +230,12 @@ async function checkSetupStatus() {
 function showInstallComplete() {
     document.getElementById('installCard').style.display = 'none';
     document.getElementById('completeCard').style.display = 'block';
-    
-    // 3秒后自动跳转到控制台
-    setTimeout(() => {
-        goToDashboard();
-    }, 3000);
 }
 
 // 显示安装失败
-function showInstallFailed(errorMessage = '') {
+function showInstallFailed() {
     document.getElementById('installCard').style.display = 'none';
-    
-    let message = '安装失败，请重试或联系管理员。';
-    
-    // 检查是否是网络错误
-    if (errorMessage && (errorMessage.includes('ECONNRESET') || 
-        errorMessage.includes('network') || 
-        errorMessage.includes('网络'))) {
-        message = '❌ 安装失败：网络连接问题\n\n' +
-                  '可能的原因：\n' +
-                  '• NPM 下载包时网络不稳定\n' +
-                  '• 访问 NPM 官方源速度慢\n\n' +
-                  '解决方案：\n' +
-                  '1. 请管理员在 .env 文件中配置 NPM 镜像源：\n' +
-                  '   NPM_REGISTRY=https://registry.npmmirror.com\n\n' +
-                  '2. 系统会自动重试 3 次，请稍后重试\n\n' +
-                  '详细信息请查看 NETWORK-TROUBLESHOOTING.md';
-    }
-    
-    alert(message);
+    alert('安装失败，请重试或联系管理员');
     document.getElementById('versionSelectCard').style.display = 'block';
 }
 
@@ -339,11 +268,8 @@ function checkAuth() {
 }
 
 // 页面初始化
-async function initialize() {
+async function init() {
     if (!checkAuth()) return;
-    
-    // 检查系统环境
-    await checkSystemEnvironment();
     
     // 加载版本列表
     await loadVersions();
