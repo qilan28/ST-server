@@ -1,12 +1,13 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { findUserByUsername } from '../database.js';
-import {
-    startInstance,
-    stopInstance,
-    restartInstance,
-    getInstanceStatus
-} from '../pm2-manager.js';
+import { startInstance, stopInstance, restartInstance, getInstanceStatus } from '../pm2-manager.js';
+import { findUserByUsername, updateUserSTInfo, updateSTSetupStatus } from '../database.js';
+import { detectSillyTavernInstallation, getGitVersion } from '../utils/st-detector.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // 获取当前用户信息
-router.get('/info', (req, res) => {
+router.get('/info', async (req, res) => {
     try {
         const user = findUserByUsername(req.user.username);
         
@@ -22,6 +23,43 @@ router.get('/info', (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
+        // 自动检测 SillyTavern 安装状态
+        const userBaseDir = path.join(__dirname, '..', 'data', user.username);
+        const stDir = path.join(userBaseDir, 'sillytavern');
+        
+        // 如果数据库中状态不是 completed，尝试检测现有安装
+        if (user.st_setup_status !== 'completed') {
+            const detection = detectSillyTavernInstallation(stDir);
+            
+            if (detection.isValid) {
+                // 检测到有效的安装，更新数据库
+                console.log(`[${user.username}] Detected existing SillyTavern installation`);
+                
+                const gitVersion = getGitVersion(stDir) || detection.version || 'unknown';
+                updateUserSTInfo(user.username, stDir, gitVersion, 'completed');
+                
+                // 重新获取更新后的用户信息
+                const updatedUser = findUserByUsername(req.user.username);
+                
+                res.json({
+                    id: updatedUser.id,
+                    username: updatedUser.username,
+                    email: updatedUser.email,
+                    port: updatedUser.port,
+                    dataDir: updatedUser.data_dir,
+                    stDir: updatedUser.st_dir,
+                    stVersion: updatedUser.st_version,
+                    stSetupStatus: updatedUser.st_setup_status,
+                    status: updatedUser.status,
+                    createdAt: updatedUser.created_at,
+                    accessUrl: `http://localhost:${updatedUser.port}`,
+                    autoDetected: true  // 标记为自动检测
+                });
+                return;
+            }
+        }
+        
+        // 返回当前数据库中的信息
         res.json({
             id: user.id,
             username: user.username,
@@ -117,6 +155,44 @@ router.post('/restart', async (req, res) => {
     } catch (error) {
         console.error('Restart instance error:', error);
         res.status(500).json({ error: 'Failed to restart instance: ' + error.message });
+    }
+});
+
+// 手动检测 SillyTavern 安装
+router.post('/detect', async (req, res) => {
+    try {
+        const user = findUserByUsername(req.user.username);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const userBaseDir = path.join(__dirname, '..', 'data', user.username);
+        const stDir = path.join(userBaseDir, 'sillytavern');
+        
+        const detection = detectSillyTavernInstallation(stDir);
+        
+        if (detection.isValid) {
+            // 检测到有效的安装，更新数据库
+            const gitVersion = getGitVersion(stDir) || detection.version || 'unknown';
+            updateUserSTInfo(user.username, stDir, gitVersion, 'completed');
+            
+            res.json({
+                success: true,
+                message: 'SillyTavern installation detected and registered',
+                detection: detection,
+                version: gitVersion
+            });
+        } else {
+            res.json({
+                success: false,
+                message: 'No valid SillyTavern installation found',
+                detection: detection
+            });
+        }
+    } catch (error) {
+        console.error('Detect installation error:', error);
+        res.status(500).json({ error: 'Failed to detect installation' });
     }
 });
 

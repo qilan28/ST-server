@@ -646,6 +646,21 @@ body {
     line-height: 1.6;
 }
 
+.setup-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.setup-tip {
+    font-size: 0.9rem;
+    color: #a0aec0;
+    margin-top: 15px;
+    font-style: italic;
+}
+
 .installing-content {
     text-align: center;
     padding: 40px 20px;

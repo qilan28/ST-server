@@ -336,6 +336,71 @@ function goToSetup() {
     window.location.href = '/setup.html';
 }
 
+// 检测已有的 SillyTavern 安装
+async function detectExistingInstallation() {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    
+    try {
+        btn.disabled = true;
+        btn.textContent = '🔍 检测中...';
+        
+        const response = await apiRequest(`${API_BASE}/instance/detect`, {
+            method: 'POST'
+        });
+        
+        if (!response) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            alert(
+                `✅ 检测成功！\n\n` +
+                `已找到有效的 SillyTavern 安装\n` +
+                `版本: ${data.version}\n\n` +
+                `页面将自动刷新...`
+            );
+            // 刷新页面以更新状态
+            window.location.reload();
+        } else {
+            const detection = data.detection || {};
+            let message = '❌ 未检测到有效的 SillyTavern 安装\n\n';
+            
+            if (!detection.exists) {
+                message += '原因：目录不存在\n';
+                message += '路径：data/' + localStorage.getItem('username') + '/sillytavern/\n\n';
+            } else if (!detection.hasServerJs) {
+                message += '原因：缺少 server.js 文件\n\n';
+            } else if (!detection.hasPackageJson) {
+                message += '原因：缺少 package.json 文件\n\n';
+            } else if (!detection.hasDependencies) {
+                message += '原因：未安装依赖包（缺少 node_modules）\n\n';
+                message += '请在 SillyTavern 目录运行: npm install\n\n';
+            } else {
+                message += '原因：依赖不完整或其他问题\n\n';
+            }
+            
+            message += '解决方案：\n';
+            message += '1. 手动部署 SillyTavern 到指定目录\n';
+            message += '2. 或使用"选择 SillyTavern 版本"自动安装';
+            
+            alert(message);
+            
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Detect installation error:', error);
+        alert('检测失败，请稍后重试');
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+}
+
 // 轮询检查安装状态
 let setupStatusInterval = null;
 

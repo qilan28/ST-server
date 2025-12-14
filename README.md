@@ -13,6 +13,11 @@
 
 ## 📋 技术栈
 
+### 系统要求
+- **Node.js 18.0+** （必需！SillyTavern 1.12.0+ 需要）
+- Git 2.0+
+- 至少 2GB 可用磁盘空间
+
 ### 后端
 - Node.js + Express
 - SQLite (better-sqlite3)
@@ -70,6 +75,8 @@ npm start
 
 ### 选择 SillyTavern 版本
 
+#### 方式一：自动安装（推荐）
+
 1. 登录后进入控制台，如果还未安装 ST，会看到安装提示
 2. 点击"选择 SillyTavern 版本"按钮
 3. 系统自动从 GitHub 获取所有可用版本
@@ -77,6 +84,21 @@ npm start
 5. 点击"选择此版本"开始安装
 6. 等待克隆仓库和安装依赖（约3-10分钟）
 7. 安装完成后自动返回控制台
+
+#### 方式二：检测已有安装
+
+如果您已经手动部署了 SillyTavern：
+
+1. 确保 SillyTavern 位于 `data/用户名/sillytavern/` 目录
+2. 在控制台点击"🔍 检测已有安装"按钮
+3. 系统会自动检测并识别您的安装
+4. 检测通过后可以直接启动实例
+
+系统会自动检查：
+- ✅ 目录结构是否正确
+- ✅ server.js 和 package.json 是否存在
+- ✅ node_modules 依赖是否已安装
+- ✅ 关键依赖包是否完整
 
 ### 管理实例
 
@@ -117,6 +139,8 @@ ST-server/
 │   ├── auth.js            # 认证路由
 │   ├── instance.js        # 实例管理路由
 │   └── version.js         # 版本管理路由
+├── utils/
+│   └── st-detector.js     # SillyTavern 安装检测
 ├── public/
 │   ├── index.html         # 登录/注册页面
 │   ├── dashboard.html     # 管理面板
@@ -137,7 +161,9 @@ ST-server/
 ├── .env.example
 ├── .gitignore
 ├── README.md
-└── QUICKSTART.md
+├── QUICKSTART.md
+├── NODEJS-UPGRADE.md          # Node.js 升级指南
+└── NETWORK-TROUBLESHOOTING.md  # 网络问题排查指南
 ```
 
 ## 🗄️ 数据库结构
@@ -168,11 +194,12 @@ ST-server/
 
 ### 实例管理接口（需要认证）
 
-- `GET /api/instance/info` - 获取用户信息
+- `GET /api/instance/info` - 获取用户信息（自动检测已有安装）
 - `POST /api/instance/start` - 启动实例
 - `POST /api/instance/stop` - 停止实例
 - `POST /api/instance/restart` - 重启实例
 - `GET /api/instance/status` - 获取实例状态
+- `POST /api/instance/detect` - 手动检测 SillyTavern 安装
 
 ### 版本管理接口
 
@@ -215,6 +242,15 @@ pm2 delete all
 
 ## 🐛 常见问题
 
+### Q: 安装时出现 "Unexpected token '?'" 错误？
+A: 
+**这是 Node.js 版本过低导致的！**
+1. 检查您的 Node.js 版本：`node --version`
+2. 如果低于 v18.0.0，请升级到 Node.js 18 LTS 或更高版本
+3. 📖 **详细升级指南请查看 [NODEJS-UPGRADE.md](NODEJS-UPGRADE.md)**
+4. 下载地址：https://nodejs.org/
+5. 升级后清理旧目录并重新安装 SillyTavern
+
 ### Q: 实例启动失败？
 A: 
 1. 检查是否已经选择并安装了 SillyTavern 版本
@@ -223,10 +259,18 @@ A:
 
 ### Q: 版本安装失败？
 A: 
-1. 检查服务器是否安装了 Git：`git --version`
-2. 检查网络连接是否正常（需要访问 GitHub）
-3. 确认有足够的磁盘空间
-4. 查看服务器日志获取详细错误信息
+1. **网络问题 (ECONNRESET/network error)**：
+   - NPM 下载包时网络不稳定
+   - 解决方案：在 `.env` 文件中配置淘宝镜像源：
+     ```
+     NPM_REGISTRY=https://registry.npmmirror.com
+     ```
+   - 系统会自动重试 3 次
+   - 📖 **详细解决方案请查看 [NETWORK-TROUBLESHOOTING.md](NETWORK-TROUBLESHOOTING.md)**
+2. 检查服务器是否安装了 Git：`git --version`
+3. 检查网络连接是否正常（需要访问 GitHub）
+4. 确认有足够的磁盘空间
+5. 查看服务器日志获取详细错误信息
 
 ### Q: 无法加载版本列表？
 A: 
@@ -242,6 +286,24 @@ A: 用户数据存储在 `data/用户名/st-data/` 目录，请定期备份
 
 ### Q: 安装速度慢？
 A: 首次安装需要从 GitHub 克隆仓库并安装依赖，根据网络情况可能需要 3-10 分钟
+
+### Q: 如何手动部署 SillyTavern？
+A: 
+如果您已经有 SillyTavern 代码或想手动安装：
+1. 将 SillyTavern 放到 `data/您的用户名/sillytavern/` 目录
+2. 确保已安装依赖：`cd data/您的用户名/sillytavern && npm install`
+3. 在控制台点击"🔍 检测已有安装"按钮
+4. 系统会自动识别并注册您的安装
+5. 检测通过后即可启动实例
+
+### Q: 检测已有安装失败？
+A: 
+请检查以下项：
+1. 目录位置是否正确：`data/用户名/sillytavern/`
+2. 是否包含 `server.js` 和 `package.json`
+3. 是否已运行 `npm install` 安装依赖
+4. `node_modules` 目录是否存在且完整
+5. Node.js 版本是否 >= 18.0
 
 ## 📄 许可证
 

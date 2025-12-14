@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
 import { findUserByUsername, updateUserSTInfo, updateSTSetupStatus } from '../database.js';
 import { getSillyTavernVersions, getSillyTavernRepoInfo } from '../github-api.js';
-import { setupSillyTavern, checkGitAvailable } from '../git-manager.js';
+import { setupSillyTavern, checkGitAvailable, checkNodeVersion } from '../git-manager.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -37,14 +37,20 @@ router.get('/repo-info', async (req, res) => {
     }
 });
 
-// 检查系统是否支持 Git
+// 检查系统环境（Git 和 Node.js 版本）
 router.get('/check-git', async (req, res) => {
     try {
-        const available = await checkGitAvailable();
-        res.json({ available });
+        const gitAvailable = await checkGitAvailable();
+        const nodeVersion = checkNodeVersion();
+        
+        res.json({ 
+            git: gitAvailable,
+            node: nodeVersion,
+            ready: gitAvailable && nodeVersion.isCompatible
+        });
     } catch (error) {
-        console.error('Check git error:', error);
-        res.json({ available: false });
+        console.error('Check environment error:', error);
+        res.json({ git: false, ready: false });
     }
 });
 
@@ -66,6 +72,15 @@ router.post('/setup', authenticateToken, async (req, res) => {
         if (user.st_setup_status === 'completed') {
             return res.status(400).json({ 
                 error: 'SillyTavern already set up. Please delete the old version first.' 
+            });
+        }
+        
+        // 检查 Node.js 版本
+        const nodeVersion = checkNodeVersion();
+        if (!nodeVersion.isCompatible) {
+            return res.status(400).json({ 
+                error: `Node.js 版本过低。当前版本: ${nodeVersion.current}，需要版本: ${nodeVersion.required}+`,
+                nodeVersion: nodeVersion
             });
         }
         
@@ -106,7 +121,17 @@ router.post('/setup', authenticateToken, async (req, res) => {
         
     } catch (error) {
         console.error('Setup error:', error);
-        res.status(500).json({ error: 'Failed to setup SillyTavern: ' + error.message });
+        
+        // 提供更友好的错误信息
+        let errorMessage = error.message;
+        if (error.message.includes('ECONNRESET') || error.message.includes('network')) {
+            errorMessage = '网络连接失败，请检查网络设置或稍后重试。如果问题持续，请考虑配置 NPM 镜像源。';
+        }
+        
+        res.status(500).json({ 
+            error: 'Failed to setup SillyTavern: ' + errorMessage,
+            detail: error.message 
+        });
     }
 });
 

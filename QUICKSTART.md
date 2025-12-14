@@ -4,15 +4,22 @@
 
 在开始之前，请确保您的系统满足以下要求：
 
-- ✅ Node.js 18.0 或更高版本
-- ✅ Git（用于克隆 SillyTavern 仓库）
+- ✅ **Node.js 18.0 或更高版本**（必需！）
+- ✅ Git 2.0+（用于克隆 SillyTavern 仓库）
 - ✅ 至少 2GB 可用磁盘空间
 - ✅ 稳定的网络连接（需要访问 GitHub）
 
 检查命令：
 ```bash
-node --version  # 应该显示 v18.x.x 或更高
-git --version   # 应该显示 git version x.x.x
+node --version  # 必须显示 v18.x.x 或更高！
+git --version   # 应该显示 git version 2.x.x 或更高
+```
+
+⚠️ **重要**：SillyTavern 1.12.0+ 使用了现代 JavaScript 语法（如空值合并运算符 `??`），需要 Node.js 18+ 才能运行。如果您的 Node.js 版本低于 18，请先升级：
+
+```bash
+# 下载并安装 Node.js 18 LTS 或更新版本
+# 访问 https://nodejs.org/ 下载安装包
 ```
 
 ## 第一步：安装依赖
@@ -41,6 +48,24 @@ npm run setup
 - ✅ 创建必要的目录（data、logs等）
 - ✅ 自动生成 `.env` 文件和随机 JWT 密钥
 - ✅ 检查 SillyTavern 是否正确安装
+
+## 第二步：配置环境
+
+复制 `.env.example` 为 `.env` 并修改配置：
+
+```bash
+cp .env.example .env
+```
+
+建议修改的配置项：
+- `JWT_SECRET` - 生产环境请修改为复杂的随机字符串
+- `PORT` - 服务器端口（默认3000）
+- `NPM_REGISTRY` - （可选）如果 NPM 下载慢，取消注释并使用淘宝镜像：
+  ```
+  NPM_REGISTRY=https://registry.npmmirror.com
+  ```
+JWT_SECRET=your-very-long-and-random-secret-key-here
+NODE_ENV=production
 
 ## 第三步：配置环境变量
 
