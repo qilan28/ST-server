@@ -50,7 +50,7 @@ upstream st_${user.username} {
     }
     
     location /${user.username}/st/ {
-        # 使用正则替换，自动去除前缀
+        # 路径重写：去除 /${user.username}/st/ 前缀
         rewrite ^/${user.username}/st/(.*)$ /$1 break;
         
         proxy_pass http://st_${user.username};
@@ -58,28 +58,56 @@ upstream st_${user.username} {
         
         # WebSocket 支持
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        
-        # 基本代理头
+        proxy_set_header Connection $connection_upgrade;
         proxy_set_header Host $host;
+        
+        # 代理头配置
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # 重要：告诉后端应用它的基础路径
-        proxy_set_header X-Forwarded-Prefix /${user.username}/st;
-        
-        # 缓存控制
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Forwarded-Host $host;
         
         # 超时设置
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
         
-        # 缓冲设置
-        proxy_buffering off;
-        proxy_request_buffering off;
+        # 启用缓冲以使用 sub_filter
+        proxy_buffering on;
+        proxy_buffer_size 128k;
+        proxy_buffers 100 128k;
+        proxy_busy_buffers_size 256k;
+        
+        # 禁用 gzip 以确保 sub_filter 工作
+        proxy_set_header Accept-Encoding "";
+        
+        # HTML 内容重写 - 修复静态资源路径
+        sub_filter_once off;
+        sub_filter_types text/html text/css text/javascript application/javascript application/json;
+        
+        # 重写绝对路径为相对于子路径的路径
+        sub_filter 'src="/' 'src="/${user.username}/st/';
+        sub_filter 'href="/' 'href="/${user.username}/st/';
+        sub_filter "src='/" "src='/${user.username}/st/";
+        sub_filter "href='/" "href='/${user.username}/st/";
+        sub_filter 'url(/' 'url(/${user.username}/st/';
+        sub_filter 'url("/' 'url("/${user.username}/st/';
+        sub_filter "url('/" "url('/${user.username}/st/";
+        
+        # 重写 JavaScript 中的路径
+        sub_filter '"/api/' '"/${user.username}/st/api/';
+        sub_filter '"/scripts/' '"/${user.username}/st/scripts/';
+        sub_filter '"/css/' '"/${user.username}/st/css/';
+        sub_filter '"/lib/' '"/${user.username}/st/lib/';
+        sub_filter '"/public/' '"/${user.username}/st/public/';
+        sub_filter '"/img/' '"/${user.username}/st/img/';
+        sub_filter '"/thumbnail/' '"/${user.username}/st/thumbnail/';
+        
+        # 处理重定向
+        proxy_redirect / /${user.username}/st/;
+        
+        # 缓存控制
+        proxy_cache_bypass $http_upgrade;
     }
 `;
     });

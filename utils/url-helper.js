@@ -9,13 +9,10 @@ import { getNginxConfig } from './config-manager.js';
 export function generateAccessUrl(username, port) {
     const nginxConfig = getNginxConfig();
     
-    // 重要提示：SillyTavern 不支持子路径运行
-    // 因此无论是否启用 Nginx，都使用直接端口访问
-    // 如果需要使用 Nginx，应该配置子域名而不是路径
-    
     if (nginxConfig.enabled) {
-        // 使用 Nginx 域名但直接访问端口（不使用路径转发）
-        return `http://${nginxConfig.domain}:${port}/`;
+        // Nginx 路径转发模式：http://域名:端口/用户名/st/
+        const portPart = nginxConfig.port === 80 ? '' : `:${nginxConfig.port}`;
+        return `http://${nginxConfig.domain}${portPart}/${username}/st/`;
     } else {
         // 直接端口模式：http://localhost:端口
         return `http://localhost:${port}`;
