@@ -9,7 +9,8 @@
     "dev": "node --watch server.js",
     "setup": "node setup.js",
     "create-admin": "node scripts/create-admin.js",
-    "generate-nginx": "node scripts/generate-nginx-config.js"
+    "generate-nginx": "node scripts/generate-nginx-config.js",
+    "reset-pm2": "node scripts/reset-pm2.js"
   },
   "keywords": [
     "sillytavern",

@@ -7,13 +7,25 @@ import { updateUserStatus } from './database.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// PM2 连接状态
+let pm2Connected = false;
+
 // 连接到PM2
 const connectPM2 = () => {
     return new Promise((resolve, reject) => {
+        // 如果已经连接，直接返回
+        if (pm2Connected) {
+            resolve();
+            return;
+        }
+        
         pm2.connect((err) => {
             if (err) {
+                console.error('PM2 connect error:', err);
+                pm2Connected = false;
                 reject(err);
             } else {
+                pm2Connected = true;
                 resolve();
             }
         });
@@ -22,12 +34,24 @@ const connectPM2 = () => {
 
 // 断开PM2连接
 const disconnectPM2 = () => {
-    pm2.disconnect();
+    try {
+        if (pm2Connected && pm2.client) {
+            pm2.disconnect();
+            pm2Connected = false;
+        }
+    } catch (error) {
+        console.error('PM2 disconnect error:', error);
+        pm2Connected = false;
+    }
 };
 
 // 启动SillyTavern实例
 export const startInstance = async (username, port, stDir, dataDir) => {
-    await connectPM2();
+    try {
+        await connectPM2();
+    } catch (error) {
+        throw new Error(`Failed to connect to PM2: ${error.message}`);
+    }
     
     return new Promise((resolve, reject) => {
         const stServerPath = path.join(stDir, 'server.js');
@@ -49,6 +73,7 @@ export const startInstance = async (username, port, stDir, dataDir) => {
             disconnectPM2();
             
             if (err) {
+                console.error(`Failed to start instance for ${username}:`, err);
                 reject(err);
             } else {
                 updateUserStatus(username, 'running');
@@ -60,7 +85,11 @@ export const startInstance = async (username, port, stDir, dataDir) => {
 
 // 停止实例
 export const stopInstance = async (username) => {
-    await connectPM2();
+    try {
+        await connectPM2();
+    } catch (error) {
+        throw new Error(`Failed to connect to PM2: ${error.message}`);
+    }
     
     return new Promise((resolve, reject) => {
         pm2.stop(`st-${username}`, (err, proc) => {
@@ -78,7 +107,11 @@ export const stopInstance = async (username) => {
 
 // 重启实例
 export const restartInstance = async (username) => {
-    await connectPM2();
+    try {
+        await connectPM2();
+    } catch (error) {
+        throw new Error(`Failed to connect to PM2: ${error.message}`);
+    }
     
     return new Promise((resolve, reject) => {
         pm2.restart(`st-${username}`, (err, proc) => {
@@ -96,7 +129,11 @@ export const restartInstance = async (username) => {
 
 // 删除实例
 export const deleteInstance = async (username) => {
-    await connectPM2();
+    try {
+        await connectPM2();
+    } catch (error) {
+        throw new Error(`Failed to connect to PM2: ${error.message}`);
+    }
     
     return new Promise((resolve, reject) => {
         pm2.delete(`st-${username}`, (err, proc) => {
@@ -113,7 +150,11 @@ export const deleteInstance = async (username) => {
 
 // 获取实例状态
 export const getInstanceStatus = async (username) => {
-    await connectPM2();
+    try {
+        await connectPM2();
+    } catch (error) {
+        throw new Error(`Failed to connect to PM2: ${error.message}`);
+    }
     
     return new Promise((resolve, reject) => {
         pm2.describe(`st-${username}`, (err, processDescription) => {
@@ -139,7 +180,11 @@ export const getInstanceStatus = async (username) => {
 
 // 获取所有实例列表
 export const listAllInstances = async () => {
-    await connectPM2();
+    try {
+        await connectPM2();
+    } catch (error) {
+        throw new Error(`Failed to connect to PM2: ${error.message}`);
+    }
     
     return new Promise((resolve, reject) => {
         pm2.list((err, processDescriptionList) => {

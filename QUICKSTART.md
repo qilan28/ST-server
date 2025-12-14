@@ -240,6 +240,44 @@ rm database.sqlite-shm database.sqlite-wal
 # 重启服务器
 ```
 
+### 问题：PM2 连接错误 (TypeError: Cannot read properties of null)
+
+这是最常见的 PM2 错误，通常在 PM2 守护进程状态异常时发生。
+
+**快速解决（推荐）：**
+```bash
+npm run reset-pm2
+```
+
+这个脚本会自动：
+- ✅ 停止所有 PM2 进程
+- ✅ 删除所有进程配置
+- ✅ 杀死 PM2 守护进程
+- ✅ 清理所有残留
+
+**手动解决：**
+```bash
+# 1. 停止所有进程
+pm2 stop all
+
+# 2. 删除所有进程
+pm2 delete all
+
+# 3. 杀死 PM2 守护进程
+pm2 kill
+
+# 4. 重启服务器
+npm start
+```
+
+## 创建管理员账户
+
+如果需要创建管理员账户来访问管理面板：
+
+```bash
+npm run create-admin
+```
+
 ## 更多帮助
 
 - 查看 [README.md](README.md) 获取详细文档

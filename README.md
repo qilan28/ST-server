@@ -311,6 +311,16 @@ pm2 stop all
 pm2 delete all
 ```
 
+### 重置 PM2（解决连接问题）
+
+如果遇到 PM2 连接错误：
+
+```bash
+npm run reset-pm2
+```
+
+这会自动清理所有 PM2 进程和守护进程。
+
 ## 🐛 常见问题
 
 ### Q: 遇到 "SyntaxError: Unexpected token '?'" 错误？
@@ -325,6 +335,14 @@ A:
 1. 检查是否已经选择并安装了 SillyTavern 版本
 2. 查看 PM2 日志：`pm2 logs`
 3. 确认端口未被占用
+
+### Q: PM2 连接错误 (TypeError: Cannot read properties of null)?
+A: 
+这是 PM2 守护进程状态异常导致的。运行重置命令：
+```bash
+npm run reset-pm2
+```
+然后重启服务器即可。详细说明请参考 [QUICKSTART.md](./QUICKSTART.md) 故障排查部分。
 
 ### Q: 版本安装失败？
 A: 
