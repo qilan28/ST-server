@@ -108,6 +108,14 @@ async function loadUserInfo() {
             document.getElementById('port').textContent = data.port;
             document.getElementById('createdAt').textContent = formatDate(data.createdAt);
             
+            // 如果是管理员，显示管理员面板链接
+            if (data.role === 'admin') {
+                const adminLink = document.getElementById('adminLink');
+                if (adminLink) {
+                    adminLink.style.display = 'inline-block';
+                }
+            }
+            
             const accessUrl = data.accessUrl;
             const accessLink = document.getElementById('accessUrl');
             accessLink.textContent = accessUrl;

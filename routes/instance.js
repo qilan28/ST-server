@@ -28,6 +28,7 @@ router.get('/info', (req, res) => {
             username: user.username,
             email: user.email,
             port: user.port,
+            role: user.role || 'user',
             dataDir: user.data_dir,
             stDir: user.st_dir,
             stVersion: user.st_version,

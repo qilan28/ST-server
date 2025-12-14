@@ -875,6 +875,142 @@ body {
     color: #4299e1;
 }
 
+/* 管理员面板样式 */
+.stats-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: var(--shadow);
+    margin-bottom: 30px;
+}
+
+.stats-card h2 {
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+}
+
+.users-card,
+.instances-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: var(--shadow);
+    margin-bottom: 30px;
+}
+
+.users-card h2,
+.instances-card h2 {
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+.table-container {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+.users-table,
+.instances-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.users-table th,
+.instances-table th {
+    background: #f7fafc;
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2d3748;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.users-table td,
+.instances-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #4a5568;
+}
+
+.users-table tr:hover,
+.instances-table tr:hover {
+    background: #f7fafc;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.role-admin {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.role-user {
+    background: #dbeafe;
+    color: #1e3a8a;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-action:hover {
+    transform: scale(1.1);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.btn-start:hover {
+    background: rgba(72, 187, 120, 0.2);
+}
+
+.btn-stop:hover {
+    background: rgba(237, 137, 54, 0.2);
+}
+
+.btn-restart:hover {
+    background: rgba(66, 153, 225, 0.2);
+}
+
+.btn-role:hover {
+    background: rgba(159, 122, 234, 0.2);
+}
+
+.btn-delete:hover {
+    background: rgba(245, 101, 101, 0.2);
+}
+
+/* 头部操作按钮 */
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .header-content {

@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import instanceRoutes from './routes/instance.js';
 import versionRoutes from './routes/version.js';
+import adminRoutes from './routes/admin.js';
 import './database.js';
 
 // 加载环境变量
@@ -39,6 +40,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/instance', instanceRoutes);
 app.use('/api/version', versionRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

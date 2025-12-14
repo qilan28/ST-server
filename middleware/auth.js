@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { findUserById } from '../database.js';
+import { findUserById, isAdmin } from '../database.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
 
@@ -33,10 +33,29 @@ export const authenticateToken = (req, res, next) => {
         
         req.user = {
             userId: user.id,
-            username: user.username
+            username: user.username,
+            role: user.role || 'user'
         };
         next();
     });
+};
+
+// 验证管理员权限中间件
+export const requireAdmin = (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const adminStatus = isAdmin(req.user.username);
+    
+    if (!adminStatus) {
+        return res.status(403).json({ 
+            error: 'Admin access required',
+            message: '需要管理员权限才能访问此功能'
+        });
+    }
+    
+    next();
 };
 
 export { JWT_SECRET };

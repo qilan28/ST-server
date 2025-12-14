@@ -25,6 +25,7 @@ const createUsersTable = () => {
             st_dir TEXT,
             st_version TEXT,
             subdomain TEXT,
+            role TEXT DEFAULT 'user',
             status TEXT DEFAULT 'stopped',
             st_setup_status TEXT DEFAULT 'pending',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -32,9 +33,27 @@ const createUsersTable = () => {
     `);
 };
 
+// 迁移：添加 role 字段（如果不存在）
+const migrateAddRoleField = () => {
+    try {
+        const checkColumn = db.prepare("PRAGMA table_info(users)");
+        const columns = checkColumn.all();
+        const hasRole = columns.some(col => col.name === 'role');
+        
+        if (!hasRole) {
+            console.log('Adding role column to users table...');
+            db.exec(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`);
+            console.log('Role column added successfully');
+        }
+    } catch (error) {
+        console.error('Migration error:', error);
+    }
+};
+
 // 初始化数据库
 export const initDatabase = () => {
     createUsersTable();
+    migrateAddRoleField();
     console.log('Database initialized successfully');
 };
 
@@ -122,6 +141,57 @@ export const updateSTSetupStatus = (username, status) => {
 export const getAllUsers = () => {
     const stmt = db.prepare('SELECT id, username, email, port, status, created_at FROM users');
     return stmt.all();
+};
+
+// 获取所有用户（包含完整信息，仅供管理员使用）
+export const getAllUsersAdmin = () => {
+    const stmt = db.prepare(`
+        SELECT id, username, email, port, data_dir, st_dir, st_version, 
+               role, status, st_setup_status, created_at 
+        FROM users 
+        ORDER BY created_at DESC
+    `);
+    return stmt.all();
+};
+
+// 检查用户是否为管理员
+export const isAdmin = (username) => {
+    const stmt = db.prepare('SELECT role FROM users WHERE username = ?');
+    const user = stmt.get(username);
+    return user && user.role === 'admin';
+};
+
+// 创建管理员用户
+export const createAdminUser = (username, hashedPassword, email) => {
+    const port = findAvailablePort();
+    const dataDir = path.join(__dirname, 'data', username);
+    
+    // 创建用户数据目录
+    if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    const stmt = db.prepare(`
+        INSERT INTO users (username, password, email, port, data_dir, role)
+        VALUES (?, ?, ?, ?, ?, 'admin')
+    `);
+    
+    const result = stmt.run(username, hashedPassword, email, port, dataDir);
+    
+    return {
+        id: result.lastInsertRowid,
+        username,
+        email,
+        port,
+        dataDir,
+        role: 'admin'
+    };
+};
+
+// 更新用户角色
+export const updateUserRole = (username, role) => {
+    const stmt = db.prepare('UPDATE users SET role = ? WHERE username = ?');
+    return stmt.run(role, username);
 };
 
 // 删除用户

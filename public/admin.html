@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员面板 - SillyTavern 管理平台</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>🔧 管理员面板</h1>
+                <div class="header-actions">
+                    <a href="/dashboard.html" class="btn btn-secondary">返回用户面板</a>
+                    <button onclick="logout()" class="btn btn-danger">退出登录</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <!-- 系统统计 -->
+            <div class="stats-card">
+                <h2>📊 系统统计</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">总用户数</div>
+                        <div class="stat-value" id="totalUsers">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">管理员</div>
+                        <div class="stat-value" id="adminUsers">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">普通用户</div>
+                        <div class="stat-value" id="regularUsers">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">运行中实例</div>
+                        <div class="stat-value" id="runningInstances">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">已停止实例</div>
+                        <div class="stat-value" id="stoppedInstances">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">总CPU使用</div>
+                        <div class="stat-value" id="totalCpu">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">总内存使用</div>
+                        <div class="stat-value" id="totalMemory">0 MB</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户管理 -->
+            <div class="users-card">
+                <h2>👥 用户管理</h2>
+                <div id="adminMessage" class="message"></div>
+                <div class="table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>邮箱</th>
+                                <th>角色</th>
+                                <th>端口</th>
+                                <th>状态</th>
+                                <th>ST版本</th>
+                                <th>安装状态</th>
+                                <th>注册时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="9" style="text-align: center; padding: 30px;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 实例监控 -->
+            <div class="instances-card">
+                <h2>🖥️ 实例监控</h2>
+                <div class="table-container">
+                    <table class="instances-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>状态</th>
+                                <th>CPU</th>
+                                <th>内存</th>
+                                <th>运行时间</th>
+                                <th>重启次数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="instancesTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 30px;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>
