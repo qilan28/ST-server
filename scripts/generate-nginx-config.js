@@ -83,7 +83,7 @@ upstream st_${user.username} {
         
         # HTML 内容重写 - 修复静态资源路径
         sub_filter_once off;
-        sub_filter_types text/html text/css text/javascript application/javascript application/json;
+        sub_filter_types text/css text/javascript application/javascript application/json;
         
         # 注入 base 标签到 HTML 以确保所有相对路径正确
         sub_filter '<head>' '<head><base href="/${user.username}/st/">';
@@ -137,7 +137,7 @@ upstream st_${user.username} {
         
         # 重写常见的根路径引用
         sub_filter '="/"' '="/${user.username}/st/"';
-        sub_filter "='/"" "='/${user.username}/st/'";
+        sub_filter "='/" "='/${user.username}/st/";
         
         # 处理重定向
         proxy_redirect / /${user.username}/st/;
