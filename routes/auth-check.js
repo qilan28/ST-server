@@ -12,6 +12,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 router.get('/verify/:username', (req, res) => {
     const requestedUsername = req.params.username;
     
+    // 调试日志：显示所有 Cookie
+    console.log(`[Auth] 检查访问权限 /${requestedUsername}/st/`);
+    console.log(`[Auth] Cookies:`, req.cookies);
+    console.log(`[Auth] Headers Cookie:`, req.headers.cookie);
+    
     // 1. 从 cookie 或 header 中获取 token
     let token = req.cookies?.st_token;
     
@@ -25,7 +30,8 @@ router.get('/verify/:username', (req, res) => {
     
     // 2. 如果没有 token，拒绝访问
     if (!token) {
-        console.log(`[Auth] 拒绝访问 /${requestedUsername}/st/ - 未提供token`);
+        console.log(`[Auth] ❌ 拒绝访问 /${requestedUsername}/st/ - 未提供token`);
+        console.log(`[Auth] 可用的 cookies:`, Object.keys(req.cookies || {}));
         return res.status(401).send('Unauthorized');
     }
     
@@ -37,24 +43,24 @@ router.get('/verify/:username', (req, res) => {
         // 4. 检查用户是否存在
         const user = findUserByUsername(currentUsername);
         if (!user) {
-            console.log(`[Auth] 拒绝访问 /${requestedUsername}/st/ - 用户不存在: ${currentUsername}`);
+            console.log(`[Auth] ❌ 拒绝访问 /${requestedUsername}/st/ - 用户不存在: ${currentUsername}`);
             return res.status(401).send('Unauthorized');
         }
         
         // 5. 管理员可以访问所有实例
         if (user.role === 'admin') {
-            console.log(`[Auth] 允许访问 /${requestedUsername}/st/ - 管理员: ${currentUsername}`);
+            console.log(`[Auth] ✅ 允许访问 /${requestedUsername}/st/ - 管理员: ${currentUsername}`);
             return res.status(200).send('OK');
         }
         
         // 6. 普通用户只能访问自己的实例
         if (currentUsername !== requestedUsername) {
-            console.log(`[Auth] 拒绝访问 /${requestedUsername}/st/ - 用户 ${currentUsername} 无权访问`);
+            console.log(`[Auth] ❌ 拒绝访问 /${requestedUsername}/st/ - 用户 ${currentUsername} 尝试访问 ${requestedUsername} 的实例`);
             return res.status(403).send('Forbidden');
         }
         
         // 7. 权限验证通过
-        console.log(`[Auth] 允许访问 /${requestedUsername}/st/ - 用户: ${currentUsername}`);
+        console.log(`[Auth] ✅ 允许访问 /${requestedUsername}/st/ - 用户: ${currentUsername}`);
         res.status(200).send('OK');
         
     } catch (error) {
