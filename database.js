@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,7 @@ const createUsersTable = () => {
             st_dir TEXT,
             st_version TEXT,
             subdomain TEXT,
+            path_uuid TEXT,
             role TEXT DEFAULT 'user',
             status TEXT DEFAULT 'stopped',
             st_setup_status TEXT DEFAULT 'pending',
@@ -50,10 +52,37 @@ const migrateAddRoleField = () => {
     }
 };
 
+// 迁移：添加 path_uuid 字段（如果不存在）
+const migrateAddPathUuidField = () => {
+    try {
+        const checkColumn = db.prepare("PRAGMA table_info(users)");
+        const columns = checkColumn.all();
+        const hasPathUuid = columns.some(col => col.name === 'path_uuid');
+        
+        if (!hasPathUuid) {
+            console.log('Adding path_uuid column to users table...');
+            db.exec(`ALTER TABLE users ADD COLUMN path_uuid TEXT`);
+            console.log('Path UUID column added successfully');
+            
+            // 为现有用户生成 UUID
+            const users = db.prepare('SELECT id, username FROM users WHERE role != "admin"').all();
+            const updateStmt = db.prepare('UPDATE users SET path_uuid = ? WHERE id = ?');
+            users.forEach(user => {
+                const uuid = randomUUID().replace(/-/g, ''); // 32位UUID（移除连字符）
+                updateStmt.run(uuid, user.id);
+                console.log(`Generated UUID for user ${user.username}: ${uuid}`);
+            });
+        }
+    } catch (error) {
+        console.error('Path UUID migration error:', error);
+    }
+};
+
 // 初始化数据库
 export const initDatabase = () => {
     createUsersTable();
     migrateAddRoleField();
+    migrateAddPathUuidField();
     fixAdminUserPorts();
     console.log('Database initialized successfully');
 };
@@ -76,6 +105,7 @@ export const findAvailablePort = () => {
 export const createUser = (username, hashedPassword, email) => {
     const port = findAvailablePort();
     const dataDir = path.join(__dirname, 'data', username);
+    const pathUuid = randomUUID().replace(/-/g, ''); // 生成32位随机路径 UUID（移除连字符）
     
     // 创建用户数据目录
     if (!fs.existsSync(dataDir)) {
@@ -83,18 +113,19 @@ export const createUser = (username, hashedPassword, email) => {
     }
     
     const stmt = db.prepare(`
-        INSERT INTO users (username, password, email, port, data_dir)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO users (username, password, email, port, data_dir, path_uuid)
+        VALUES (?, ?, ?, ?, ?, ?)
     `);
     
-    const result = stmt.run(username, hashedPassword, email, port, dataDir);
+    const result = stmt.run(username, hashedPassword, email, port, dataDir, pathUuid);
     
     return {
         id: result.lastInsertRowid,
         username,
         email,
         port,
-        dataDir
+        dataDir,
+        pathUuid
     };
 };
 
@@ -148,7 +179,7 @@ export const getAllUsers = () => {
 export const getAllUsersAdmin = () => {
     const stmt = db.prepare(`
         SELECT id, username, email, port, data_dir, st_dir, st_version, 
-               role, status, st_setup_status, created_at 
+               path_uuid, role, status, st_setup_status, created_at 
         FROM users 
         ORDER BY created_at DESC
     `);
@@ -213,6 +244,22 @@ const fixAdminUserPorts = () => {
     } catch (error) {
         console.error('Error fixing admin user ports:', error);
     }
+};
+
+// 更新用户路径 UUID（用于实例重启时）
+export const regeneratePathUuid = (username) => {
+    const newUuid = randomUUID().replace(/-/g, ''); // 移除连字符，得到32位UUID
+    const stmt = db.prepare('UPDATE users SET path_uuid = ? WHERE username = ?');
+    stmt.run(newUuid, username);
+    console.log(`[Security] Regenerated path UUID for ${username}: ${newUuid}`);
+    return newUuid;
+};
+
+// 获取用户路径 UUID
+export const getUserPathUuid = (username) => {
+    const stmt = db.prepare('SELECT path_uuid FROM users WHERE username = ?');
+    const user = stmt.get(username);
+    return user ? user.path_uuid : null;
 };
 
 // 删除用户
