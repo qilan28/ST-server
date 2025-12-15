@@ -12,6 +12,7 @@
     "check-database": "node scripts/check-database.js",
     "check-config": "node scripts/check-config.js",
     "fix-online-status": "node scripts/fix-online-status.js",
+    "force-update-login": "node scripts/force-update-login.js",
     "generate-nginx": "node scripts/generate-nginx-config.js",
     "deploy-nginx": "sudo bash scripts/deploy-nginx.sh",
     "start-nginx": "sudo bash scripts/start-nginx-standalone.sh",

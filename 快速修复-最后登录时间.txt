@@ -1,0 +1,105 @@
+# 快速修复 - 最后登录时间显示"从未登录"
+
+## 🚀 立即执行（推荐）
+
+### 步骤 1：上传文件
+
+上传这 8 个文件到服务器：
+
+1. database.js
+2. routes/auth.js
+3. routes/admin.js
+4. public/admin.html
+5. public/js/admin.js
+6. scripts/force-update-login.js
+7. scripts/check-database.js
+8. package.json
+
+### 步骤 2：SSH 连接到服务器
+
+```bash
+ssh root@119.8.118.149
+cd /root/ST-server
+```
+
+### 步骤 3：强制更新登录时间
+
+```bash
+# 这会立即给所有用户设置登录时间
+npm run force-update-login
+```
+
+**应该看到：**
+```
+✅ 已更新 2 个用户的登录时间
+
+更新后的登录记录:
+┌─────────┬──────────────────────┐
+│ 用户名  │ 最后登录             │
+├─────────┼──────────────────────┤
+│ 123     │ 2025-12-16 00:20:00  │
+│ 111     │ 2025-12-16 00:20:00  │
+└─────────┴──────────────────────┘
+```
+
+### 步骤 4：刷新管理员面板
+
+在浏览器按 **F5** 刷新，应该能看到时间了！
+
+---
+
+## ✅ 如果还是不行
+
+### 方法 A：重启服务器 + 重新登录
+
+```bash
+# 重启
+pm2 restart st-manager
+
+# 查看日志
+pm2 logs st-manager --lines 30
+```
+
+**退出登录 → 重新登录**
+
+然后查看日志：
+```bash
+pm2 logs st-manager --lines 5
+```
+
+**应该看到：**
+```
+[Auth] ✅ 用户 123 登录成功，已记录登录时间
+[Database] ✅ 用户 123 最后登录时间: 2025-12-16 00:25:00
+```
+
+### 方法 B：手动添加数据库字段
+
+```bash
+sqlite3 /root/ST-server/database.sqlite
+```
+
+```sql
+-- 添加字段
+ALTER TABLE users ADD COLUMN last_login_at DATETIME;
+
+-- 更新所有用户
+UPDATE users SET last_login_at = CURRENT_TIMESTAMP;
+
+-- 退出
+.exit
+```
+
+刷新管理员面板。
+
+---
+
+## 📝 验证修复成功
+
+- [ ] 管理员面板"最后登录"显示具体时间
+- [ ] 不再显示"从未登录"
+- [ ] 重新登录后时间会更新
+
+---
+
+详细说明查看: 修复最后登录时间.md
