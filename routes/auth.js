@@ -136,7 +136,12 @@ router.post('/login', async (req, res) => {
         const token = generateToken(user.id, user.username);
         
         // 更新登录时间和在线状态
-        updateUserLogin(user.username);
+        try {
+            updateUserLogin(user.username);
+            console.log(`[Auth] ✅ 用户 ${user.username} 登录状态已更新（在线 + 登录时间）`);
+        } catch (error) {
+            console.error(`[Auth] ⚠️  更新登录状态失败:`, error);
+        }
         
         // 设置 cookie
         res.cookie('st_token', token, {

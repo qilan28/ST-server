@@ -59,18 +59,22 @@ const migrateAddLoginFields = () => {
         const hasIsOnline = columns.some(col => col.name === 'is_online');
         
         if (!hasLastLogin) {
-            console.log('Adding last_login_at column to users table...');
+            console.log('[Database] 添加 last_login_at 字段...');
             db.exec(`ALTER TABLE users ADD COLUMN last_login_at DATETIME`);
-            console.log('last_login_at column added successfully');
+            console.log('[Database] ✅ last_login_at 字段添加成功');
+        } else {
+            console.log('[Database] ℹ️  last_login_at 字段已存在');
         }
         
         if (!hasIsOnline) {
-            console.log('Adding is_online column to users table...');
+            console.log('[Database] 添加 is_online 字段...');
             db.exec(`ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 0`);
-            console.log('is_online column added successfully');
+            console.log('[Database] ✅ is_online 字段添加成功');
+        } else {
+            console.log('[Database] ℹ️  is_online 字段已存在');
         }
     } catch (error) {
-        console.error('Migration error:', error);
+        console.error('[Database] ❌ 迁移失败:', error);
     }
 };
 
@@ -259,8 +263,15 @@ export const updateUserOnlineStatus = (username, isOnline) => {
 
 // 设置所有用户为离线（服务器启动时调用）
 export const setAllUsersOffline = () => {
-    const stmt = db.prepare('UPDATE users SET is_online = 0');
-    return stmt.run();
+    try {
+        const stmt = db.prepare('UPDATE users SET is_online = 0');
+        const result = stmt.run();
+        console.log(`[Database] ℹ️  已将所有用户设置为离线状态 (${result.changes} 个用户)`);
+        return result;
+    } catch (error) {
+        console.error('[Database] ⚠️  设置用户离线状态失败:', error.message);
+        return null;
+    }
 };
 
 // 删除用户

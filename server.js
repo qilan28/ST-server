@@ -37,16 +37,29 @@ dirs.forEach(dir => {
 // 自动创建管理员账号（根据配置）
 async function autoCreateAdmin() {
     try {
+        console.log('[Admin] 开始检查自动创建管理员配置...');
         const adminConfig = getAdminConfig();
+        
+        console.log('[Admin] 读取到的配置:', {
+            username: adminConfig.username || '(空)',
+            email: adminConfig.email || '(空)',
+            autoCreate: adminConfig.autoCreate,
+            hasPassword: !!adminConfig.password
+        });
         
         // 检查是否启用自动创建
         if (!adminConfig.autoCreate) {
+            console.log('ℹ️  [Admin] autoCreate = false，跳过自动创建');
             return;
         }
         
         // 检查必要的配置项
         if (!adminConfig.username || !adminConfig.password || !adminConfig.email) {
             console.log('⚠️  [Admin] 管理员配置不完整，跳过自动创建');
+            console.log('   请确保在 config.json 中配置了完整的管理员信息：');
+            console.log('   - username: 管理员用户名');
+            console.log('   - password: 管理员密码');
+            console.log('   - email: 管理员邮箱');
             return;
         }
         
@@ -56,12 +69,18 @@ async function autoCreateAdmin() {
             console.log(`ℹ️  [Admin] 管理员账号 "${adminConfig.username}" 已存在，跳过创建`);
             
             // 清除配置文件中的密码（提高安全性）
-            clearAdminPassword();
+            if (adminConfig.password) {
+                clearAdminPassword();
+                console.log('🔒 [Admin] 已从配置文件中清除管理员密码');
+            }
             return;
         }
         
         // 创建管理员账号
         console.log('🔧 [Admin] 正在自动创建管理员账号...');
+        console.log(`   用户名: ${adminConfig.username}`);
+        console.log(`   邮箱: ${adminConfig.email}`);
+        
         const hashedPassword = await bcrypt.hash(adminConfig.password, 10);
         const admin = createAdminUser(
             adminConfig.username,
@@ -70,8 +89,9 @@ async function autoCreateAdmin() {
         );
         
         console.log('✅ [Admin] 管理员账号创建成功！');
+        console.log(`   ID: ${admin.id}`);
         console.log(`   用户名: ${admin.username}`);
-        console.log(`   邮箱: ${admin.email}`);
+        console.log(`   邮箱: ${admin.email || adminConfig.email}`);
         console.log(`   角色: ${admin.role}`);
         
         // 创建成功后，清除配置文件中的密码
@@ -80,11 +100,15 @@ async function autoCreateAdmin() {
         
     } catch (error) {
         console.error('❌ [Admin] 自动创建管理员失败:', error);
+        console.error('   错误详情:', error.message);
+        console.error('   请检查 config.json 文件是否正确');
     }
 }
 
 // 调用自动创建管理员
+console.log('='.repeat(60));
 autoCreateAdmin();
+console.log('='.repeat(60));
 
 // 中间件
 app.use(cors({ credentials: true }));
