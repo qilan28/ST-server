@@ -15,6 +15,7 @@
     "diagnose-nginx": "sudo bash scripts/diagnose-nginx.sh",
     "enable-access-control": "sudo bash scripts/enable-access-control.sh",
     "fix-nginx-400": "sudo bash scripts/fix-nginx-400.sh",
+    "fix-uuid": "node scripts/fix-uuid-database.js",
     "reset-pm2": "node scripts/reset-pm2.js"
   },
   "keywords": [
