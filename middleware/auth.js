@@ -14,8 +14,13 @@ export const generateToken = (userId, username) => {
 
 // 验证JWT token中间件
 export const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    // 优先从 Cookie 获取 token，其次从 Authorization header
+    let token = req.cookies?.st_token;
+    
+    if (!token) {
+        const authHeader = req.headers['authorization'];
+        token = authHeader && authHeader.split(' ')[1];
+    }
     
     if (!token) {
         return res.status(401).json({ error: 'Access token required' });

@@ -87,9 +87,10 @@ router.post('/register', async (req, res) => {
         // 设置 cookie
         res.cookie('st_token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: false, // 支持 HTTP 访问
             maxAge: 24 * 60 * 60 * 1000, // 24小时
-            sameSite: 'lax'
+            sameSite: 'lax',
+            path: '/' // 确保整个网站都能访问
         });
         
         res.status(201).json({
@@ -146,9 +147,10 @@ router.post('/login', async (req, res) => {
         // 设置 cookie
         res.cookie('st_token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: false, // 支持 HTTP 访问
             maxAge: 24 * 60 * 60 * 1000, // 24小时
-            sameSite: 'lax'
+            sameSite: 'lax',
+            path: '/' // 确保整个网站都能访问
         });
         
         res.json({
