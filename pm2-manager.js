@@ -2,7 +2,7 @@ import pm2 from 'pm2';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { updateUserStatus, regeneratePathUuid } from './database.js';
+import { updateUserStatus } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,10 +47,6 @@ const disconnectPM2 = () => {
 
 // 启动SillyTavern实例
 export const startInstance = async (username, port, stDir, dataDir) => {
-    // 启动时重新生成路径 UUID（安全增强）
-    const newUuid = regeneratePathUuid(username);
-    console.log(`[Start] New path UUID for ${username}: ${newUuid}`);
-    
     try {
         await connectPM2();
     } catch (error) {
@@ -81,7 +77,7 @@ export const startInstance = async (username, port, stDir, dataDir) => {
                 reject(err);
             } else {
                 updateUserStatus(username, 'running');
-                resolve({ apps, newUuid });
+                resolve(apps);
             }
         });
     });
@@ -111,10 +107,6 @@ export const stopInstance = async (username) => {
 
 // 重启实例
 export const restartInstance = async (username) => {
-    // 重启时重新生成路径 UUID（安全增强）
-    const newUuid = regeneratePathUuid(username);
-    console.log(`[Restart] New path UUID for ${username}: ${newUuid}`);
-    
     try {
         await connectPM2();
     } catch (error) {
@@ -129,7 +121,7 @@ export const restartInstance = async (username) => {
                 reject(err);
             } else {
                 updateUserStatus(username, 'running');
-                resolve({ proc, newUuid });
+                resolve(proc);
             }
         });
     });

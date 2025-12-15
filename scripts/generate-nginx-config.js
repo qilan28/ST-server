@@ -15,6 +15,7 @@ function generateNginxConfig() {
     const MAIN_DOMAIN = nginxConfig.domain || 'localhost';
     const NGINX_PORT = nginxConfig.port || 80;
     const MANAGER_PORT = process.env.PORT || 3000;
+    const ENABLE_ACCESS_CONTROL = nginxConfig.enableAccessControl !== false; // 默认启用
     
     // 读取所有用户（排除管理员和没有端口的用户）
     const allUsers = getAllUsers();
@@ -39,6 +40,21 @@ upstream st_${user.username} {
 `;
     });
     
+    // 生成认证检查的内部 location 块
+    let authCheckLocations = '';
+    users.forEach(user => {
+        authCheckLocations += `location = /auth-check-internal/${user.username} {
+            internal;
+            proxy_pass http://st_manager/api/auth-check/verify/${user.username};
+            proxy_pass_request_body off;
+            proxy_set_header Content-Length "";
+            proxy_set_header X-Original-URI $request_uri;
+            proxy_set_header Cookie $http_cookie;
+        }
+        
+`;
+    });
+    
     // 生成 Cookie 救援模式 location 块
     let rescueMode = `location ~ ^/(api|locales|lib|css|scripts|img|assets|public|data|uploads|fonts|icons|csrf-token|version|node_modules|script\\.js|thumbnail) {
             
@@ -46,10 +62,9 @@ upstream st_${user.username} {
     
     // 为每个用户添加 Cookie 检查
     users.forEach(user => {
-        const pathSegment = user.path_uuid || 'st';
         rescueMode += `            # ${user.username} 用户的 Cookie 检查
             if ($cookie_st_context = "${user.username}") {
-                rewrite ^(.*)$ /${user.username}/${pathSegment}$1 last;
+                rewrite ^(.*)$ /${user.username}/st$1 last;
             }
             
 `;
@@ -59,8 +74,7 @@ upstream st_${user.username} {
     rescueMode += `            # 备用：Referer 救援 (双重保险)
 `;
     users.forEach(user => {
-        const pathSegment = user.path_uuid || 'st';
-        rescueMode += `            if ($http_referer ~* "/${user.username}/${pathSegment}/") { rewrite ^(.*)$ /${user.username}/${pathSegment}$1 last; }
+        rescueMode += `            if ($http_referer ~* "/${user.username}/st/") { rewrite ^(.*)$ /${user.username}/st$1 last; }
 `;
     });
     
@@ -72,17 +86,20 @@ upstream st_${user.username} {
     // 生成 location 块
     let locationBlocks = '';
     users.forEach(user => {
-        const pathSegment = user.path_uuid || 'st'; // 使用 UUID 或回退到 'st'
         locationBlocks += `
-    # ${user.username} 的 SillyTavern 实例 (路径: /${user.username}/${pathSegment}/)
-    location /${user.username}/${pathSegment} {
+    # ${user.username} 的 SillyTavern 实例
+    location /${user.username}/st {
         # 添加尾部斜杠重定向
-        return 301 /${user.username}/${pathSegment}/;
+        return 301 /${user.username}/st/;
     }
     
-    location /${user.username}/${pathSegment}/ {
-        # 路径重写：去除 /${user.username}/${pathSegment}/ 前缀
-        rewrite ^/${user.username}/${pathSegment}/(.*)$ /$1 break;
+    location /${user.username}/st/ {${ENABLE_ACCESS_CONTROL ? `
+        # 🔒 访问控制：只有 ${user.username} 用户才能访问
+        auth_request /auth-check-internal/${user.username};
+        error_page 401 403 = @access_denied;
+        ` : ''}
+        # 路径重写：去除 /${user.username}/st/ 前缀
+        rewrite ^/${user.username}/st/(.*)$ /$1 break;
         
         proxy_pass http://st_${user.username};
         proxy_http_version 1.1;
@@ -120,69 +137,69 @@ upstream st_${user.username} {
         sub_filter_types text/css text/javascript application/javascript application/json;
         
         # 注入 base 标签到 HTML 以确保所有相对路径正确
-        sub_filter '<head>' '<head><base href="/${user.username}/${pathSegment}/">';
+        sub_filter '<head>' '<head><base href="/${user.username}/st/">';
         
         # 重写 HTML 属性中的绝对路径
-        sub_filter 'src="/' 'src="/${user.username}/${pathSegment}/';
-        sub_filter 'href="/' 'href="/${user.username}/${pathSegment}/';
-        sub_filter "src='/" "src='/${user.username}/${pathSegment}/";
-        sub_filter "href='/" "href='/${user.username}/${pathSegment}/";
-        sub_filter 'action="/' 'action="/${user.username}/${pathSegment}/';
-        sub_filter 'data-src="/' 'data-src="/${user.username}/${pathSegment}/';
+        sub_filter 'src="/' 'src="/${user.username}/st/';
+        sub_filter 'href="/' 'href="/${user.username}/st/';
+        sub_filter "src='/" "src='/${user.username}/st/";
+        sub_filter "href='/" "href='/${user.username}/st/";
+        sub_filter 'action="/' 'action="/${user.username}/st/';
+        sub_filter 'data-src="/' 'data-src="/${user.username}/st/';
         
         # 重写 CSS 中的路径
-        sub_filter 'url(/' 'url(/${user.username}/${pathSegment}/';
-        sub_filter 'url("/' 'url("/${user.username}/${pathSegment}/';
-        sub_filter "url('/" "url('/${user.username}/${pathSegment}/";
-        sub_filter '@import "/' '@import "/${user.username}/${pathSegment}/';
-        sub_filter "@import '/" "@import '/${user.username}/${pathSegment}/";
+        sub_filter 'url(/' 'url(/${user.username}/st/';
+        sub_filter 'url("/' 'url("/${user.username}/st/';
+        sub_filter "url('/" "url('/${user.username}/st/";
+        sub_filter '@import "/' '@import "/${user.username}/st/';
+        sub_filter "@import '/" "@import '/${user.username}/st/";
         
         # 重写 JavaScript 中的常见路径模式
-        sub_filter '"/api/' '"/${user.username}/${pathSegment}/api/';
-        sub_filter "'/api/" "'/${user.username}/${pathSegment}/api/";
-        sub_filter '"/scripts/' '"/${user.username}/${pathSegment}/scripts/';
-        sub_filter "'/scripts/" "'/${user.username}/${pathSegment}/scripts/";
-        sub_filter '"/css/' '"/${user.username}/${pathSegment}/css/';
-        sub_filter "'/css/" "'/${user.username}/${pathSegment}/css/";
-        sub_filter '"/lib/' '"/${user.username}/${pathSegment}/lib/';
-        sub_filter "'/lib/" "'/${user.username}/${pathSegment}/lib/";
-        sub_filter '"/public/' '"/${user.username}/${pathSegment}/public/';
-        sub_filter "'/public/" "'/${user.username}/${pathSegment}/public/";
-        sub_filter '"/img/' '"/${user.username}/${pathSegment}/img/';
-        sub_filter "'/img/" "'/${user.username}/${pathSegment}/img/";
-        sub_filter '"/thumbnail/' '"/${user.username}/${pathSegment}/thumbnail/';
-        sub_filter "'/thumbnail/" "'/${user.username}/${pathSegment}/thumbnail/";
-        sub_filter '"/assets/' '"/${user.username}/${pathSegment}/assets/';
-        sub_filter "'/assets/" "'/${user.username}/${pathSegment}/assets/";
-        sub_filter '"/data/' '"/${user.username}/${pathSegment}/data/';
-        sub_filter "'/data/" "'/${user.username}/${pathSegment}/data/";
-        sub_filter '"/user/' '"/${user.username}/${pathSegment}/user/';
-        sub_filter "'/user/" "'/${user.username}/${pathSegment}/user/";
-        sub_filter '"/uploads/' '"/${user.username}/${pathSegment}/uploads/';
-        sub_filter "'/uploads/" "'/${user.username}/${pathSegment}/uploads/";
+        sub_filter '"/api/' '"/${user.username}/st/api/';
+        sub_filter "'/api/" "'/${user.username}/st/api/";
+        sub_filter '"/scripts/' '"/${user.username}/st/scripts/';
+        sub_filter "'/scripts/" "'/${user.username}/st/scripts/";
+        sub_filter '"/css/' '"/${user.username}/st/css/';
+        sub_filter "'/css/" "'/${user.username}/st/css/";
+        sub_filter '"/lib/' '"/${user.username}/st/lib/';
+        sub_filter "'/lib/" "'/${user.username}/st/lib/";
+        sub_filter '"/public/' '"/${user.username}/st/public/';
+        sub_filter "'/public/" "'/${user.username}/st/public/";
+        sub_filter '"/img/' '"/${user.username}/st/img/';
+        sub_filter "'/img/" "'/${user.username}/st/img/";
+        sub_filter '"/thumbnail/' '"/${user.username}/st/thumbnail/';
+        sub_filter "'/thumbnail/" "'/${user.username}/st/thumbnail/";
+        sub_filter '"/assets/' '"/${user.username}/st/assets/';
+        sub_filter "'/assets/" "'/${user.username}/st/assets/";
+        sub_filter '"/data/' '"/${user.username}/st/data/';
+        sub_filter "'/data/" "'/${user.username}/st/data/";
+        sub_filter '"/user/' '"/${user.username}/st/user/';
+        sub_filter "'/user/" "'/${user.username}/st/user/";
+        sub_filter '"/uploads/' '"/${user.username}/st/uploads/';
+        sub_filter "'/uploads/" "'/${user.username}/st/uploads/";
         
         # 重写 fetch/XMLHttpRequest 等 API 调用
-        sub_filter 'fetch("/' 'fetch("/${user.username}/${pathSegment}/';
-        sub_filter "fetch('/" "fetch('/${user.username}/${pathSegment}/";
-        sub_filter '.open("GET", "/' '.open("GET", "/${user.username}/${pathSegment}/';
-        sub_filter ".open('GET', '/" ".open('GET', '/${user.username}/${pathSegment}/";
-        sub_filter '.open("POST", "/' '.open("POST", "/${user.username}/${pathSegment}/';
-        sub_filter ".open('POST', '/" ".open('POST', '/${user.username}/${pathSegment}/";
+        sub_filter 'fetch("/' 'fetch("/${user.username}/st/';
+        sub_filter "fetch('/" "fetch('/${user.username}/st/";
+        sub_filter '.open("GET", "/' '.open("GET", "/${user.username}/st/';
+        sub_filter ".open('GET', '/" ".open('GET', '/${user.username}/st/";
+        sub_filter '.open("POST", "/' '.open("POST", "/${user.username}/st/';
+        sub_filter ".open('POST', '/" ".open('POST', '/${user.username}/st/";
         
         # 重写常见的根路径引用
-        sub_filter '="/"' '="/${user.username}/${pathSegment}/"';
-        sub_filter "='/" "='/${user.username}/${pathSegment}/";
+        sub_filter '="/"' '="/${user.username}/st/"';
+        sub_filter "='/" "='/${user.username}/st/";
         
         # 处理重定向
-        proxy_redirect / /${user.username}/${pathSegment}/;
+        proxy_redirect / /${user.username}/st/;
         
         # 缓存控制
         proxy_cache_bypass $http_upgrade;
     }
     
     # ${user.username} - 静态资源专门处理（优化性能）
-    location ~ ^/${user.username}/${pathSegment}/(scripts|css|lib|img|assets|public|data|uploads|locales)/ {
-        rewrite ^/${user.username}/${pathSegment}/(.*)$ /$1 break;
+    location ~ ^/${user.username}/st/(scripts|css|lib|img|assets|public|data|uploads|locales)/ {
+        rewrite ^/${user.username}/st/(.*)$ /$1 break;
         proxy_pass http://st_${user.username};
         proxy_http_version 1.1;
         
@@ -211,6 +228,7 @@ upstream st_${user.username} {
     
     // 替换占位符
     template = template.replace('# {{UPSTREAM_SERVERS}}', upstreamServers.trim());
+    template = template.replace('# {{AUTH_CHECK_LOCATIONS}}', authCheckLocations.trim());
     template = template.replace('# {{RESCUE_MODE}}', rescueMode.trim());
     template = template.replace('# {{LOCATION_BLOCKS}}', locationBlocks.trim());
     template = template.replace(/server_name localhost;/g, `server_name ${MAIN_DOMAIN};`);

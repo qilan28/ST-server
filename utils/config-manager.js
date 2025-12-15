@@ -12,7 +12,8 @@ const DEFAULT_CONFIG = {
     nginx: {
         enabled: false,
         domain: 'localhost',
-        port: 80
+        port: 80,
+        enableAccessControl: true  // 默认启用访问控制
     },
     system: {
         port: 3000,

@@ -1,5 +1,4 @@
 import { getNginxConfig } from './config-manager.js';
-import { getUserPathUuid } from '../database.js';
 
 /**
  * 生成用户的 SillyTavern 访问地址
@@ -11,12 +10,9 @@ export function generateAccessUrl(username, port) {
     const nginxConfig = getNginxConfig();
     
     if (nginxConfig.enabled) {
-        // Nginx 路径转发模式：http://域名:端口/用户名/UUID/
-        // 使用动态 UUID 路径以增强安全性
-        const pathUuid = getUserPathUuid(username);
-        const pathSegment = pathUuid || 'st'; // 如果没有 UUID，回退到默认的 'st'
+        // Nginx 路径转发模式：http://域名:端口/用户名/st/
         const portPart = nginxConfig.port === 80 ? '' : `:${nginxConfig.port}`;
-        return `http://${nginxConfig.domain}${portPart}/${username}/${pathSegment}/`;
+        return `http://${nginxConfig.domain}${portPart}/${username}/st/`;
     } else {
         // 直接端口模式：http://localhost:端口
         return `http://localhost:${port}`;

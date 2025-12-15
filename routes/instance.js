@@ -9,8 +9,6 @@ import {
     getInstanceLogs
 } from '../pm2-manager.js';
 import { generateAccessUrl } from '../utils/url-helper.js';
-import { generateNginxConfig } from '../scripts/generate-nginx-config.js';
-import { reloadNginx } from '../utils/nginx-reload.js';
 
 const router = express.Router();
 
@@ -72,30 +70,11 @@ router.post('/start', async (req, res) => {
         // 数据目录
         const dataDir = user.data_dir.replace(/sillytavern$/, 'st-data');
         
-        const result = await startInstance(user.username, user.port, user.st_dir, dataDir);
-        
-        // 启动后重新生成 Nginx 配置（因为 UUID 已更新）
-        console.log(`[Start] Regenerating Nginx config for ${user.username} (new UUID: ${result.newUuid})`);
-        try {
-            generateNginxConfig();
-            const reloadResult = await reloadNginx();
-            if (reloadResult.success) {
-                console.log(`[Start] ✅ Nginx config reloaded (method: ${reloadResult.method})`);
-            } else {
-                console.error(`[Start] ⚠️ Nginx reload failed:`, reloadResult.error);
-            }
-        } catch (error) {
-            console.error(`[Start] Failed to regenerate Nginx config:`, error);
-        }
-        
-        // 生成新的访问 URL（包含新的 UUID）
-        const accessUrl = generateAccessUrl(user.username, user.port);
+        await startInstance(user.username, user.port, user.st_dir, dataDir);
         
         res.json({
             message: 'Instance started successfully',
-            accessUrl,
-            newPathUuid: result.newUuid,
-            info: 'Access URL has been updated with a new security path. Please use the new URL.'
+            accessUrl: `http://localhost:${user.port}`
         });
     } catch (error) {
         console.error('Start instance error:', error);
@@ -132,30 +111,11 @@ router.post('/restart', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        const result = await restartInstance(user.username);
-        
-        // 重启后重新生成 Nginx 配置（因为 UUID 已更新）
-        console.log(`[Restart] Regenerating Nginx config for ${user.username} (new UUID: ${result.newUuid})`);
-        try {
-            generateNginxConfig();
-            const reloadResult = await reloadNginx();
-            if (reloadResult.success) {
-                console.log(`[Restart] ✅ Nginx config reloaded (method: ${reloadResult.method})`);
-            } else {
-                console.error(`[Restart] ⚠️ Nginx reload failed:`, reloadResult.error);
-            }
-        } catch (error) {
-            console.error(`[Restart] Failed to regenerate Nginx config:`, error);
-        }
-        
-        // 生成新的访问 URL（包含新的 UUID）
-        const accessUrl = generateAccessUrl(user.username, user.port);
+        await restartInstance(user.username);
         
         res.json({
             message: 'Instance restarted successfully',
-            accessUrl,
-            newPathUuid: result.newUuid,
-            info: 'Access URL has been updated with a new security path. Please use the new URL.'
+            accessUrl: `http://localhost:${user.port}`
         });
     } catch (error) {
         console.error('Restart instance error:', error);

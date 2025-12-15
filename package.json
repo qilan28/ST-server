@@ -13,9 +13,8 @@
     "deploy-nginx": "sudo bash scripts/deploy-nginx.sh",
     "start-nginx": "sudo bash scripts/start-nginx-standalone.sh",
     "diagnose-nginx": "sudo bash scripts/diagnose-nginx.sh",
-    "enable-access-control": "sudo bash scripts/enable-access-control.sh",
+    "enable-access-control": "sudo bash scripts/enable-access-control-v2.sh",
     "fix-nginx-400": "sudo bash scripts/fix-nginx-400.sh",
-    "fix-uuid": "node scripts/fix-uuid-database.js",
     "reset-pm2": "node scripts/reset-pm2.js"
   },
   "keywords": [
