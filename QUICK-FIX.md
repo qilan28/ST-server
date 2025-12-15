@@ -1,18 +1,32 @@
 # 🚀 快速修复指南
 
-## 问题 1：在线状态不显示
+## 问题 1：在线状态不显示 ⭐
+
+**症状**: 用户已登录，实例在运行，但显示"⚫ 离线"和"从未登录"
 
 ```bash
 cd /root/ST-server
 
-# 重启服务器（执行数据库迁移）
+# 1. 运行修复脚本（必须！）
+npm run fix-online-status
+
+# 2. 重启服务器（执行数据库迁移）
 pm2 restart st-manager
 
-# 查看日志确认迁移成功
-pm2 logs st-manager --lines 50 | grep Database
+# 3. 查看日志确认迁移成功
+pm2 logs st-manager --lines 50
 
-# 重新登录测试
+# 4. 用户重新登录
+
+# 5. 查看登录日志
+pm2 logs st-manager --lines 10
+
+# 应该看到：
+# [Auth] ✅ 用户 xxx 登录状态已更新
+# [Database] ✅ 更新用户 xxx 登录状态: 1 行受影响
 ```
+
+**详细说明**: 查看 `FIX-NOW.md`
 
 ---
 

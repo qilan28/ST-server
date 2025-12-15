@@ -1,0 +1,57 @@
+# 在线状态不显示 - 立即修复
+
+## 上传以下文件到服务器：
+
+1. database.js
+2. routes/auth.js
+3. server.js
+4. scripts/fix-online-status.js
+5. scripts/check-database.js
+6. scripts/check-config.js
+7. package.json
+
+## 然后在服务器执行：
+
+```bash
+cd /root/ST-server
+
+# 1. 修复数据库
+npm run fix-online-status
+
+# 2. 重启服务器
+pm2 restart st-manager
+
+# 3. 查看日志（确认修复成功）
+pm2 logs st-manager --lines 50
+
+# 4. 让用户重新登录（或自己登录测试）
+
+# 5. 再次查看日志（确认登录更新）
+pm2 logs st-manager --lines 20
+```
+
+## 应该看到的日志：
+
+启动时：
+```
+[Database] ℹ️  last_login_at 字段已存在
+[Database] ℹ️  is_online 字段已存在
+[Database] ℹ️  已将所有用户设置为离线状态
+```
+
+登录时：
+```
+[Auth] ✅ 用户 123 登录状态已更新（在线 + 登录时间）
+[Database] ✅ 更新用户 123 登录状态: 1 行受影响
+[Database] 验证: is_online=1, last_login_at=...
+```
+
+## 完成！
+
+刷新管理员面板，应该看到：
+- 🟢 在线
+- 具体的登录时间
+
+---
+
+详细说明查看: FIX-NOW.md

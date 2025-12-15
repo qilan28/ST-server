@@ -247,12 +247,25 @@ const fixAdminUserPorts = () => {
 
 // 更新用户登录状态
 export const updateUserLogin = (username) => {
-    const stmt = db.prepare(`
-        UPDATE users 
-        SET last_login_at = CURRENT_TIMESTAMP, is_online = 1 
-        WHERE username = ?
-    `);
-    return stmt.run(username);
+    try {
+        const stmt = db.prepare(`
+            UPDATE users 
+            SET last_login_at = CURRENT_TIMESTAMP, is_online = 1 
+            WHERE username = ?
+        `);
+        const result = stmt.run(username);
+        console.log(`[Database] ✅ 更新用户 ${username} 登录状态: ${result.changes} 行受影响`);
+        
+        // 验证更新结果
+        const checkStmt = db.prepare('SELECT is_online, last_login_at FROM users WHERE username = ?');
+        const user = checkStmt.get(username);
+        console.log(`[Database] 验证: is_online=${user.is_online}, last_login_at=${user.last_login_at}`);
+        
+        return result;
+    } catch (error) {
+        console.error(`[Database] ❌ 更新登录状态失败:`, error);
+        throw error;
+    }
 };
 
 // 更新用户在线状态
