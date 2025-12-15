@@ -39,6 +39,34 @@ upstream st_${user.username} {
 `;
     });
     
+    // 生成 Cookie 救援模式 location 块
+    let rescueMode = `location ~ ^/(api|locales|lib|css|scripts|img|assets|public|data|uploads|fonts|icons|csrf-token|version|node_modules|script\\.js|thumbnail) {
+            
+`;
+    
+    // 为每个用户添加 Cookie 检查
+    users.forEach(user => {
+        rescueMode += `            # ${user.username} 用户的 Cookie 检查
+            if ($cookie_st_context = "${user.username}") {
+                rewrite ^(.*)$ /${user.username}/st$1 last;
+            }
+            
+`;
+    });
+    
+    // 添加 Referer 备用检查
+    rescueMode += `            # 备用：Referer 救援 (双重保险)
+`;
+    users.forEach(user => {
+        rescueMode += `            if ($http_referer ~* "/${user.username}/st/") { rewrite ^(.*)$ /${user.username}/st$1 last; }
+`;
+    });
+    
+    rescueMode += `
+            # 默认转发给管理端
+            proxy_pass http://st_manager;
+        }`;
+    
     // 生成 location 块
     let locationBlocks = '';
     users.forEach(user => {
@@ -55,6 +83,9 @@ upstream st_${user.username} {
         
         proxy_pass http://st_${user.username};
         proxy_http_version 1.1;
+        
+        # 设置 Cookie 标记用户上下文，用于救援模式
+        add_header Set-Cookie "st_context=${user.username}; Path=/; Max-Age=86400; SameSite=Lax";
         
         # WebSocket 支持
         proxy_set_header Upgrade $http_upgrade;
@@ -147,10 +178,13 @@ upstream st_${user.username} {
     }
     
     # ${user.username} - 静态资源专门处理（优化性能）
-    location ~ ^/${user.username}/st/(scripts|css|lib|img|assets|public|data|uploads)/ {
+    location ~ ^/${user.username}/st/(scripts|css|lib|img|assets|public|data|uploads|locales)/ {
         rewrite ^/${user.username}/st/(.*)$ /$1 break;
         proxy_pass http://st_${user.username};
         proxy_http_version 1.1;
+        
+        # 设置 Cookie 标记用户上下文
+        add_header Set-Cookie "st_context=${user.username}; Path=/; Max-Age=86400; SameSite=Lax";
         
         # 静态资源不需要 sub_filter，直接代理
         proxy_set_header Host $host;
@@ -174,6 +208,7 @@ upstream st_${user.username} {
     
     // 替换占位符
     template = template.replace('# {{UPSTREAM_SERVERS}}', upstreamServers.trim());
+    template = template.replace('# {{RESCUE_MODE}}', rescueMode.trim());
     template = template.replace('# {{LOCATION_BLOCKS}}', locationBlocks.trim());
     template = template.replace(/server_name localhost;/g, `server_name ${MAIN_DOMAIN};`);
     template = template.replace(/listen 80;/g, `listen ${NGINX_PORT};`);
