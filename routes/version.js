@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
 import { findUserByUsername, updateUserSTInfo, updateSTSetupStatus } from '../database.js';
@@ -94,9 +95,43 @@ router.post('/setup', authenticateToken, async (req, res) => {
         // 这里简化处理，直接在后台安装
         
         // 异步安装（不阻塞响应）
-        setupSillyTavern(stDir, version, (progress) => {
-            console.log(`[${user.username}] ${progress}`);
-        }).then(() => {
+        (async () => {
+            // 如果目录已存在，先删除（版本切换场景）
+            if (fs.existsSync(stDir)) {
+                console.log(`[${user.username}] 检测到旧版本，准备切换版本...`);
+                
+                // 先停止实例（如果正在运行）
+                try {
+                    const status = await getInstanceStatus(user.username);
+                    if (status && status.status === 'online') {
+                        console.log(`[${user.username}] 停止运行中的实例...`);
+                        await stopInstance(user.username);
+                        console.log(`[${user.username}] 实例已停止`);
+                        // 等待 2 秒确保进程完全停止
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                } catch (stopError) {
+                    console.warn(`[${user.username}] 停止实例时出现警告:`, stopError.message);
+                    // 继续执行，即使停止失败
+                }
+                
+                // 删除旧版本目录
+                console.log(`[${user.username}] 删除旧版本目录...`);
+                try {
+                    fs.rmSync(stDir, { recursive: true, force: true });
+                    console.log(`[${user.username}] 旧版本已删除`);
+                } catch (deleteError) {
+                    console.error(`[${user.username}] 删除旧版本失败:`, deleteError);
+                    updateSTSetupStatus(user.username, 'failed');
+                    return;
+                }
+            }
+            
+            // 安装新版本
+            await setupSillyTavern(stDir, version, (progress) => {
+                console.log(`[${user.username}] ${progress}`);
+            });
+        })().then(() => {
             // 更新数据库
             updateUserSTInfo(user.username, stDir, version, 'completed');
             console.log(`[${user.username}] SillyTavern ${version} setup completed`);
