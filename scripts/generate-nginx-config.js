@@ -86,6 +86,13 @@ upstream st_${user.username} {
     // 生成 location 块
     let locationBlocks = '';
     users.forEach(user => {
+        // 访问控制指令（如果启用）
+        const accessControl = ENABLE_ACCESS_CONTROL ? `
+        # 🔒 访问控制：只有 ${user.username} 用户才能访问
+        auth_request /auth-check-internal/${user.username};
+        error_page 401 403 = @access_denied;
+        ` : '';
+        
         locationBlocks += `
     # ${user.username} 的 SillyTavern 实例
     location /${user.username}/st {
@@ -93,11 +100,7 @@ upstream st_${user.username} {
         return 301 /${user.username}/st/;
     }
     
-    location /${user.username}/st/ {${ENABLE_ACCESS_CONTROL ? `
-        # 🔒 访问控制：只有 ${user.username} 用户才能访问
-        auth_request /auth-check-internal/${user.username};
-        error_page 401 403 = @access_denied;
-        ` : ''}
+    location /${user.username}/st/ {${accessControl}
         # 路径重写：去除 /${user.username}/st/ 前缀
         rewrite ^/${user.username}/st/(.*)$ /$1 break;
         
