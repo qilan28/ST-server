@@ -41,16 +41,16 @@ router.get('/verify/:username', (req, res) => {
             return res.status(401).send('Unauthorized');
         }
         
-        // 5. 检查权限：只能访问自己的实例
-        if (currentUsername !== requestedUsername) {
-            console.log(`[Auth] 拒绝访问 /${requestedUsername}/st/ - 用户 ${currentUsername} 无权访问`);
-            return res.status(403).send('Forbidden');
-        }
-        
-        // 6. 管理员可以访问所有实例（可选）
+        // 5. 管理员可以访问所有实例
         if (user.role === 'admin') {
             console.log(`[Auth] 允许访问 /${requestedUsername}/st/ - 管理员: ${currentUsername}`);
             return res.status(200).send('OK');
+        }
+        
+        // 6. 普通用户只能访问自己的实例
+        if (currentUsername !== requestedUsername) {
+            console.log(`[Auth] 拒绝访问 /${requestedUsername}/st/ - 用户 ${currentUsername} 无权访问`);
+            return res.status(403).send('Forbidden');
         }
         
         // 7. 权限验证通过
