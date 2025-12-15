@@ -84,6 +84,14 @@ router.post('/register', async (req, res) => {
         // 生成token
         const token = generateToken(user.id, user.username);
         
+        // 更新最后登录时间（注册即登录）
+        try {
+            updateUserLogin(user.username);
+            console.log(`[Register] ✅ 用户 ${user.username} 注册成功，已记录登录时间`);
+        } catch (error) {
+            console.error(`[Register] ⚠️  更新登录时间失败:`, error);
+        }
+        
         // 设置 cookie
         res.cookie('st_token', token, {
             httpOnly: true,

@@ -168,7 +168,7 @@ export const getAllUsers = () => {
 export const getAllUsersAdmin = () => {
     const stmt = db.prepare(`
         SELECT id, username, email, port, data_dir, st_dir, st_version, 
-               role, status, st_setup_status, created_at 
+               role, status, st_setup_status, created_at, last_login_at 
         FROM users 
         ORDER BY created_at DESC
     `);
