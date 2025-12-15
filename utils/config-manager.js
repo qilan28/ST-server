@@ -19,6 +19,12 @@ const DEFAULT_CONFIG = {
         port: 3000,
         allowRegistration: true,
         maxUsers: 100
+    },
+    admin: {
+        username: '',
+        password: '',
+        email: '',
+        autoCreate: false  // 默认不自动创建管理员
     }
 };
 
@@ -86,4 +92,24 @@ export function updateSystemConfig(systemConfig) {
     const config = getConfig();
     config.system = { ...config.system, ...systemConfig };
     return saveConfig(config);
+}
+
+/**
+ * 获取管理员配置
+ */
+export function getAdminConfig() {
+    const config = getConfig();
+    return config.admin || DEFAULT_CONFIG.admin;
+}
+
+/**
+ * 清除管理员密码（创建管理员后调用，提高安全性）
+ */
+export function clearAdminPassword() {
+    const config = getConfig();
+    if (config.admin) {
+        config.admin.password = '';
+        return saveConfig(config);
+    }
+    return false;
 }

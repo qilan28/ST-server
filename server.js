@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import bcrypt from 'bcrypt';
 import authRoutes from './routes/auth.js';
 import authCheckRoutes from './routes/auth-check.js';
 import instanceRoutes from './routes/instance.js';
@@ -12,6 +13,8 @@ import versionRoutes from './routes/version.js';
 import adminRoutes from './routes/admin.js';
 import configRoutes from './routes/config.js';
 import './database.js';
+import { findUserByUsername, createAdminUser } from './database.js';
+import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
 
 // 加载环境变量
 dotenv.config();
@@ -30,6 +33,58 @@ dirs.forEach(dir => {
         fs.mkdirSync(dirPath, { recursive: true });
     }
 });
+
+// 自动创建管理员账号（根据配置）
+async function autoCreateAdmin() {
+    try {
+        const adminConfig = getAdminConfig();
+        
+        // 检查是否启用自动创建
+        if (!adminConfig.autoCreate) {
+            return;
+        }
+        
+        // 检查必要的配置项
+        if (!adminConfig.username || !adminConfig.password || !adminConfig.email) {
+            console.log('⚠️  [Admin] 管理员配置不完整，跳过自动创建');
+            return;
+        }
+        
+        // 检查管理员是否已存在
+        const existingAdmin = findUserByUsername(adminConfig.username);
+        if (existingAdmin) {
+            console.log(`ℹ️  [Admin] 管理员账号 "${adminConfig.username}" 已存在，跳过创建`);
+            
+            // 清除配置文件中的密码（提高安全性）
+            clearAdminPassword();
+            return;
+        }
+        
+        // 创建管理员账号
+        console.log('🔧 [Admin] 正在自动创建管理员账号...');
+        const hashedPassword = await bcrypt.hash(adminConfig.password, 10);
+        const admin = createAdminUser(
+            adminConfig.username,
+            hashedPassword,
+            adminConfig.email
+        );
+        
+        console.log('✅ [Admin] 管理员账号创建成功！');
+        console.log(`   用户名: ${admin.username}`);
+        console.log(`   邮箱: ${admin.email}`);
+        console.log(`   角色: ${admin.role}`);
+        
+        // 创建成功后，清除配置文件中的密码
+        clearAdminPassword();
+        console.log('🔒 [Admin] 已从配置文件中清除管理员密码');
+        
+    } catch (error) {
+        console.error('❌ [Admin] 自动创建管理员失败:', error);
+    }
+}
+
+// 调用自动创建管理员
+autoCreateAdmin();
 
 // 中间件
 app.use(cors({ credentials: true }));

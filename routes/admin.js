@@ -37,6 +37,8 @@ router.get('/users', async (req, res) => {
             port: user.port,
             role: user.role,
             status: user.status,
+            isOnline: user.is_online === 1,
+            lastLoginAt: user.last_login_at,
             stVersion: user.st_version,
             stSetupStatus: user.st_setup_status,
             createdAt: user.created_at,
@@ -69,6 +71,7 @@ router.get('/stats', async (req, res) => {
         
         const totalUsers = users.length;
         const adminUsers = users.filter(u => u.role === 'admin').length;
+        const onlineUsers = users.filter(u => u.is_online === 1).length;
         const runningInstances = instances.filter(i => i.status === 'online').length;
         const stoppedInstances = instances.filter(i => i.status === 'stopped').length;
         
@@ -87,6 +90,7 @@ router.get('/stats', async (req, res) => {
                 totalUsers,
                 adminUsers,
                 regularUsers: totalUsers - adminUsers,
+                onlineUsers,
                 runningInstances,
                 stoppedInstances,
                 totalInstances: instances.length,

@@ -50,11 +50,37 @@ const migrateAddRoleField = () => {
     }
 };
 
+// 迁移：添加登录状态字段
+const migrateAddLoginFields = () => {
+    try {
+        const checkColumn = db.prepare("PRAGMA table_info(users)");
+        const columns = checkColumn.all();
+        const hasLastLogin = columns.some(col => col.name === 'last_login_at');
+        const hasIsOnline = columns.some(col => col.name === 'is_online');
+        
+        if (!hasLastLogin) {
+            console.log('Adding last_login_at column to users table...');
+            db.exec(`ALTER TABLE users ADD COLUMN last_login_at DATETIME`);
+            console.log('last_login_at column added successfully');
+        }
+        
+        if (!hasIsOnline) {
+            console.log('Adding is_online column to users table...');
+            db.exec(`ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 0`);
+            console.log('is_online column added successfully');
+        }
+    } catch (error) {
+        console.error('Migration error:', error);
+    }
+};
+
 // 初始化数据库
 export const initDatabase = () => {
     createUsersTable();
     migrateAddRoleField();
+    migrateAddLoginFields();
     fixAdminUserPorts();
+    setAllUsersOffline(); // 服务器启动时将所有用户设置为离线
     console.log('Database initialized successfully');
 };
 
@@ -213,6 +239,28 @@ const fixAdminUserPorts = () => {
     } catch (error) {
         console.error('Error fixing admin user ports:', error);
     }
+};
+
+// 更新用户登录状态
+export const updateUserLogin = (username) => {
+    const stmt = db.prepare(`
+        UPDATE users 
+        SET last_login_at = CURRENT_TIMESTAMP, is_online = 1 
+        WHERE username = ?
+    `);
+    return stmt.run(username);
+};
+
+// 更新用户在线状态
+export const updateUserOnlineStatus = (username, isOnline) => {
+    const stmt = db.prepare('UPDATE users SET is_online = ? WHERE username = ?');
+    return stmt.run(isOnline ? 1 : 0, username);
+};
+
+// 设置所有用户为离线（服务器启动时调用）
+export const setAllUsersOffline = () => {
+    const stmt = db.prepare('UPDATE users SET is_online = 0');
+    return stmt.run();
 };
 
 // 删除用户

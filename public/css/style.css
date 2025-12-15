@@ -1208,3 +1208,14 @@ input:checked + .slider:before {
     background: #c53030;
     transform: scale(1.02);
 }
+
+/* 在线/离线状态标签 */
+.status-online {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.status-offline {
+    background: #e2e8f0;
+    color: #4a5568;
+}

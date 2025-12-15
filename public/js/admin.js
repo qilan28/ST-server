@@ -122,6 +122,7 @@ async function loadStats() {
         document.getElementById('totalUsers').textContent = stats.totalUsers;
         document.getElementById('adminUsers').textContent = stats.adminUsers;
         document.getElementById('regularUsers').textContent = stats.regularUsers;
+        document.getElementById('onlineUsers').textContent = stats.onlineUsers || 0;
         document.getElementById('runningInstances').textContent = stats.runningInstances;
         document.getElementById('stoppedInstances').textContent = stats.stoppedInstances;
         document.getElementById('totalCpu').textContent = stats.totalCpu + '%';
@@ -143,7 +144,7 @@ async function loadUsers() {
         const tbody = document.getElementById('usersTableBody');
         
         if (users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 30px;">暂无用户</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 30px;">暂无用户</td></tr>';
             return;
         }
         
@@ -157,6 +158,12 @@ async function loadUsers() {
                     </span>
                 </td>
                 <td>${user.port}</td>
+                <td>
+                    <span class="status-badge ${user.isOnline ? 'status-online' : 'status-offline'}">
+                        ${user.isOnline ? '🟢 在线' : '⚫ 离线'}
+                    </span>
+                </td>
+                <td>${user.lastLoginAt ? formatDate(user.lastLoginAt) : '从未登录'}</td>
                 <td>
                     <span class="status-badge ${user.status === 'running' ? 'status-running' : 'status-stopped'}">
                         ${user.status === 'running' ? '运行中' : '已停止'}
