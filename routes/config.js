@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getConfig, getNginxConfig, updateNginxConfig, getSystemConfig, updateSystemConfig } from '../utils/config-manager.js';
 import { generateNginxConfig } from '../scripts/generate-nginx-config.js';
+import { reloadNginx, getNginxStatus, getNginxConfigPath } from '../utils/nginx-reload.js';
 
 const router = express.Router();
 
@@ -75,13 +76,71 @@ router.put('/nginx', (req, res) => {
 });
 
 // 生成 Nginx 配置文件
-router.post('/nginx/generate', (req, res) => {
+router.post('/nginx/generate', async (req, res) => {
     try {
+        // 生成配置文件
         generateNginxConfig();
-        res.json({ message: 'Nginx configuration file generated successfully' });
+        console.log('[Config] Nginx 配置文件已生成');
+        
+        // 自动重载 Nginx
+        const reloadResult = await reloadNginx();
+        
+        if (reloadResult.success) {
+            console.log(`[Config] ✅ Nginx 配置已自动重载 (方式: ${reloadResult.method || 'unknown'})`);
+            res.json({ 
+                message: 'Nginx configuration file generated and reloaded successfully',
+                reloadMethod: reloadResult.method
+            });
+        } else {
+            console.error('[Config] ⚠️ Nginx 配置重载失败:', reloadResult.error);
+            res.json({ 
+                message: 'Nginx configuration file generated, but reload failed',
+                warning: reloadResult.error,
+                needManualReload: true
+            });
+        }
     } catch (error) {
         console.error('Generate nginx config error:', error);
         res.status(500).json({ error: 'Failed to generate nginx config file' });
+    }
+});
+
+// 获取 Nginx 状态
+router.get('/nginx/status', async (req, res) => {
+    try {
+        const status = await getNginxStatus();
+        const configPath = getNginxConfigPath();
+        
+        res.json({
+            status,
+            configPath,
+            projectConfigPath: configPath
+        });
+    } catch (error) {
+        console.error('Get nginx status error:', error);
+        res.status(500).json({ error: 'Failed to get nginx status' });
+    }
+});
+
+// 手动重载 Nginx
+router.post('/nginx/reload', async (req, res) => {
+    try {
+        const reloadResult = await reloadNginx();
+        
+        if (reloadResult.success) {
+            res.json({
+                message: 'Nginx reloaded successfully',
+                method: reloadResult.method
+            });
+        } else {
+            res.status(500).json({
+                error: 'Failed to reload Nginx',
+                details: reloadResult.error
+            });
+        }
+    } catch (error) {
+        console.error('Reload nginx error:', error);
+        res.status(500).json({ error: 'Failed to reload nginx' });
     }
 });
 

@@ -2,6 +2,8 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import { createUser, findUserByUsername, findUserByEmail } from '../database.js';
 import { generateToken } from '../middleware/auth.js';
+import { generateNginxConfig } from '../scripts/generate-nginx-config.js';
+import { reloadNginx } from '../utils/nginx-reload.js';
 
 const router = express.Router();
 
@@ -49,6 +51,27 @@ router.post('/register', async (req, res) => {
         
         // 创建用户
         const user = createUser(username, hashedPassword, email);
+        
+        // 🔧 自动生成并重载 Nginx 配置
+        console.log(`[Register] 新用户 ${username} 注册成功，正在更新 Nginx 配置...`);
+        try {
+            generateNginxConfig();
+            console.log('[Register] Nginx 配置文件已生成');
+            
+            // 尝试重载 Nginx
+            const reloadResult = await reloadNginx();
+            if (reloadResult.success) {
+                console.log(`[Register] ✅ Nginx 配置已自动重载 (方式: ${reloadResult.method || 'unknown'})`);
+            } else {
+                console.error('[Register] ⚠️ Nginx 配置重载失败:', reloadResult.error);
+                if (reloadResult.needGenerate) {
+                    console.error('[Register] 提示：请先运行 npm run generate-nginx 生成配置文件');
+                }
+            }
+        } catch (nginxError) {
+            // Nginx 重载失败不应该影响用户注册
+            console.error('[Register] Nginx 配置更新失败（不影响注册）:', nginxError.message);
+        }
         
         // 生成token
         const token = generateToken(user.id, user.username);
