@@ -22,22 +22,19 @@ console.table(tableInfo.map(col => ({
     允许空: col.notnull === 0 ? '是' : '否'
 })));
 
-// 检查是否有在线状态字段
+// 检查是否有最后登录时间字段
 const hasLastLogin = tableInfo.some(col => col.name === 'last_login_at');
-const hasIsOnline = tableInfo.some(col => col.name === 'is_online');
 
-console.log('\n2. 在线状态字段检查:');
+console.log('\n2. 最后登录时间字段检查:');
 console.log(`   last_login_at 字段: ${hasLastLogin ? '✅ 存在' : '❌ 不存在'}`);
-console.log(`   is_online 字段: ${hasIsOnline ? '✅ 存在' : '❌ 不存在'}`);
 
-// 查询所有用户的在线状态
-if (hasLastLogin && hasIsOnline) {
-    console.log('\n3. 当前用户在线状态:');
+// 查询所有用户的登录记录
+if (hasLastLogin) {
+    console.log('\n3. 当前用户登录记录:');
     const users = db.prepare(`
         SELECT 
             username, 
             role, 
-            is_online, 
             last_login_at,
             created_at
         FROM users 
@@ -50,13 +47,12 @@ if (hasLastLogin && hasIsOnline) {
         console.table(users.map(u => ({
             用户名: u.username,
             角色: u.role === 'admin' ? '管理员' : '用户',
-            在线状态: u.is_online === 1 ? '🟢 在线' : '⚫ 离线',
             最后登录: u.last_login_at || '从未登录',
             注册时间: u.created_at
         })));
     }
 } else {
-    console.log('\n⚠️  缺少在线状态字段，请重启服务器以执行数据库迁移');
+    console.log('\n⚠️  缺少 last_login_at 字段，请重启服务器以执行数据库迁移');
 }
 
 // 查询管理员账号

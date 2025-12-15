@@ -50,13 +50,12 @@ const migrateAddRoleField = () => {
     }
 };
 
-// 迁移：添加登录状态字段
+// 迁移：添加最后登录时间字段
 const migrateAddLoginFields = () => {
     try {
         const checkColumn = db.prepare("PRAGMA table_info(users)");
         const columns = checkColumn.all();
         const hasLastLogin = columns.some(col => col.name === 'last_login_at');
-        const hasIsOnline = columns.some(col => col.name === 'is_online');
         
         if (!hasLastLogin) {
             console.log('[Database] 添加 last_login_at 字段...');
@@ -64,14 +63,6 @@ const migrateAddLoginFields = () => {
             console.log('[Database] ✅ last_login_at 字段添加成功');
         } else {
             console.log('[Database] ℹ️  last_login_at 字段已存在');
-        }
-        
-        if (!hasIsOnline) {
-            console.log('[Database] 添加 is_online 字段...');
-            db.exec(`ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 0`);
-            console.log('[Database] ✅ is_online 字段添加成功');
-        } else {
-            console.log('[Database] ℹ️  is_online 字段已存在');
         }
     } catch (error) {
         console.error('[Database] ❌ 迁移失败:', error);
@@ -84,8 +75,7 @@ export const initDatabase = () => {
     migrateAddRoleField();
     migrateAddLoginFields();
     fixAdminUserPorts();
-    setAllUsersOffline(); // 服务器启动时将所有用户设置为离线
-    console.log('Database initialized successfully');
+    console.log('[Database] ✅ 数据库初始化成功');
 };
 
 // 查找可用端口（3001-4000）
@@ -245,45 +235,27 @@ const fixAdminUserPorts = () => {
     }
 };
 
-// 更新用户登录状态
+// 更新用户登录时间
 export const updateUserLogin = (username) => {
     try {
         const stmt = db.prepare(`
             UPDATE users 
-            SET last_login_at = CURRENT_TIMESTAMP, is_online = 1 
+            SET last_login_at = CURRENT_TIMESTAMP 
             WHERE username = ?
         `);
         const result = stmt.run(username);
-        console.log(`[Database] ✅ 更新用户 ${username} 登录状态: ${result.changes} 行受影响`);
         
-        // 验证更新结果
-        const checkStmt = db.prepare('SELECT is_online, last_login_at FROM users WHERE username = ?');
-        const user = checkStmt.get(username);
-        console.log(`[Database] 验证: is_online=${user.is_online}, last_login_at=${user.last_login_at}`);
+        if (result.changes > 0) {
+            // 获取更新后的登录时间
+            const checkStmt = db.prepare('SELECT last_login_at FROM users WHERE username = ?');
+            const user = checkStmt.get(username);
+            console.log(`[Database] ✅ 用户 ${username} 最后登录时间: ${user.last_login_at}`);
+        }
         
         return result;
     } catch (error) {
-        console.error(`[Database] ❌ 更新登录状态失败:`, error);
+        console.error(`[Database] ❌ 更新登录时间失败:`, error);
         throw error;
-    }
-};
-
-// 更新用户在线状态
-export const updateUserOnlineStatus = (username, isOnline) => {
-    const stmt = db.prepare('UPDATE users SET is_online = ? WHERE username = ?');
-    return stmt.run(isOnline ? 1 : 0, username);
-};
-
-// 设置所有用户为离线（服务器启动时调用）
-export const setAllUsersOffline = () => {
-    try {
-        const stmt = db.prepare('UPDATE users SET is_online = 0');
-        const result = stmt.run();
-        console.log(`[Database] ℹ️  已将所有用户设置为离线状态 (${result.changes} 个用户)`);
-        return result;
-    } catch (error) {
-        console.error('[Database] ⚠️  设置用户离线状态失败:', error.message);
-        return null;
     }
 };
 

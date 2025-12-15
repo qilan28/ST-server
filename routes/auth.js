@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createUser, findUserByUsername, findUserByEmail, deleteUser, getAllUsers, updateUserLogin, updateUserOnlineStatus } from '../database.js';
+import { createUser, findUserByUsername, findUserByEmail, deleteUser, getAllUsers, updateUserLogin } from '../database.js';
 import { generateToken, authenticateToken } from '../middleware/auth.js';
 import { generateNginxConfig } from '../scripts/generate-nginx-config.js';
 import { reloadNginx } from '../utils/nginx-reload.js';
@@ -135,12 +135,12 @@ router.post('/login', async (req, res) => {
         // 生成token
         const token = generateToken(user.id, user.username);
         
-        // 更新登录时间和在线状态
+        // 更新最后登录时间
         try {
             updateUserLogin(user.username);
-            console.log(`[Auth] ✅ 用户 ${user.username} 登录状态已更新（在线 + 登录时间）`);
+            console.log(`[Auth] ✅ 用户 ${user.username} 登录成功，已记录登录时间`);
         } catch (error) {
-            console.error(`[Auth] ⚠️  更新登录状态失败:`, error);
+            console.error(`[Auth] ⚠️  更新登录时间失败:`, error);
         }
         
         // 设置 cookie
@@ -164,24 +164,6 @@ router.post('/login', async (req, res) => {
         });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// 退出登录
-router.post('/logout', authenticateToken, async (req, res) => {
-    try {
-        const username = req.user.username;
-        
-        // 将用户设置为离线状态
-        updateUserOnlineStatus(username, false);
-        
-        // 清除 Cookie
-        res.clearCookie('st_token');
-        
-        res.json({ message: 'Logout successful' });
-    } catch (error) {
-        console.error('Logout error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
