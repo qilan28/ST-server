@@ -53,6 +53,14 @@ router.post('/register', async (req, res) => {
         // 生成token
         const token = generateToken(user.id, user.username);
         
+        // 设置 cookie
+        res.cookie('st_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 24 * 60 * 60 * 1000, // 24小时
+            sameSite: 'lax'
+        });
+        
         res.status(201).json({
             message: 'User registered successfully',
             user: {
@@ -95,6 +103,14 @@ router.post('/login', async (req, res) => {
         
         // 生成token
         const token = generateToken(user.id, user.username);
+        
+        // 设置 cookie
+        res.cookie('st_token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 24 * 60 * 60 * 1000, // 24小时
+            sameSite: 'lax'
+        });
         
         res.json({
             message: 'Login successful',

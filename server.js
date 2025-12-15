@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
+import authCheckRoutes from './routes/auth-check.js';
 import instanceRoutes from './routes/instance.js';
 import versionRoutes from './routes/version.js';
 import adminRoutes from './routes/admin.js';
@@ -30,7 +32,8 @@ dirs.forEach(dir => {
 });
 
 // 中间件
-app.use(cors());
+app.use(cors({ credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -39,6 +42,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API路由
 app.use('/api/auth', authRoutes);
+app.use('/api/auth-check', authCheckRoutes);
 app.use('/api/instance', instanceRoutes);
 app.use('/api/version', versionRoutes);
 app.use('/api/admin', adminRoutes);

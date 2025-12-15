@@ -13,6 +13,7 @@
     "deploy-nginx": "sudo bash scripts/deploy-nginx.sh",
     "start-nginx": "sudo bash scripts/start-nginx-standalone.sh",
     "diagnose-nginx": "sudo bash scripts/diagnose-nginx.sh",
+    "enable-access-control": "sudo bash scripts/enable-access-control.sh",
     "reset-pm2": "node scripts/reset-pm2.js"
   },
   "keywords": [
@@ -29,6 +30,7 @@
   },
   "dependencies": {
     "express": "^4.18.2",
+    "cookie-parser": "^1.4.6",
     "better-sqlite3": "^9.2.2",
     "bcrypt": "^5.1.1",
     "jsonwebtoken": "^9.0.2",
