@@ -189,6 +189,24 @@
                     <li>日志自动刷新功能可实时查看运行状态</li>
                 </ul>
             </div>
+
+            <div class="danger-zone-card">
+                <h3>⚠️ 危险操作</h3>
+                <div class="danger-zone-content">
+                    <div class="danger-zone-warning">
+                        <p><strong>删除账号将执行以下操作：</strong></p>
+                        <ul>
+                            <li>🗑️ 删除您的 SillyTavern 实例</li>
+                            <li>🗑️ 删除所有对话记录、角色和设置</li>
+                            <li>🗑️ 删除用户数据目录</li>
+                            <li>⚠️ 此操作不可恢复！</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-danger" onclick="handleDeleteAccount()">
+                        🗑️ 删除我的账号
+                    </button>
+                </div>
+            </div>
         </main>
     </div>
 

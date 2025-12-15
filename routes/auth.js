@@ -1,9 +1,17 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
-import { createUser, findUserByUsername, findUserByEmail } from '../database.js';
-import { generateToken } from '../middleware/auth.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createUser, findUserByUsername, findUserByEmail, deleteUser, getAllUsers } from '../database.js';
+import { generateToken, authenticateToken } from '../middleware/auth.js';
 import { generateNginxConfig } from '../scripts/generate-nginx-config.js';
 import { reloadNginx } from '../utils/nginx-reload.js';
+import { deleteInstance } from '../pm2-manager.js';
+import { deleteSillyTavern } from '../git-manager.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = express.Router();
 
@@ -149,6 +157,88 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 用户删除自己的账号
+router.delete('/account', authenticateToken, async (req, res) => {
+    try {
+        const username = req.user.username;
+        const user = findUserByUsername(username);
+        
+        if (!user) {
+            return res.status(404).json({ 
+                error: 'User not found',
+                message: '用户不存在'
+            });
+        }
+        
+        // 防止删除管理员账号（如果是最后一个管理员）
+        if (user.role === 'admin') {
+            const allUsers = getAllUsers();
+            const adminCount = allUsers.filter(u => u.role === 'admin').length;
+            
+            if (adminCount <= 1) {
+                return res.status(400).json({ 
+                    error: 'Cannot delete the last admin user',
+                    message: '不能删除最后一个管理员用户，请先创建其他管理员'
+                });
+            }
+        }
+        
+        console.log(`[Delete Account] 用户 ${username} 请求删除账号`);
+        
+        // 1. 停止并删除 PM2 实例
+        try {
+            console.log(`[Delete Account] 停止并删除 ${username} 的实例...`);
+            await deleteInstance(username);
+        } catch (err) {
+            console.log(`[Delete Account] 没有运行的实例或已删除: ${err.message}`);
+        }
+        
+        // 2. 删除 SillyTavern 目录
+        if (user.st_dir && fs.existsSync(user.st_dir)) {
+            console.log(`[Delete Account] 删除 ${username} 的 SillyTavern 目录...`);
+            await deleteSillyTavern(user.st_dir);
+        }
+        
+        // 3. 删除用户数据目录
+        const userDataDir = path.join(__dirname, '..', 'data', username);
+        if (fs.existsSync(userDataDir)) {
+            console.log(`[Delete Account] 删除 ${username} 的数据目录...`);
+            fs.rmSync(userDataDir, { recursive: true, force: true });
+        }
+        
+        // 4. 从数据库删除用户
+        deleteUser(username);
+        console.log(`[Delete Account] 用户 ${username} 已从数据库删除`);
+        
+        // 5. 重新生成 Nginx 配置
+        try {
+            console.log(`[Delete Account] 重新生成 Nginx 配置...`);
+            await generateNginxConfig();
+            await reloadNginx();
+            console.log(`[Delete Account] Nginx 配置已更新`);
+        } catch (nginxError) {
+            console.error(`[Delete Account] Nginx 配置更新失败:`, nginxError);
+            // 不影响删除流程
+        }
+        
+        // 6. 清除 Cookie
+        res.clearCookie('st_token');
+        
+        console.log(`[Delete Account] ✅ 用户 ${username} 账号删除完成`);
+        res.json({ 
+            message: 'Account deleted successfully',
+            redirect: '/'
+        });
+        
+    } catch (error) {
+        console.error('[Delete Account] 删除账号失败:', error);
+        res.status(500).json({ 
+            error: 'Failed to delete account',
+            message: '删除账号失败: ' + error.message
+        });
     }
 });
 

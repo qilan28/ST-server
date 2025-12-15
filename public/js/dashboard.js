@@ -690,6 +690,71 @@ function stopAutoRefresh() {
     }
 }
 
+// ==================== 删除账号 ====================
+
+// 删除账号
+async function handleDeleteAccount() {
+    const username = getUsername();
+    
+    // 第一次确认
+    const confirmMessage1 = `⚠️ 危险操作！\n\n您确定要删除账号 "${username}" 吗？\n\n此操作将会：\n• 删除您的 SillyTavern 实例\n• 删除所有对话记录、角色和设置\n• 删除用户数据目录\n• 此操作不可恢复！\n\n请输入 "DELETE" 以确认删除`;
+    
+    const userInput = prompt(confirmMessage1);
+    
+    if (userInput !== 'DELETE') {
+        if (userInput !== null) {
+            alert('❌ 输入不正确，删除已取消');
+        }
+        return;
+    }
+    
+    // 第二次确认
+    const confirmMessage2 = `🚨 最后确认！\n\n您真的要删除账号 "${username}" 吗？\n\n点击"确定"将立即删除账号，此操作无法撤销！`;
+    
+    if (!confirm(confirmMessage2)) {
+        return;
+    }
+    
+    try {
+        // 显示处理中
+        const deleteBtn = event.target;
+        const originalText = deleteBtn.textContent;
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = '⏳ 删除中...';
+        
+        const response = await apiRequest(`${API_BASE}/auth/account`, {
+            method: 'DELETE'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // 清除本地存储
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            
+            // 显示成功消息并跳转
+            alert('✅ 账号已成功删除！\n\n感谢您使用 SillyTavern 多开管理平台。');
+            
+            // 跳转到首页
+            window.location.href = '/';
+        } else {
+            throw new Error(data.message || data.error || '删除失败');
+        }
+    } catch (error) {
+        console.error('Delete account error:', error);
+        alert('❌ 删除账号失败：' + error.message);
+        
+        // 恢复按钮状态
+        if (event.target) {
+            event.target.disabled = false;
+            event.target.textContent = '🗑️ 删除我的账号';
+        }
+    }
+}
+
 // ==================== 初始化 ====================
 
 // 页面初始化

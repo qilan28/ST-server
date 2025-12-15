@@ -1142,3 +1142,69 @@ input:checked + .slider:before {
         gap: 5px;
     }
 }
+
+/* 危险操作区域 */
+.danger-zone-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--danger-color);
+    margin-top: 20px;
+}
+
+.danger-zone-card h3 {
+    color: var(--danger-color);
+    margin-bottom: 20px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.danger-zone-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.danger-zone-warning {
+    background: #fff5f5;
+    border-left: 4px solid var(--danger-color);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.danger-zone-warning p {
+    font-weight: 600;
+    color: var(--danger-color);
+    margin-bottom: 10px;
+}
+
+.danger-zone-warning ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.danger-zone-warning li {
+    padding: 5px 0;
+    color: var(--text-color);
+}
+
+.danger-zone-warning li:last-child {
+    font-weight: 600;
+    color: var(--danger-color);
+    margin-top: 5px;
+}
+
+.danger-zone-content .btn-danger {
+    width: 100%;
+    max-width: 300px;
+    align-self: center;
+    font-weight: 600;
+}
+
+.danger-zone-content .btn-danger:hover {
+    background: #c53030;
+    transform: scale(1.02);
+}
