@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import archiver from 'archiver';
 import { Readable } from 'stream';
+import { uploadFile } from '@huggingface/hub';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,41 +70,57 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename) {
             throw new Error('仓库名格式错误，应为: username/repo-name');
         }
 
-        // 读取文件
-        const fileBuffer = fs.readFileSync(filePath);
-        const fileSize = fs.statSync(filePath).size;
+        // 获取文件大小
+        const fileStats = fs.statSync(filePath);
+        const fileSize = fileStats.size;
+        const fileSizeMB = (fileSize / 1024 / 1024).toFixed(2);
+        const fileSizeGB = (fileSize / 1024 / 1024 / 1024).toFixed(2);
         
-        console.log(`[HF Backup] 开始上传文件: ${filename} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
-        
-        // Hugging Face API 端点
-        const url = `https://huggingface.co/api/datasets/${hfRepo}/upload/main/${filename}`;
-        
-        // 使用 fetch 上传文件
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${hfToken}`,
-                'Content-Type': 'application/zip',
-            },
-            body: fileBuffer
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`上传失败 (${response.status}): ${errorText}`);
+        // 文件大小警告
+        if (fileSize > 100 * 1024 * 1024) { // > 100MB
+            console.log(`[HF Backup] ⚠️  大文件警告: ${fileSizeGB} GB`);
         }
-
-        const result = await response.json();
+        
+        console.log(`[HF Backup] 开始上传文件: ${filename} (${fileSizeMB} MB)`);
+        
+        // 使用 Hugging Face Hub SDK 上传文件（支持大文件和 LFS）
+        const result = await uploadFile({
+            file: filePath,
+            path: filename,
+            repo: hfRepo,
+            repoType: 'dataset',
+            credentials: {
+                accessToken: hfToken
+            },
+            commitTitle: `Backup: ${filename}`,
+            commitDescription: `Automated backup created at ${new Date().toISOString()}\nFile size: ${fileSizeMB} MB`,
+            branch: 'main'
+        });
+        
         console.log('[HF Backup] ✅ 上传成功');
+        
+        // 构建文件URL
+        const fileUrl = `https://huggingface.co/datasets/${hfRepo}/blob/main/${filename}`;
         
         return {
             success: true,
-            url: `https://huggingface.co/datasets/${hfRepo}/blob/main/${filename}`,
+            url: fileUrl,
             size: fileSize,
-            ...result
+            commitUrl: result.commitUrl || `https://huggingface.co/datasets/${hfRepo}/commit/${result.oid}`,
+            oid: result.oid
         };
     } catch (error) {
         console.error('[HF Backup] ❌ 上传失败:', error);
+        
+        // 提供更友好的错误信息
+        if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+            throw new Error('Token 无效或已过期，请检查您的 Hugging Face Token');
+        } else if (error.message?.includes('404')) {
+            throw new Error('仓库不存在或无权访问，请检查仓库名称和权限');
+        } else if (error.message?.includes('413') || error.message?.includes('too large')) {
+            throw new Error('文件过大，建议使用 Git LFS 手动上传');
+        }
+        
         throw error;
     }
 }
@@ -144,7 +161,17 @@ export async function backupToHuggingFace(dataDir, username, hfToken, hfRepo) {
 
         // 获取文件大小
         const fileSize = fs.statSync(tempZipPath).size;
-        console.log(`[HF Backup] 压缩包大小: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+        const fileSizeMB = (fileSize / 1024 / 1024).toFixed(2);
+        const fileSizeGB = (fileSize / 1024 / 1024 / 1024).toFixed(2);
+        
+        console.log(`[HF Backup] 压缩包大小: ${fileSizeMB} MB`);
+        
+        // 大文件警告
+        if (fileSize > 5 * 1024 * 1024 * 1024) { // > 5GB
+            console.warn(`[HF Backup] ⚠️  警告: 文件非常大 (${fileSizeGB} GB)，上传可能需要较长时间`);
+        } else if (fileSize > 1 * 1024 * 1024 * 1024) { // > 1GB
+            console.log(`[HF Backup] ℹ️  文件较大 (${fileSizeGB} GB)，上传可能需要几分钟`);
+        }
 
         // 上传到 Hugging Face
         console.log('[HF Backup] 正在上传到 Hugging Face...');
