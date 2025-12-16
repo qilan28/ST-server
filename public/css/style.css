@@ -1791,3 +1791,109 @@ input:checked + .slider:before {
         margin-bottom: 15px;
     }
 }
+
+/* 备份卡片样式 */
+.backup-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: var(--shadow);
+}
+
+.backup-card h2 {
+    color: var(--text-color);
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
+
+.backup-info {
+    margin-bottom: 20px;
+    padding: 12px;
+    background: #f7fafc;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.backup-info p {
+    color: #4a5568;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.backup-config {
+    margin-bottom: 20px;
+}
+
+.backup-config .form-group {
+    margin-bottom: 15px;
+}
+
+.backup-config .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.backup-config .form-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.backup-config .form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.backup-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.backup-status {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f7fafc;
+    border-radius: 8px;
+    border-left: 4px solid var(--success-color);
+}
+
+.backup-status h4 {
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.backup-status p {
+    margin: 8px 0;
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+.backup-status a {
+    color: var(--primary-color);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.backup-status a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    .backup-actions {
+        flex-direction: column;
+    }
+    
+    .backup-actions .btn {
+        width: 100%;
+    }
+}

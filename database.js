@@ -69,6 +69,30 @@ const migrateAddLoginFields = () => {
     }
 };
 
+// 迁移：添加 Hugging Face 备份配置字段
+const migrateAddHFFields = () => {
+    try {
+        const checkColumn = db.prepare("PRAGMA table_info(users)");
+        const columns = checkColumn.all();
+        const hasHFToken = columns.some(col => col.name === 'hf_token');
+        const hasHFRepo = columns.some(col => col.name === 'hf_repo');
+        
+        if (!hasHFToken) {
+            console.log('[Database] 添加 hf_token 字段...');
+            db.exec(`ALTER TABLE users ADD COLUMN hf_token TEXT`);
+            console.log('[Database] ✅ hf_token 字段添加成功');
+        }
+        
+        if (!hasHFRepo) {
+            console.log('[Database] 添加 hf_repo 字段...');
+            db.exec(`ALTER TABLE users ADD COLUMN hf_repo TEXT`);
+            console.log('[Database] ✅ hf_repo 字段添加成功');
+        }
+    } catch (error) {
+        console.error('[Database] ❌ HF 字段迁移失败:', error);
+    }
+};
+
 // 创建公告表
 const createAnnouncementsTable = () => {
     db.exec(`
@@ -90,6 +114,7 @@ export const initDatabase = () => {
     createAnnouncementsTable();
     migrateAddRoleField();
     migrateAddLoginFields();
+    migrateAddHFFields();
     fixAdminUserPorts();
     console.log('[Database] ✅ 数据库初始化成功');
 };
@@ -279,6 +304,28 @@ export const updateUserLogin = (username) => {
 export const deleteUser = (username) => {
     const stmt = db.prepare('DELETE FROM users WHERE username = ?');
     return stmt.run(username);
+};
+
+// ==================== Hugging Face 备份配置 ====================
+
+// 更新用户的 Hugging Face 配置
+export const updateUserHFConfig = (username, hfToken, hfRepo) => {
+    const stmt = db.prepare(`
+        UPDATE users 
+        SET hf_token = ?, hf_repo = ? 
+        WHERE username = ?
+    `);
+    return stmt.run(hfToken, hfRepo, username);
+};
+
+// 获取用户的 Hugging Face 配置
+export const getUserHFConfig = (username) => {
+    const stmt = db.prepare(`
+        SELECT hf_token, hf_repo 
+        FROM users 
+        WHERE username = ?
+    `);
+    return stmt.get(username);
 };
 
 // ==================== 公告管理 ====================

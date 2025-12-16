@@ -142,6 +142,58 @@
                 </div>
             </div>
 
+            <div class="backup-card">
+                <h2>💾 数据备份</h2>
+                <div class="backup-info">
+                    <p>将您的 SillyTavern 数据备份到 Hugging Face 仓库</p>
+                </div>
+                
+                <div class="backup-config">
+                    <div class="form-group">
+                        <label for="hfRepo">Hugging Face 仓库名 (格式: username/repo-name)</label>
+                        <input 
+                            type="text" 
+                            id="hfRepo" 
+                            class="form-input" 
+                            placeholder="例如: myusername/sillytavern-backup"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="hfToken">Hugging Face Token</label>
+                        <input 
+                            type="password" 
+                            id="hfToken" 
+                            class="form-input" 
+                            placeholder="输入您的 Hugging Face Write Token"
+                        >
+                        <small style="color: #666; margin-top: 5px; display: block;">
+                            获取 Token: <a href="https://huggingface.co/settings/tokens" target="_blank">https://huggingface.co/settings/tokens</a>
+                            （需要 Write 权限）
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="backup-actions">
+                    <button class="btn btn-primary" onclick="handleSaveBackupConfig()">
+                        💾 保存配置
+                    </button>
+                    <button class="btn btn-info" onclick="handleTestConnection()">
+                        🔌 测试连接
+                    </button>
+                    <button class="btn btn-success" onclick="handleBackup()">
+                        ☁️ 立即备份
+                    </button>
+                </div>
+                
+                <div id="backupMessage" class="message"></div>
+                
+                <div class="backup-status" id="backupStatus" style="display: none;">
+                    <h4>备份状态</h4>
+                    <div id="backupStatusContent"></div>
+                </div>
+            </div>
+
             <div class="stats-card">
                 <h2>资源使用</h2>
                 <div class="stats-grid">

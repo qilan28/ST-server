@@ -863,6 +863,177 @@ async function handleDeleteAccount() {
     }
 }
 
+// ==================== 备份功能 ====================
+
+// 加载备份配置
+async function loadBackupConfig() {
+    try {
+        const response = await fetch(`${API_BASE}/backup/hf-config`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.config) {
+                document.getElementById('hfRepo').value = data.config.hfRepo || '';
+                // Token 不显示完整内容，只显示是否已设置
+                if (data.config.hfTokenSet) {
+                    document.getElementById('hfToken').placeholder = `已设置 (${data.config.hfTokenPreview})`;
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Load backup config error:', error);
+    }
+}
+
+// 保存备份配置
+async function handleSaveBackupConfig() {
+    const hfRepo = document.getElementById('hfRepo').value.trim();
+    const hfToken = document.getElementById('hfToken').value.trim();
+    const messageDiv = document.getElementById('backupMessage');
+    
+    if (!hfRepo || !hfToken) {
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '❌ 请填写完整的配置信息';
+        return;
+    }
+    
+    // 验证仓库名格式
+    if (!hfRepo.includes('/')) {
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '❌ 仓库名格式错误，应为: username/repo-name';
+        return;
+    }
+    
+    try {
+        messageDiv.className = 'message info';
+        messageDiv.textContent = '⏳ 正在保存配置...';
+        
+        const response = await fetch(`${API_BASE}/backup/hf-config`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ hfToken, hfRepo })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            messageDiv.className = 'message success';
+            messageDiv.textContent = '✅ 配置保存成功！';
+            
+            // 清空密码框并更新提示
+            document.getElementById('hfToken').value = '';
+            document.getElementById('hfToken').placeholder = '已设置';
+        } else {
+            throw new Error(data.error || '保存失败');
+        }
+    } catch (error) {
+        console.error('Save backup config error:', error);
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '❌ 保存失败：' + error.message;
+    }
+}
+
+// 测试连接
+async function handleTestConnection() {
+    const hfRepo = document.getElementById('hfRepo').value.trim();
+    const hfToken = document.getElementById('hfToken').value.trim();
+    const messageDiv = document.getElementById('backupMessage');
+    
+    try {
+        messageDiv.className = 'message info';
+        messageDiv.textContent = '⏳ 正在测试连接...';
+        
+        const body = {};
+        if (hfRepo) body.hfRepo = hfRepo;
+        if (hfToken) body.hfToken = hfToken;
+        
+        const response = await fetch(`${API_BASE}/backup/test-connection`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(body)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            messageDiv.className = 'message success';
+            let message = '✅ 连接成功！\n';
+            if (data.repoInfo) {
+                message += `\n仓库: ${data.repoInfo.id || data.repoInfo.name}\n`;
+                message += `作者: ${data.repoInfo.author}\n`;
+                message += `类型: ${data.repoInfo.private ? '私有' : '公开'}`;
+            }
+            messageDiv.textContent = message;
+        } else {
+            messageDiv.className = 'message error';
+            messageDiv.textContent = '❌ ' + (data.message || '连接失败');
+        }
+    } catch (error) {
+        console.error('Test connection error:', error);
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '❌ 连接测试失败：' + error.message;
+    }
+}
+
+// 执行备份
+async function handleBackup() {
+    const messageDiv = document.getElementById('backupMessage');
+    const statusDiv = document.getElementById('backupStatus');
+    const statusContent = document.getElementById('backupStatusContent');
+    
+    // 确认操作
+    if (!confirm('确定要立即备份您的数据到 Hugging Face 吗？\n\n备份过程可能需要几分钟，取决于数据大小。')) {
+        return;
+    }
+    
+    try {
+        messageDiv.className = 'message info';
+        messageDiv.textContent = '⏳ 正在备份，请稍候...';
+        statusDiv.style.display = 'none';
+        
+        const response = await fetch(`${API_BASE}/backup/backup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            messageDiv.className = 'message success';
+            messageDiv.textContent = '✅ 备份成功！';
+            
+            // 显示备份详情
+            statusDiv.style.display = 'block';
+            statusContent.innerHTML = `
+                <p><strong>备份文件:</strong> ${data.filename}</p>
+                <p><strong>文件大小:</strong> ${(data.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p><strong>备份时间:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
+                <p><strong>下载地址:</strong> <a href="${data.url}" target="_blank">${data.url}</a></p>
+            `;
+        } else {
+            throw new Error(data.message || data.error || '备份失败');
+        }
+    } catch (error) {
+        console.error('Backup error:', error);
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '❌ 备份失败：' + error.message;
+        statusDiv.style.display = 'none';
+    }
+}
+
 // ==================== 初始化 ====================
 
 // 页面初始化
@@ -871,6 +1042,7 @@ async function init() {
     
     await loadUserInfo();
     await loadDashboardAnnouncements();
+    await loadBackupConfig();
     startStatusCheck();
     
     // 初始加载日志
