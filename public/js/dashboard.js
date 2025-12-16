@@ -1099,9 +1099,33 @@ async function init() {
     console.log('[前端] 🔑 localStorage token:', token ? `存在 (${token.substring(0, 20)}...)` : '❌ 不存在');
     
     if (token) {
-        setCookie('st_token', token);
-        console.log('[前端] ✅ 已设置 st_token cookie');
-        console.log('[前端] 🍪 当前所有 Cookies:', document.cookie || '无');
+        console.log('[前端] 🍪 设置前的 Cookies:', document.cookie || '(空)');
+        
+        const success = setCookie('st_token', token);
+        
+        // 立即读取验证
+        const cookiesAfter = document.cookie;
+        console.log('[前端] 🍪 设置后的 Cookies:', cookiesAfter || '(空)');
+        
+        if (!success || !cookiesAfter.includes('st_token')) {
+            console.error('[前端] ❌ Cookie 设置失败！正在尝试诊断...');
+            console.error('[前端] 当前域名:', window.location.hostname);
+            console.error('[前端] 当前协议:', window.location.protocol);
+            console.error('[前端] 当前路径:', window.location.pathname);
+            
+            // 尝试最简单的 Cookie 设置
+            console.log('[前端] 尝试最简单的 Cookie 设置...');
+            document.cookie = 'test=1';
+            console.log('[前端] 测试 Cookie 结果:', document.cookie);
+            
+            if (!document.cookie.includes('test')) {
+                console.error('[前端] ❌❌❌ 浏览器完全无法设置 Cookie！');
+                console.error('[前端] 可能原因：');
+                console.error('[前端] 1. 浏览器隐私模式/无痕模式');
+                console.error('[前端] 2. 浏览器扩展阻止了 Cookie');
+                console.error('[前端] 3. 浏览器安全策略限制');
+            }
+        }
     } else {
         console.log('[前端] ❌ 无法设置 st_token cookie - localStorage 中没有 token');
     }

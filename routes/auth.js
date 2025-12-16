@@ -92,11 +92,11 @@ router.post('/register', async (req, res) => {
             console.error(`[Register] ⚠️  更新登录时间失败:`, error);
         }
         
-        // 设置 cookie
+        // 设置 cookie（用于 Nginx 权限验证）
         res.cookie('st_token', token, {
-            httpOnly: true,
+            httpOnly: false, // 允许前端 JavaScript 读取（用于验证）
             secure: false, // 支持 HTTP 访问
-            maxAge: 24 * 60 * 60 * 1000, // 24小时
+            maxAge: 365 * 24 * 60 * 60 * 1000, // 365天
             sameSite: 'lax',
             path: '/' // 确保整个网站都能访问
         });
@@ -152,11 +152,11 @@ router.post('/login', async (req, res) => {
             console.error(`[Auth] ⚠️  更新登录时间失败:`, error);
         }
         
-        // 设置 cookie
+        // 设置 cookie（用于 Nginx 权限验证）
         res.cookie('st_token', token, {
-            httpOnly: true,
+            httpOnly: false, // 允许前端 JavaScript 读取（用于验证）
             secure: false, // 支持 HTTP 访问
-            maxAge: 24 * 60 * 60 * 1000, // 24小时
+            maxAge: 365 * 24 * 60 * 60 * 1000, // 365天
             sameSite: 'lax',
             path: '/' // 确保整个网站都能访问
         });
