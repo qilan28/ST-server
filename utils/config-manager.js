@@ -13,7 +13,7 @@ const DEFAULT_CONFIG = {
         enabled: false,
         domain: 'localhost',
         port: 80,
-        enableAccessControl: true  // 默认启用访问控制
+        enableAccessControl: false  // 默认禁用访问控制，任何人都能访问
     },
     system: {
         port: 3000,

@@ -18,6 +18,7 @@
     "start-nginx": "sudo bash scripts/start-nginx-standalone.sh",
     "diagnose-nginx": "sudo bash scripts/diagnose-nginx.sh",
     "enable-access-control": "sudo bash scripts/enable-access-control-v2.sh",
+    "disable-access-control": "node scripts/disable-access-control.js",
     "fix-nginx-400": "sudo bash scripts/fix-nginx-400.sh",
     "reset-pm2": "node scripts/reset-pm2.js"
   },
