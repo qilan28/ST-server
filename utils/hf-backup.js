@@ -162,7 +162,19 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename, u
                 }
             }
             
-            // 3. 推送删除到远程（先推送，确保 Git 历史记录删除）
+            // 3. 先拉取远程更新，再推送（避免冲突）
+            log('🔄 同步远程更新...');
+            try {
+                await execAsync('git pull origin main --rebase', { cwd: repoPath });
+            } catch (pullError) {
+                try {
+                    await execAsync('git pull origin master --rebase', { cwd: repoPath });
+                } catch (masterPullError) {
+                    log('⚠️ 拉取远程更新失败，尝试强制推送...', 'warning');
+                }
+            }
+            
+            // 4. 推送删除到远程
             log('🚀 推送删除到远程...');
             try {
                 await execAsync('git push origin main', { cwd: repoPath });
@@ -243,6 +255,24 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename, u
                 };
             }
             throw commitError;
+        }
+        
+        // 先拉取远程更新，避免推送冲突
+        log('🔄 同步远程更新...');
+        try {
+            await execAsync('git pull origin main --rebase', { 
+                cwd: repoPath,
+                timeout: 60000 
+            });
+        } catch (pullError) {
+            try {
+                await execAsync('git pull origin master --rebase', { 
+                    cwd: repoPath,
+                    timeout: 60000 
+                });
+            } catch (masterPullError) {
+                log('⚠️ 拉取远程更新失败，尝试直接推送...', 'warning');
+            }
         }
         
         // 推送到远程
