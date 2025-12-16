@@ -1,7 +1,7 @@
 {
   "nginx": {
     "enabled": true,
-    "domain": "119.8.118.149",
+    "domain": "8.210.210.211",
     "port": 7091,
     "enableAccessControl": true
   },

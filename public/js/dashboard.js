@@ -3,9 +3,31 @@ let statusCheckInterval = null;
 
 // 设置 Cookie
 function setCookie(name, value, days = 365) {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-    document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+    try {
+        // 方法 1：使用 max-age（更简单、更可靠）
+        document.cookie = `${name}=${value}; path=/; max-age=${days * 24 * 60 * 60}`;
+        
+        // 验证是否设置成功
+        if (document.cookie.includes(`${name}=`)) {
+            console.log(`[Cookie] ✅ ${name} 设置成功`);
+            return true;
+        }
+        
+        // 方法 2：如果方法 1 失败，尝试添加 SameSite
+        document.cookie = `${name}=${value}; path=/; max-age=${days * 24 * 60 * 60}; SameSite=Lax`;
+        
+        if (document.cookie.includes(`${name}=`)) {
+            console.log(`[Cookie] ✅ ${name} 设置成功（方法2）`);
+            return true;
+        }
+        
+        console.error(`[Cookie] ❌ ${name} 设置失败 - 浏览器可能阻止了 Cookie`);
+        console.error(`[Cookie] 💡 请检查浏览器地址栏左侧的锁图标 → Cookie 设置`);
+        return false;
+    } catch (error) {
+        console.error(`[Cookie] ❌ 设置失败:`, error);
+        return false;
+    }
 }
 
 // 删除 Cookie
