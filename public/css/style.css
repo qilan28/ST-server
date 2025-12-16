@@ -332,6 +332,8 @@ body {
     color: var(--text-color);
     font-size: 1.1rem;
     font-weight: 600;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .status-badge {
@@ -356,6 +358,12 @@ body {
     color: var(--primary-color);
     text-decoration: none;
     font-weight: 600;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
 }
 
 .access-link:hover {
@@ -1179,6 +1187,12 @@ input:checked + .slider:before {
     .info-grid {
         grid-template-columns: 1fr;
     }
+    
+    /* 访问地址链接在移动端的优化 */
+    .access-link {
+        font-size: 0.95rem;
+        max-width: 100%;
+    }
 
     /* 统计网格 */
     .stats-grid {
@@ -1529,6 +1543,16 @@ input:checked + .slider:before {
     .users-table,
     .instances-table {
         font-size: 12px;
+    }
+    
+    /* 访问地址链接进一步缩小 */
+    .access-link {
+        font-size: 0.85rem;
+    }
+    
+    /* 信息项值字体调整 */
+    .info-item .value {
+        font-size: 1rem;
     }
     
     .users-table th,

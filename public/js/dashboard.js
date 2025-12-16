@@ -233,6 +233,7 @@ async function loadUserInfo() {
             const accessLink = document.getElementById('accessUrl');
             accessLink.textContent = accessUrl;
             accessLink.href = accessUrl;
+            accessLink.title = accessUrl; // 悬停显示完整URL
             
             // 更新版本管理区域
             updateVersionInfo(data);
