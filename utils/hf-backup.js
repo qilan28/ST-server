@@ -136,25 +136,26 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename, u
         log('🔍 检查并管理现有备份文件...');
         const filesToDelete = manageBackupFiles(repoPath, logCallback);
         
-        // 删除需要清理的文件
+        // 使用 API 删除文件（避免留在 Git 历史中占用空间）
         if (filesToDelete.length > 0) {
+            log(`🧹 准备通过 API 清理 ${filesToDelete.length} 个旧备份...`);
             for (const fileToDelete of filesToDelete) {
-                const filePath = path.join(repoPath, fileToDelete);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
-                    log(`✅ 已删除: ${fileToDelete}`);
-                }
+                // 使用 HF API 删除
+                await deleteFileViaAPI(hfToken, hfRepo, fileToDelete, logCallback);
+                // 等待一小段时间，避免 API 请求过快
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
             
-            // 提交删除操作
-            log('💬 提交删除操作到 Git...');
-            await execAsync('git add -A', { cwd: repoPath });
+            // 刷新本地仓库（重新拉取以同步删除）
+            log('🔄 同步仓库状态...');
             try {
-                await execAsync(`git commit -m "清理旧备份文件"`, { cwd: repoPath });
-            } catch (commitError) {
-                // 忽略 "nothing to commit" 错误
-                if (!commitError.stdout?.includes('nothing to commit')) {
-                    throw commitError;
+                await execAsync('git fetch origin', { cwd: repoPath });
+                await execAsync('git reset --hard origin/main', { cwd: repoPath });
+            } catch (resetError) {
+                try {
+                    await execAsync('git reset --hard origin/master', { cwd: repoPath });
+                } catch (masterError) {
+                    log('⚠️ 同步仓库失败，继续上传...', 'warning');
                 }
             }
         }
@@ -309,6 +310,58 @@ function listBackupFiles(repoPath) {
     } catch (error) {
         console.error('[HF Backup] 列出备份文件失败:', error);
         return [];
+    }
+}
+
+/**
+ * 使用 Hugging Face API 删除文件（参考空间删除的API方式）
+ * @param {string} hfToken - Hugging Face token
+ * @param {string} hfRepo - 仓库名 (username/repo-name)
+ * @param {string} filename - 要删除的文件名
+ * @param {function} logCallback - 日志回调函数
+ * @returns {Promise<boolean>} 是否删除成功
+ */
+async function deleteFileViaAPI(hfToken, hfRepo, filename, logCallback = null) {
+    const log = (msg, type = 'info') => {
+        console.log(`[HF Backup] ${msg}`);
+        if (logCallback) logCallback(msg, type);
+    };
+    
+    try {
+        // 方法1：使用 HF Hub API 删除文件（推荐）
+        const [owner, repoName] = hfRepo.split('/');
+        const commitUrl = `https://huggingface.co/api/datasets/${hfRepo}/commit/main`;
+        
+        const commitPayload = {
+            operations: [
+                {
+                    operation: "delete",
+                    path: filename
+                }
+            ],
+            summary: `删除旧备份文件: ${filename}`
+        };
+        
+        const response = await fetch(commitUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${hfToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(commitPayload)
+        });
+        
+        if (response.ok) {
+            log(`✅ API删除成功: ${filename}`);
+            return true;
+        } else {
+            const errorText = await response.text();
+            log(`⚠️ API删除失败 (${response.status}): ${filename} - ${errorText}`, 'warning');
+            return false;
+        }
+    } catch (error) {
+        log(`⚠️ API删除异常: ${filename} - ${error.message}`, 'warning');
+        return false;
     }
 }
 
