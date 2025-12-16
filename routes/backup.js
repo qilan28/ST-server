@@ -1,7 +1,8 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { authenticateToken } from '../middleware/auth.js';
+import jwt from 'jsonwebtoken';
+import { authenticateToken, JWT_SECRET } from '../middleware/auth.js';
 import { 
     findUserByUsername, 
     updateUserHFConfig, 
@@ -141,8 +142,7 @@ router.get('/backup', async (req, res) => {
     
     // 验证 token
     try {
-        const jwt = await import('jsonwebtoken');
-        const decoded = jwt.default.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, JWT_SECRET);
         req.user = { username: decoded.username };
     } catch (error) {
         return res.status(401).json({
