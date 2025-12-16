@@ -1888,6 +1888,96 @@ input:checked + .slider:before {
     text-decoration: underline;
 }
 
+/* 备份实时日志样式 */
+.backup-logs {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f7fafc;
+    border-radius: 8px;
+    border-left: 4px solid #3182ce;
+}
+
+.backup-logs h4 {
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.logs-container {
+    background: #1e1e1e;
+    border-radius: 8px;
+    padding: 16px;
+    height: 400px;
+    overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.log-entry {
+    margin-bottom: 4px;
+    padding: 4px 0;
+}
+
+.log-time {
+    color: #888;
+    margin-right: 8px;
+    font-size: 12px;
+}
+
+.log-message {
+    color: #e0e0e0;
+}
+
+/* 不同类型的日志颜色 */
+.log-start .log-message {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.log-info .log-message {
+    color: #2196F3;
+}
+
+.log-success .log-message {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.log-warning .log-message {
+    color: #FF9800;
+}
+
+.log-error .log-message {
+    color: #f44336;
+    font-weight: bold;
+}
+
+.empty-logs {
+    color: #666;
+    text-align: center;
+    padding: 40px;
+    font-style: italic;
+}
+
+/* 滚动条样式 */
+.logs-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.logs-container::-webkit-scrollbar-track {
+    background: #2e2e2e;
+    border-radius: 4px;
+}
+
+.logs-container::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+.logs-container::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
 @media (max-width: 768px) {
     .backup-actions {
         flex-direction: column;
@@ -1895,5 +1985,10 @@ input:checked + .slider:before {
     
     .backup-actions .btn {
         width: 100%;
+    }
+    
+    .logs-container {
+        height: 300px;
+        font-size: 12px;
     }
 }

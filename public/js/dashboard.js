@@ -947,6 +947,7 @@ async function loadBackupConfig() {
             const data = await response.json();
             if (data.success && data.config) {
                 document.getElementById('hfRepo').value = data.config.hfRepo || '';
+                document.getElementById('hfEmail').value = data.config.hfEmail || '';
                 // Token 不显示完整内容，只显示是否已设置
                 if (data.config.hfTokenSet) {
                     document.getElementById('hfToken').placeholder = `已设置 (${data.config.hfTokenPreview})`;
@@ -962,11 +963,12 @@ async function loadBackupConfig() {
 async function handleSaveBackupConfig() {
     const hfRepo = document.getElementById('hfRepo').value.trim();
     const hfToken = document.getElementById('hfToken').value.trim();
+    const hfEmail = document.getElementById('hfEmail').value.trim();
     const messageDiv = document.getElementById('backupMessage');
     
-    if (!hfRepo || !hfToken) {
+    if (!hfRepo || !hfToken || !hfEmail) {
         messageDiv.className = 'message error';
-        messageDiv.textContent = '❌ 请填写完整的配置信息';
+        messageDiv.textContent = '❌ 请填写完整的配置信息（Token、仓库名、邮箱）';
         return;
     }
     
@@ -987,7 +989,7 @@ async function handleSaveBackupConfig() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify({ hfToken, hfRepo })
+            body: JSON.stringify({ hfToken, hfRepo, hfEmail })
         });
         
         const data = await response.json();
@@ -999,6 +1001,8 @@ async function handleSaveBackupConfig() {
             // 清空密码框并更新提示
             document.getElementById('hfToken').value = '';
             document.getElementById('hfToken').placeholder = '已设置';
+            document.getElementById('hfEmail').value = '';
+            document.getElementById('hfEmail').placeholder = '已设置';
         } else {
             throw new Error(data.error || '保存失败');
         }
@@ -1054,11 +1058,15 @@ async function handleTestConnection() {
     }
 }
 
-// 执行备份
+// 执行备份（使用 SSE 实时日志）
+let backupEventSource = null;
+
 async function handleBackup() {
     const messageDiv = document.getElementById('backupMessage');
     const statusDiv = document.getElementById('backupStatus');
     const statusContent = document.getElementById('backupStatusContent');
+    const logsContainer = document.getElementById('backupLogsContainer');
+    const logsDiv = document.getElementById('backupLogs');
     
     // 确认操作
     if (!confirm('确定要立即备份您的数据到 Hugging Face 吗？\n\n备份过程可能需要几分钟，取决于数据大小。')) {
@@ -1066,41 +1074,106 @@ async function handleBackup() {
     }
     
     try {
-        messageDiv.className = 'message info';
-        messageDiv.textContent = '⏳ 正在备份，请稍候...';
+        // 清空日志
+        logsDiv.innerHTML = '';
+        logsContainer.style.display = 'block';
         statusDiv.style.display = 'none';
         
-        const response = await fetch(`${API_BASE}/backup/backup`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
+        messageDiv.className = 'message info';
+        messageDiv.textContent = '🚀 备份中，请查看下方实时日志...';
         
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-            messageDiv.className = 'message success';
-            messageDiv.textContent = '✅ 备份成功！';
-            
-            // 显示备份详情
-            statusDiv.style.display = 'block';
-            statusContent.innerHTML = `
-                <p><strong>备份文件:</strong> ${data.filename}</p>
-                <p><strong>文件大小:</strong> ${(data.size / 1024 / 1024).toFixed(2)} MB</p>
-                <p><strong>备份时间:</strong> ${new Date(data.timestamp).toLocaleString()}</p>
-                <p><strong>下载地址:</strong> <a href="${data.url}" target="_blank">${data.url}</a></p>
-            `;
-        } else {
-            throw new Error(data.message || data.error || '备份失败');
+        // 关闭旧的 EventSource
+        if (backupEventSource) {
+            backupEventSource.close();
         }
+        
+        // 创建 SSE 连接
+        backupEventSource = new EventSource(`${API_BASE}/backup/backup?token=${localStorage.getItem('token')}`);
+        
+        // 监听消息
+        backupEventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                // 添加日志
+                addBackupLog(data.message, data.type);
+                
+                // 检查完成状态
+                if (data.type === 'done') {
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = '✅ 备份完成！';
+                    
+                    backupEventSource.close();
+                    backupEventSource = null;
+                    
+                    // 显示备份详情
+                    if (data.result) {
+                        statusDiv.style.display = 'block';
+                        statusContent.innerHTML = `
+                            <p><strong>备份文件:</strong> ${data.result.filename}</p>
+                            <p><strong>文件大小:</strong> ${(data.result.size / 1024 / 1024).toFixed(2)} MB</p>
+                            <p><strong>备份时间:</strong> ${new Date(data.result.timestamp).toLocaleString()}</p>
+                            <p><strong>下载地址:</strong> <a href="${data.result.url}" target="_blank">${data.result.url}</a></p>
+                        `;
+                    }
+                } else if (data.type === 'error') {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = '❌ 备份失败：' + data.error;
+                    
+                    backupEventSource.close();
+                    backupEventSource = null;
+                }
+            } catch (err) {
+                console.error('解析日志消息失败:', err);
+            }
+        };
+        
+        // 监听错误
+        backupEventSource.onerror = (error) => {
+            console.error('SSE 连接错误:', error);
+            messageDiv.className = 'message error';
+            messageDiv.textContent = '❌ 连接失败，请重试';
+            
+            addBackupLog('❌ 连接失败，请重试', 'error');
+            
+            if (backupEventSource) {
+                backupEventSource.close();
+                backupEventSource = null;
+            }
+        };
+        
     } catch (error) {
         console.error('Backup error:', error);
         messageDiv.className = 'message error';
         messageDiv.textContent = '❌ 备份失败：' + error.message;
-        statusDiv.style.display = 'none';
+        logsContainer.style.display = 'none';
     }
+}
+
+// 添加备份日志
+function addBackupLog(message, type = 'info') {
+    const logsDiv = document.getElementById('backupLogs');
+    const logEntry = document.createElement('div');
+    logEntry.className = `log-entry log-${type}`;
+    
+    // 添加时间戳
+    const timestamp = new Date().toLocaleTimeString();
+    logEntry.innerHTML = `
+        <span class="log-time">[${timestamp}]</span>
+        <span class="log-message">${escapeHtml(message)}</span>
+    `;
+    
+    logsDiv.appendChild(logEntry);
+    
+    // 自动滚动到底部
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+}
+
+// 转义 HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // ==================== 初始化 ====================

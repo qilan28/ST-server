@@ -127,8 +127,29 @@ router.post('/test-connection', authenticateToken, async (req, res) => {
     }
 });
 
-// 执行备份
-router.post('/backup', authenticateToken, async (req, res) => {
+// 执行备份（支持 GET 用于 SSE）
+router.get('/backup', async (req, res) => {
+    // 从 query 参数获取 token（用于 EventSource）
+    const token = req.query.token || req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            error: '未提供认证令牌'
+        });
+    }
+    
+    // 验证 token
+    try {
+        const jwt = await import('jsonwebtoken');
+        const decoded = jwt.default.verify(token, process.env.JWT_SECRET);
+        req.user = { username: decoded.username };
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            error: '认证失败'
+        });
+    }
     try {
         const username = req.user.username;
         const user = findUserByUsername(username);

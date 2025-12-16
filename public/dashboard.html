@@ -172,6 +172,19 @@
                             （需要 Write 权限）
                         </small>
                     </div>
+                    
+                    <div class="form-group">
+                        <label for="hfEmail">Git 邮箱 ⭐ 必填</label>
+                        <input 
+                            type="email" 
+                            id="hfEmail" 
+                            class="form-input" 
+                            placeholder="用于 Git commit 的邮箱，例如: user@example.com"
+                        >
+                        <small style="color: #666; margin-top: 5px; display: block;">
+                            用于 Hugging Face 仓库的 Git 提交身份验证
+                        </small>
+                    </div>
                 </div>
                 
                 <div class="backup-actions">
@@ -191,6 +204,13 @@
                 <div class="backup-status" id="backupStatus" style="display: none;">
                     <h4>备份状态</h4>
                     <div id="backupStatusContent"></div>
+                </div>
+                
+                <div class="backup-logs" id="backupLogsContainer" style="display: none;">
+                    <h4>📜 实时日志</h4>
+                    <div class="logs-container" id="backupLogs">
+                        <div class="empty-logs">等待备份开始...</div>
+                    </div>
                 </div>
             </div>
 
