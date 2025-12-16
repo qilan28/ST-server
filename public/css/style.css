@@ -1038,6 +1038,23 @@ body {
     text-align: center;
 }
 
+/* 管理员头部按钮组 */
+.admin-header-buttons {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    gap: 10px;
+}
+
+/* 管理员面板主内容区 */
+.main {
+    padding: 80px 20px 20px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
 /* 表单输入框 */
 .form-input {
     width: 100%;
@@ -1346,11 +1363,54 @@ input:checked + .slider:before {
         top: 10px !important;
         right: 10px !important;
         flex-direction: column;
+        gap: 5px !important;
     }
     
     div[style*="position: fixed"][style*="top: 20px"] .btn {
         font-size: 12px;
         padding: 8px 12px;
+        min-width: 80px;
+    }
+    
+    /* 管理员头部按钮移动端优化 */
+    .admin-header-buttons {
+        top: 10px !important;
+        right: 10px !important;
+        flex-direction: column;
+        gap: 5px !important;
+    }
+    
+    .admin-header-buttons .btn {
+        font-size: 12px;
+        padding: 8px 12px;
+        min-width: 80px;
+        white-space: nowrap;
+    }
+    
+    /* 管理员面板特殊优化 */
+    .main {
+        padding: 70px 10px 10px 10px;
+    }
+    
+    /* Info banner 移动端优化 */
+    .info-banner {
+        padding: 12px 15px !important;
+        font-size: 13px !important;
+    }
+    
+    /* Nginx 配置表单优化 */
+    .stats-card > div[style*="background: white"] {
+        padding: 15px !important;
+    }
+    
+    .stats-card h3 {
+        font-size: 14px !important;
+    }
+    
+    /* 表格标题优化 */
+    .users-card h2,
+    .instances-card h2 {
+        font-size: 1.2rem;
     }
 }
 
@@ -1489,5 +1549,50 @@ input:checked + .slider:before {
     div[style*="position: fixed"][style*="top"] .btn {
         font-size: 11px;
         padding: 6px 10px;
+        width: 100%;
+    }
+    
+    /* 管理员头部按钮更紧凑 */
+    .admin-header-buttons {
+        top: 5px !important;
+        right: 5px !important;
+    }
+    
+    .admin-header-buttons .btn {
+        font-size: 11px;
+        padding: 6px 10px;
+        width: auto;
+        min-width: 70px;
+    }
+    
+    /* 管理员面板main区域 */
+    .main {
+        padding: 60px 5px 10px 5px !important;
+    }
+    
+    /* 统计卡片单列显示 */
+    .stats-card .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px;
+    }
+    
+    /* Nginx配置区域 */
+    .stats-card > div[style*="background: white"] {
+        padding: 12px !important;
+    }
+    
+    .stats-card input[type="text"],
+    .stats-card input[type="number"] {
+        font-size: 16px !important;
+    }
+    
+    /* 配置按钮堆叠 */
+    .stats-card div[style*="display: flex"] {
+        flex-direction: column !important;
+    }
+    
+    .stats-card button {
+        width: 100%;
+        margin-bottom: 10px;
     }
 }
