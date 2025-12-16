@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>正在跳转...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            color: #4a5568;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 14px;
+        }
+
+        .status-label {
+            color: #718096;
+        }
+
+        .status-value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .error {
+            color: #e53e3e;
+            background: #fff5f5;
+            border: 1px solid #fc8181;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h1 id="title">正在准备访问...</h1>
+        <div class="message" id="message">正在设置身份验证信息，请稍候...</div>
+        <div class="status" id="status" style="display: none;">
+            <div class="status-item">
+                <span class="status-label">目标地址:</span>
+                <span class="status-value" id="targetUrl">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Cookie 状态:</span>
+                <span class="status-value" id="cookieStatus">检查中...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">重定向倒计时:</span>
+                <span class="status-value" id="countdown">-</span>
+            </div>
+        </div>
+        <div class="error" id="error" style="display: none;"></div>
+        <a href="/dashboard.html" class="btn" id="backBtn" style="display: none;">返回控制台</a>
+    </div>
+
+    <script>
+        // 设置 Cookie
+        function setCookie(name, value, days = 365) {
+            try {
+                document.cookie = `${name}=${value}; path=/; max-age=${days * 24 * 60 * 60}; SameSite=Lax`;
+                return document.cookie.includes(`${name}=`);
+            } catch (error) {
+                console.error('[Cookie] 设置失败:', error);
+                return false;
+            }
+        }
+
+        // 获取 URL 参数
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.getElementById('title').textContent = '❌ 访问失败';
+            document.getElementById('message').textContent = '';
+            document.querySelector('.spinner').style.display = 'none';
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('error').textContent = message;
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('backBtn').style.display = 'inline-block';
+        }
+
+        // 主要逻辑
+        async function redirectWithAuth() {
+            console.log('\n========== [中转页] 身份验证跳转 ==========');
+            
+            // 获取目标 URL
+            const targetUrl = getUrlParameter('url');
+            if (!targetUrl) {
+                showError('缺少目标地址参数');
+                console.error('[中转页] ❌ 缺少 url 参数');
+                return;
+            }
+
+            console.log('[中转页] 📍 目标地址:', targetUrl);
+            document.getElementById('targetUrl').textContent = targetUrl;
+            document.getElementById('status').style.display = 'block';
+
+            // 从 localStorage 获取 token
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+
+            console.log('[中转页] 👤 当前用户:', username || '未登录');
+            console.log('[中转页] 🔑 Token 状态:', token ? '存在' : '❌ 不存在');
+
+            if (!token) {
+                showError('未找到登录信息，请先登录');
+                console.error('[中转页] ❌ localStorage 中没有 token');
+                console.log('==========================================\n');
+                return;
+            }
+
+            // 设置 Cookie
+            console.log('[中转页] 🍪 正在设置 st_token Cookie...');
+            document.getElementById('cookieStatus').textContent = '设置中...';
+            
+            const success = setCookie('st_token', token);
+            
+            if (success) {
+                console.log('[中转页] ✅ Cookie 设置成功');
+                document.getElementById('cookieStatus').textContent = '✅ 已设置';
+                document.getElementById('cookieStatus').style.color = '#48bb78';
+                
+                // 验证 Cookie
+                const cookies = document.cookie;
+                console.log('[中转页] 🍪 当前所有 Cookies:', cookies);
+                
+                if (cookies.includes('st_token')) {
+                    // 倒计时跳转
+                    let countdown = 2;
+                    document.getElementById('message').textContent = '身份验证设置完成！';
+                    document.getElementById('countdown').textContent = countdown + ' 秒';
+                    
+                    const timer = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            document.getElementById('countdown').textContent = countdown + ' 秒';
+                        } else {
+                            clearInterval(timer);
+                            console.log('[中转页] 🚀 开始跳转到:', targetUrl);
+                            console.log('==========================================\n');
+                            window.location.href = targetUrl;
+                        }
+                    }, 1000);
+                } else {
+                    showError('Cookie 设置后验证失败，请检查浏览器设置');
+                    console.error('[中转页] ❌ Cookie 设置后验证失败');
+                }
+            } else {
+                showError('无法设置身份验证 Cookie，可能被浏览器阻止。请检查浏览器设置是否允许 Cookie。');
+                console.error('[中转页] ❌ setCookie 返回 false');
+            }
+            
+            console.log('==========================================\n');
+        }
+
+        // 页面加载后执行
+        redirectWithAuth();
+    </script>
+</body>
+</html>

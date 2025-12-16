@@ -282,19 +282,8 @@ async function loadUserInfo() {
                 console.log('[前端] 🍪 所有 Cookies:', cookies || '无');
                 console.log('[前端] 🍪 st_token Cookie:', cookies.includes('st_token') ? '存在' : '❌ 不存在！');
                 
-                // 确保 Cookie 已设置
-                if (!cookies.includes('st_token') && token) {
-                    console.log('[前端] ⚠️  检测到 st_token Cookie 缺失，正在重新设置...');
-                    const success = setCookie('st_token', token);
-                    if (success) {
-                        console.log('[前端] ✅ st_token Cookie 已重新设置');
-                    } else {
-                        console.error('[前端] ❌ 无法设置 st_token Cookie，可能被浏览器阻止');
-                        alert('无法设置身份验证 Cookie，请检查浏览器设置是否允许 Cookie');
-                        console.log('==========================================\n');
-                        return;
-                    }
-                } else if (!token) {
+                // 检查 token
+                if (!token) {
                     console.error('[前端] ❌ 未找到 token，请重新登录');
                     alert('登录状态已失效，请重新登录');
                     console.log('==========================================\n');
@@ -302,11 +291,15 @@ async function loadUserInfo() {
                     return;
                 }
                 
-                console.log('[前端] 💡 提示: 正在打开新标签页，请查看服务器日志了解权限验证结果');
+                // 使用中转页面打开，确保 Cookie 被正确设置
+                // 中转页会先设置 Cookie，然后再跳转到实例
+                const redirectUrl = `/redirect-with-auth.html?url=${encodeURIComponent(accessUrl)}`;
+                console.log('[前端] 🔄 使用中转页面:', redirectUrl);
+                console.log('[前端] 💡 中转页将自动设置 Cookie 并跳转');
                 console.log('==========================================\n');
                 
-                // 打开新标签页
-                window.open(accessUrl, '_blank');
+                // 打开中转页
+                window.open(redirectUrl, '_blank');
             };
             
             // 更新版本管理区域
