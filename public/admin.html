@@ -133,6 +133,33 @@
                 </div>
             </div>
 
+            <!-- 公告管理 -->
+            <div class="users-card">
+                <h2>📢 公告管理</h2>
+                <div style="margin-bottom: 20px;">
+                    <button onclick="showCreateAnnouncementModal()" class="btn btn-primary">➕ 创建新公告</button>
+                </div>
+                <div class="table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>类型</th>
+                                <th>标题</th>
+                                <th>内容</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="announcementsTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 30px;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- 实例监控 -->
             <div class="instances-card">
                 <h2>🖥️ 实例监控</h2>
@@ -157,6 +184,43 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- 公告创建/编辑模态框 -->
+    <div id="announcementModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2 id="modalTitle">创建公告</h2>
+            <form id="announcementForm" onsubmit="handleAnnouncementSubmit(event)">
+                <input type="hidden" id="announcementId">
+                <div class="form-group">
+                    <label for="announcementType">公告类型 *</label>
+                    <select id="announcementType" class="form-input" required>
+                        <option value="">请选择</option>
+                        <option value="login">登录页公告</option>
+                        <option value="dashboard">用户面板公告</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="announcementTitle">标题 *</label>
+                    <input type="text" id="announcementTitle" class="form-input" required placeholder="输入公告标题" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="announcementContent">内容 *</label>
+                    <textarea id="announcementContent" class="form-input" required placeholder="输入公告内容" rows="6" maxlength="500"></textarea>
+                    <small style="color: #718096;">最多500字</small>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="announcementIsActive" checked>
+                        <span>立即启用</span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" onclick="closeAnnouncementModal()" class="btn btn-secondary">取消</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="/js/admin.js"></script>

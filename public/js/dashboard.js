@@ -1,6 +1,30 @@
 const API_BASE = '/api';
 let statusCheckInterval = null;
 
+// 加载用户面板公告
+async function loadDashboardAnnouncements() {
+    try {
+        const response = await fetch(`${API_BASE}/announcements/dashboard`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const announcements = data.announcements;
+        
+        if (announcements && announcements.length > 0) {
+            const announcement = announcements[0]; // 显示第一个
+            document.getElementById('dashboardAnnouncementTitle').textContent = announcement.title;
+            document.getElementById('dashboardAnnouncementContent').textContent = announcement.content;
+            
+            const date = new Date(announcement.created_at);
+            document.getElementById('dashboardAnnouncementDate').textContent = `发布于 ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+            
+            document.getElementById('dashboardAnnouncementContainer').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Load dashboard announcements error:', error);
+    }
+}
+
 // 获取token
 function getToken() {
     return localStorage.getItem('token');
@@ -762,6 +786,7 @@ async function init() {
     if (!checkAuth()) return;
     
     await loadUserInfo();
+    await loadDashboardAnnouncements();
     startStatusCheck();
     
     // 初始加载日志

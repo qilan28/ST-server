@@ -5,7 +5,12 @@ import {
     findUserByUsername,
     updateUserRole,
     deleteUser,
-    isAdmin
+    isAdmin,
+    getAllAnnouncements,
+    createAnnouncement,
+    updateAnnouncement,
+    deleteAnnouncement,
+    toggleAnnouncementStatus
 } from '../database.js';
 import { 
     startInstance,
@@ -271,6 +276,82 @@ router.delete('/users/:username', async (req, res) => {
     } catch (error) {
         console.error('Delete user error:', error);
         res.status(500).json({ error: 'Failed to delete user' });
+    }
+});
+
+// ==================== 公告管理 ====================
+
+// 获取所有公告
+router.get('/announcements', async (req, res) => {
+    try {
+        const announcements = getAllAnnouncements();
+        res.json({ announcements });
+    } catch (error) {
+        console.error('Get announcements error:', error);
+        res.status(500).json({ error: 'Failed to get announcements' });
+    }
+});
+
+// 创建公告
+router.post('/announcements', async (req, res) => {
+    try {
+        const { type, title, content } = req.body;
+        
+        if (!type || !title || !content) {
+            return res.status(400).json({ error: 'Type, title and content are required' });
+        }
+        
+        if (!['login', 'dashboard'].includes(type)) {
+            return res.status(400).json({ error: 'Invalid type. Must be login or dashboard' });
+        }
+        
+        const announcementId = createAnnouncement(type, title, content);
+        res.json({ message: 'Announcement created successfully', id: announcementId });
+    } catch (error) {
+        console.error('Create announcement error:', error);
+        res.status(500).json({ error: 'Failed to create announcement' });
+    }
+});
+
+// 更新公告
+router.put('/announcements/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, content, isActive } = req.body;
+        
+        if (!title || !content || isActive === undefined) {
+            return res.status(400).json({ error: 'Title, content and isActive are required' });
+        }
+        
+        updateAnnouncement(id, title, content, isActive ? 1 : 0);
+        res.json({ message: 'Announcement updated successfully' });
+    } catch (error) {
+        console.error('Update announcement error:', error);
+        res.status(500).json({ error: 'Failed to update announcement' });
+    }
+});
+
+// 切换公告状态
+router.patch('/announcements/:id/toggle', async (req, res) => {
+    try {
+        const { id } = req.params;
+        toggleAnnouncementStatus(id);
+        res.json({ message: 'Announcement status toggled successfully' });
+    } catch (error) {
+        console.error('Toggle announcement status error:', error);
+        res.status(500).json({ error: 'Failed to toggle announcement status' });
+    }
+});
+
+// 删除公告
+router.delete('/announcements/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        deleteAnnouncement(id);
+        res.json({ message: 'Announcement deleted successfully' });
+    } catch (error) {
+        console.error('Delete announcement error:', error);
+        res.status(500).json({ error: 'Failed to delete announcement' });
     }
 });
 

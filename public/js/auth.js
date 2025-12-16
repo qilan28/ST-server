@@ -1,5 +1,34 @@
 const API_BASE = '/api';
 
+// 加载登录页公告
+async function loadLoginAnnouncements() {
+    try {
+        const response = await fetch(`${API_BASE}/announcements/login`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const announcements = data.announcements;
+        
+        if (announcements && announcements.length > 0) {
+            const announcement = announcements[0]; // 显示第一个
+            document.getElementById('announcementTitle').textContent = announcement.title;
+            document.getElementById('announcementContent').textContent = announcement.content;
+            
+            const date = new Date(announcement.created_at);
+            document.getElementById('announcementDate').textContent = `发布于 ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+            
+            document.getElementById('announcementContainer').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Load announcements error:', error);
+    }
+}
+
+// 页面加载完成后加载公告
+document.addEventListener('DOMContentLoaded', () => {
+    loadLoginAnnouncements();
+});
+
 // 切换到注册表单
 function switchToRegister() {
     document.getElementById('loginForm').classList.remove('active');

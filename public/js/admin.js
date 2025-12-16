@@ -516,12 +516,14 @@ async function init() {
     await loadStats();
     await loadUsers();
     await loadInstances();
+    await loadAnnouncements();
     
     // 定时刷新（每5秒）
     refreshInterval = setInterval(() => {
         loadStats();
         loadUsers();
         loadInstances();
+        loadAnnouncements();
     }, 5000);
 }
 
@@ -534,3 +536,180 @@ window.addEventListener('beforeunload', () => {
 
 // 页面加载完成后初始化
 init();
+
+// ==================== 公告管理 ====================
+
+// 加载公告列表
+async function loadAnnouncements() {
+    try {
+        const response = await apiRequest(`${API_BASE}/admin/announcements`);
+        if (!response) return;
+        
+        const data = await response.json();
+        const announcements = data.announcements;
+        
+        const tbody = document.getElementById('announcementsTableBody');
+        
+        if (announcements.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 30px;">暂无公告</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = announcements.map(ann => `
+            <tr>
+                <td>
+                    <span class="role-badge ${ann.type === 'login' ? 'role-admin' : 'role-user'}">
+                        ${ann.type === 'login' ? '登录页' : '用户面板'}
+                    </span>
+                </td>
+                <td>${ann.title}</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${ann.content}</td>
+                <td>
+                    <span class="status-badge ${ann.is_active ? 'status-running' : 'status-stopped'}">
+                        ${ann.is_active ? '启用' : '禁用'}
+                    </span>
+                </td>
+                <td>${formatDate(ann.created_at)}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button onclick="toggleAnnouncementStatus(${ann.id})" class="btn-action" title="${ann.is_active ? '禁用' : '启用'}">
+                            ${ann.is_active ? '⏸️' : '▶️'}
+                        </button>
+                        <button onclick="editAnnouncement(${ann.id})" class="btn-action" title="编辑">✏️</button>
+                        <button onclick="deleteAnnouncementConfirm(${ann.id})" class="btn-action btn-delete" title="删除">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Load announcements error:', error);
+    }
+}
+
+// 显示创建公告模态框
+function showCreateAnnouncementModal() {
+    document.getElementById('modalTitle').textContent = '创建公告';
+    document.getElementById('announcementId').value = '';
+    document.getElementById('announcementType').value = '';
+    document.getElementById('announcementTitle').value = '';
+    document.getElementById('announcementContent').value = '';
+    document.getElementById('announcementIsActive').checked = true;
+    document.getElementById('announcementModal').style.display = 'flex';
+}
+
+// 编辑公告
+async function editAnnouncement(id) {
+    try {
+        const response = await apiRequest(`${API_BASE}/admin/announcements`);
+        if (!response) return;
+        
+        const data = await response.json();
+        const announcement = data.announcements.find(a => a.id === id);
+        
+        if (!announcement) {
+            showMessage('公告不存在', 'error');
+            return;
+        }
+        
+        document.getElementById('modalTitle').textContent = '编辑公告';
+        document.getElementById('announcementId').value = announcement.id;
+        document.getElementById('announcementType').value = announcement.type;
+        document.getElementById('announcementTitle').value = announcement.title;
+        document.getElementById('announcementContent').value = announcement.content;
+        document.getElementById('announcementIsActive').checked = announcement.is_active === 1;
+        document.getElementById('announcementModal').style.display = 'flex';
+    } catch (error) {
+        console.error('Edit announcement error:', error);
+        showMessage('加载公告失败', 'error');
+    }
+}
+
+// 关闭公告模态框
+function closeAnnouncementModal() {
+    document.getElementById('announcementModal').style.display = 'none';
+}
+
+// 提交公告表单
+async function handleAnnouncementSubmit(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('announcementId').value;
+    const type = document.getElementById('announcementType').value;
+    const title = document.getElementById('announcementTitle').value.trim();
+    const content = document.getElementById('announcementContent').value.trim();
+    const isActive = document.getElementById('announcementIsActive').checked;
+    
+    if (!title || !content) {
+        showMessage('请填写所有必填项', 'error');
+        return;
+    }
+    
+    try {
+        let response;
+        if (id) {
+            // 更新
+            response = await apiRequest(`${API_BASE}/admin/announcements/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, content, isActive })
+            });
+        } else {
+            // 创建
+            response = await apiRequest(`${API_BASE}/admin/announcements`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, title, content })
+            });
+        }
+        
+        if (response) {
+            showMessage(id ? '公告更新成功' : '公告创建成功', 'success');
+            closeAnnouncementModal();
+            loadAnnouncements();
+        }
+    } catch (error) {
+        console.error('Submit announcement error:', error);
+        showMessage('操作失败', 'error');
+    }
+}
+
+// 切换公告状态
+async function toggleAnnouncementStatus(id) {
+    try {
+        const response = await apiRequest(`${API_BASE}/admin/announcements/${id}/toggle`, {
+            method: 'PATCH'
+        });
+        
+        if (response) {
+            showMessage('状态切换成功', 'success');
+            loadAnnouncements();
+        }
+    } catch (error) {
+        console.error('Toggle announcement status error:', error);
+        showMessage('操作失败', 'error');
+    }
+}
+
+// 删除公告确认
+function deleteAnnouncementConfirm(id) {
+    if (confirm('确定要删除这条公告吗？此操作不可撤销！')) {
+        deleteAnnouncementAction(id);
+    }
+}
+
+// 执行删除公告
+async function deleteAnnouncementAction(id) {
+    try {
+        const response = await apiRequest(`${API_BASE}/admin/announcements/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response) {
+            showMessage('公告删除成功', 'success');
+            loadAnnouncements();
+        }
+    } catch (error) {
+        console.error('Delete announcement error:', error);
+        showMessage('删除失败', 'error');
+    }
+}

@@ -12,6 +12,7 @@ import instanceRoutes from './routes/instance.js';
 import versionRoutes from './routes/version.js';
 import adminRoutes from './routes/admin.js';
 import configRoutes from './routes/config.js';
+import announcementsRoutes from './routes/announcements.js';
 import './database.js';
 import { findUserByUsername, createAdminUser } from './database.js';
 import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
@@ -126,6 +127,7 @@ app.use('/api/instance', instanceRoutes);
 app.use('/api/version', versionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/config', configRoutes);
+app.use('/api/announcements', announcementsRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

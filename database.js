@@ -69,9 +69,25 @@ const migrateAddLoginFields = () => {
     }
 };
 
+// 创建公告表
+const createAnnouncementsTable = () => {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS announcements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+};
+
 // 初始化数据库
 export const initDatabase = () => {
     createUsersTable();
+    createAnnouncementsTable();
     migrateAddRoleField();
     migrateAddLoginFields();
     fixAdminUserPorts();
@@ -263,6 +279,65 @@ export const updateUserLogin = (username) => {
 export const deleteUser = (username) => {
     const stmt = db.prepare('DELETE FROM users WHERE username = ?');
     return stmt.run(username);
+};
+
+// ==================== 公告管理 ====================
+
+// 获取所有公告（管理员用）
+export const getAllAnnouncements = () => {
+    const stmt = db.prepare(`
+        SELECT id, type, title, content, is_active, created_at, updated_at 
+        FROM announcements 
+        ORDER BY created_at DESC
+    `);
+    return stmt.all();
+};
+
+// 获取指定类型的活跃公告（前端用）
+export const getActiveAnnouncements = (type) => {
+    const stmt = db.prepare(`
+        SELECT id, type, title, content, created_at 
+        FROM announcements 
+        WHERE type = ? AND is_active = 1 
+        ORDER BY created_at DESC
+    `);
+    return stmt.all(type);
+};
+
+// 创建公告
+export const createAnnouncement = (type, title, content) => {
+    const stmt = db.prepare(`
+        INSERT INTO announcements (type, title, content, is_active) 
+        VALUES (?, ?, ?, 1)
+    `);
+    const result = stmt.run(type, title, content);
+    return result.lastInsertRowid;
+};
+
+// 更新公告
+export const updateAnnouncement = (id, title, content, isActive) => {
+    const stmt = db.prepare(`
+        UPDATE announcements 
+        SET title = ?, content = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+    `);
+    return stmt.run(title, content, isActive, id);
+};
+
+// 删除公告
+export const deleteAnnouncement = (id) => {
+    const stmt = db.prepare('DELETE FROM announcements WHERE id = ?');
+    return stmt.run(id);
+};
+
+// 切换公告状态
+export const toggleAnnouncementStatus = (id) => {
+    const stmt = db.prepare(`
+        UPDATE announcements 
+        SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+    `);
+    return stmt.run(id);
 };
 
 // 导出数据库实例（用于事务等高级操作）
