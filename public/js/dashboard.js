@@ -247,6 +247,20 @@ async function loadUserInfo() {
             accessLink.href = accessUrl;
             accessLink.title = accessUrl; // 悬停显示完整URL
             
+            // 增加点击事件日志
+            accessLink.onclick = function(e) {
+                const token = localStorage.getItem('token');
+                const cookies = document.cookie;
+                console.log('\n========== [前端] 点击访问地址 ==========');
+                console.log('[前端] 📍 目标地址:', accessUrl);
+                console.log('[前端] 👤 当前用户:', data.username);
+                console.log('[前端] 🔑 localStorage token:', token ? `存在 (${token.substring(0, 20)}...)` : '不存在');
+                console.log('[前端] 🍪 所有 Cookies:', cookies || '无');
+                console.log('[前端] 🍪 st_token Cookie:', cookies.includes('st_token') ? '存在' : '❌ 不存在！');
+                console.log('[前端] 💡 提示: 打开新标签页后，请查看服务器日志了解权限验证结果');
+                console.log('==========================================\n');
+            };
+            
             // 更新版本管理区域
             updateVersionInfo(data);
             
@@ -1054,11 +1068,22 @@ async function handleBackup() {
 async function init() {
     if (!checkAuth()) return;
     
+    console.log('\n========== [前端] 页面初始化 ==========');
+    
     // 确保 cookie 中也有 token（用于 Nginx 权限验证）
     const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    console.log('[前端] 👤 当前用户:', username);
+    console.log('[前端] 🔑 localStorage token:', token ? `存在 (${token.substring(0, 20)}...)` : '❌ 不存在');
+    
     if (token) {
         setCookie('st_token', token);
+        console.log('[前端] ✅ 已设置 st_token cookie');
+        console.log('[前端] 🍪 当前所有 Cookies:', document.cookie || '无');
+    } else {
+        console.log('[前端] ❌ 无法设置 st_token cookie - localStorage 中没有 token');
     }
+    console.log('==========================================\n');
     
     await loadUserInfo();
     await loadDashboardAnnouncements();

@@ -166,12 +166,19 @@ async function handleLogin(event) {
         const data = await response.json();
         
         if (response.ok) {
+            console.log('\n========== [前端] 登录成功 ==========');
+            
             // 保存token到 localStorage
             localStorage.setItem('token', data.token);
             localStorage.setItem('username', data.user.username);
+            console.log('[前端] ✅ Token 已保存到 localStorage');
+            console.log('[前端] 👤 用户:', data.user.username);
             
             // 同时设置 cookie，供 Nginx 权限验证使用
             setCookie('st_token', data.token);
+            console.log('[前端] ✅ st_token cookie 已设置');
+            console.log('[前端] 🍪 当前所有 Cookies:', document.cookie);
+            console.log('==========================================\n');
             
             showMessage('登录成功！正在跳转...', 'success');
             
