@@ -136,27 +136,49 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename, u
         log('🔍 检查并管理现有备份文件...');
         const filesToDelete = manageBackupFiles(repoPath, logCallback);
         
-        // 使用 API 删除文件（避免留在 Git 历史中占用空间）
+        // 双重删除：本地 Git + HF API（确保彻底清理）
         if (filesToDelete.length > 0) {
-            log(`🧹 准备通过 API 清理 ${filesToDelete.length} 个旧备份...`);
+            log(`🧹 准备清理 ${filesToDelete.length} 个旧备份...`);
+            
+            // 1. 先删除本地仓库中的文件
             for (const fileToDelete of filesToDelete) {
-                // 使用 HF API 删除
-                await deleteFileViaAPI(hfToken, hfRepo, fileToDelete, logCallback);
-                // 等待一小段时间，避免 API 请求过快
-                await new Promise(resolve => setTimeout(resolve, 500));
+                const filePath = path.join(repoPath, fileToDelete);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    log(`🗑️ 本地删除: ${fileToDelete}`);
+                }
             }
             
-            // 刷新本地仓库（重新拉取以同步删除）
-            log('🔄 同步仓库状态...');
+            // 2. 提交本地删除到 Git
+            log('💬 提交删除操作到 Git...');
+            await execAsync('git add -A', { cwd: repoPath });
             try {
-                await execAsync('git fetch origin', { cwd: repoPath });
-                await execAsync('git reset --hard origin/main', { cwd: repoPath });
-            } catch (resetError) {
-                try {
-                    await execAsync('git reset --hard origin/master', { cwd: repoPath });
-                } catch (masterError) {
-                    log('⚠️ 同步仓库失败，继续上传...', 'warning');
+                await execAsync(`git commit -m "清理旧备份文件"`, { cwd: repoPath });
+            } catch (commitError) {
+                // 忽略 "nothing to commit" 错误
+                const stdout = commitError.stdout || '';
+                if (!stdout.includes('nothing to commit')) {
+                    log('⚠️ Git commit 失败，继续执行...', 'warning');
                 }
+            }
+            
+            // 3. 推送删除到远程（先推送，确保 Git 历史记录删除）
+            log('🚀 推送删除到远程...');
+            try {
+                await execAsync('git push origin main', { cwd: repoPath });
+            } catch (pushError) {
+                try {
+                    await execAsync('git push origin master', { cwd: repoPath });
+                } catch (masterError) {
+                    log('⚠️ 推送删除失败，继续执行...', 'warning');
+                }
+            }
+            
+            // 4. 使用 HF API 再次确保删除（双保险，防止文件留在 Git 历史）
+            log('🔥 通过 API 确保彻底删除...');
+            for (const fileToDelete of filesToDelete) {
+                await deleteFileViaAPI(hfToken, hfRepo, fileToDelete, logCallback);
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
         
