@@ -132,6 +132,33 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename, u
         await execAsync(`git config user.email "${gitEmail}"`, { cwd: repoPath });
         await execAsync(`git config user.name "${gitName}"`, { cwd: repoPath });
         
+        // 管理备份文件（删除旧文件）
+        log('🔍 检查并管理现有备份文件...');
+        const filesToDelete = manageBackupFiles(repoPath, logCallback);
+        
+        // 删除需要清理的文件
+        if (filesToDelete.length > 0) {
+            for (const fileToDelete of filesToDelete) {
+                const filePath = path.join(repoPath, fileToDelete);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    log(`✅ 已删除: ${fileToDelete}`);
+                }
+            }
+            
+            // 提交删除操作
+            log('💬 提交删除操作到 Git...');
+            await execAsync('git add -A', { cwd: repoPath });
+            try {
+                await execAsync(`git commit -m "清理旧备份文件"`, { cwd: repoPath });
+            } catch (commitError) {
+                // 忽略 "nothing to commit" 错误
+                if (!commitError.stdout?.includes('nothing to commit')) {
+                    throw commitError;
+                }
+            }
+        }
+        
         // 如果文件大于 10MB，配置 Git LFS
         if (fileSize > 10 * 1024 * 1024) {
             log('💾 配置 Git LFS（大文件支持）...');
@@ -253,6 +280,111 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename, u
         }
         
         throw error;
+    }
+}
+
+/**
+ * 列出 Hugging Face 仓库中的备份文件
+ * @param {string} repoPath - 仓库本地路径
+ * @returns {Array<{filename: string, timestamp: number, date: string}>} 备份文件列表
+ */
+function listBackupFiles(repoPath) {
+    try {
+        if (!fs.existsSync(repoPath)) {
+            return [];
+        }
+        
+        const files = fs.readdirSync(repoPath);
+        const backupFiles = files
+            .filter(f => f.endsWith('.zip') && /^\d+\.zip$/.test(f))
+            .map(filename => {
+                const timestamp = parseInt(filename.replace('.zip', ''));
+                const date = new Date(timestamp);
+                const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+                return { filename, timestamp, date: dateStr };
+            })
+            .sort((a, b) => b.timestamp - a.timestamp); // 从新到旧排序
+        
+        return backupFiles;
+    } catch (error) {
+        console.error('[HF Backup] 列出备份文件失败:', error);
+        return [];
+    }
+}
+
+/**
+ * 管理备份文件：保留3天，每天最后一个
+ * @param {string} repoPath - 仓库本地路径
+ * @param {function} logCallback - 日志回调函数
+ * @returns {Array<string>} 需要删除的文件列表
+ */
+function manageBackupFiles(repoPath, logCallback = null) {
+    const log = (msg, type = 'info') => {
+        console.log(`[HF Backup] ${msg}`);
+        if (logCallback) logCallback(msg, type);
+    };
+    
+    try {
+        const backupFiles = listBackupFiles(repoPath);
+        
+        if (backupFiles.length === 0) {
+            return [];
+        }
+        
+        log(`📋 当前仓库中有 ${backupFiles.length} 个备份文件`);
+        
+        // 按日期分组
+        const filesByDate = {};
+        backupFiles.forEach(file => {
+            if (!filesByDate[file.date]) {
+                filesByDate[file.date] = [];
+            }
+            filesByDate[file.date].push(file);
+        });
+        
+        // 获取今天的日期
+        const today = new Date().toISOString().split('T')[0];
+        
+        const filesToDelete = [];
+        
+        // 1. 每天只保留最后一个（最新的）备份
+        Object.keys(filesByDate).forEach(date => {
+            const filesOnDate = filesByDate[date];
+            if (filesOnDate.length > 1) {
+                // 保留第一个（最新的），删除其他
+                const toDelete = filesOnDate.slice(1);
+                toDelete.forEach(file => {
+                    log(`🗑️ 删除同日旧备份: ${file.filename} (${file.date})`);
+                    filesToDelete.push(file.filename);
+                });
+            }
+        });
+        
+        // 2. 重新统计（删除同日重复后）
+        const remainingFiles = backupFiles.filter(f => !filesToDelete.includes(f.filename));
+        const uniqueDates = [...new Set(remainingFiles.map(f => f.date))].sort().reverse();
+        
+        // 3. 只保留3天的备份
+        if (uniqueDates.length > 3) {
+            const datesToKeep = uniqueDates.slice(0, 3);
+            remainingFiles.forEach(file => {
+                if (!datesToKeep.includes(file.date)) {
+                    log(`🗑️ 删除超过3天的备份: ${file.filename} (${file.date})`);
+                    filesToDelete.push(file.filename);
+                }
+            });
+        }
+        
+        if (filesToDelete.length > 0) {
+            log(`🧹 共需删除 ${filesToDelete.length} 个旧备份`);
+        } else {
+            log(`✅ 备份文件符合保留策略，无需删除`);
+        }
+        
+        return filesToDelete;
+    } catch (error) {
+        console.error('[HF Backup] 管理备份文件失败:', error);
+        return [];
     }
 }
 
