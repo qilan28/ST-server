@@ -1,4 +1,11 @@
 const API_BASE = '/api';
+const GITHUB_API = 'https://api.github.com/repos/SillyTavern/SillyTavern';
+
+// 删除 Cookie
+function deleteCookie(name) {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+}
+
 let versions = { releases: [], branches: [] };
 let currentTab = 'releases';
 let checkInterval = null;
@@ -249,6 +256,8 @@ function handleLogout() {
     if (confirm('确定要退出登录吗？')) {
         localStorage.removeItem('token');
         localStorage.removeItem('username');
+        // 同时清除 st_token cookie
+        deleteCookie('st_token');
         window.location.href = '/';
     }
 }

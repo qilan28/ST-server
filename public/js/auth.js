@@ -1,5 +1,12 @@
 const API_BASE = '/api';
 
+// 设置 Cookie
+function setCookie(name, value, days = 365) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+}
+
 // 公告轮播相关变量
 let loginAnnouncements = [];
 let currentAnnouncementIndex = 0;
@@ -159,9 +166,12 @@ async function handleLogin(event) {
         const data = await response.json();
         
         if (response.ok) {
-            // 保存token
+            // 保存token到 localStorage
             localStorage.setItem('token', data.token);
             localStorage.setItem('username', data.user.username);
+            
+            // 同时设置 cookie，供 Nginx 权限验证使用
+            setCookie('st_token', data.token);
             
             showMessage('登录成功！正在跳转...', 'success');
             
@@ -209,6 +219,9 @@ async function handleRegister(event) {
             // 保存token
             localStorage.setItem('token', data.token);
             localStorage.setItem('username', data.user.username);
+            
+            // 同时设置 cookie，供 Nginx 权限验证使用
+            setCookie('st_token', data.token);
             
             showMessage('注册成功！正在跳转...', 'success');
             

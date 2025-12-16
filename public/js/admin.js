@@ -12,9 +12,23 @@ function checkAuth() {
     return true;
 }
 
+// 设置 Cookie
+function setCookie(name, value, days = 365) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = `${name}=${value}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+}
+
+// 删除 Cookie
+function deleteCookie(name) {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+}
+
 // 退出登录
 function logout() {
     localStorage.removeItem('token');
+    // 同时清除 st_token cookie
+    deleteCookie('st_token');
     window.location.href = '/login.html';
 }
 
@@ -507,6 +521,12 @@ async function checkAdminSTStatus() {
 
 async function init() {
     if (!checkAuth()) return;
+    
+    // 确保 cookie 中也有 token（用于 Nginx 权限验证）
+    const token = localStorage.getItem('token');
+    if (token) {
+        setCookie('st_token', token);
+    }
     
     // 检查管理员是否有 ST 实例
     await checkAdminSTStatus();
