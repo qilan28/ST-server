@@ -1102,12 +1102,54 @@ input:checked + .slider:before {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+    /* 通用移动端优化 */
+    body {
+        font-size: 14px;
+    }
+    
+    .container {
+        padding: 10px;
+    }
+    
+    /* 登录注册页面 */
+    .auth-card {
+        padding: 25px 20px;
+        max-width: 100%;
+    }
+    
+    .logo h1 {
+        font-size: 2rem;
+    }
+    
+    .logo p {
+        font-size: 1rem;
+    }
+    
+    /* Header适配 */
     .header-content {
         flex-direction: column;
         gap: 15px;
         text-align: center;
+        padding: 0 10px;
+    }
+    
+    .header-content h1 {
+        font-size: 1.5rem;
+    }
+    
+    .user-info {
+        flex-direction: column;
+        width: 100%;
+        gap: 10px;
+    }
+    
+    .user-info .btn,
+    .header-actions .btn {
+        width: 100%;
+        padding: 10px 15px;
     }
 
+    /* 控制按钮 */
     .control-buttons {
         flex-direction: column;
     }
@@ -1115,15 +1157,32 @@ input:checked + .slider:before {
     .control-buttons .btn {
         width: 100%;
     }
+    
+    /* 信息网格 */
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
 
+    /* 统计网格 */
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
     
+    .stat-item {
+        padding: 15px 10px;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    /* 版本相关 */
     .version-item {
         flex-direction: column;
         align-items: flex-start;
         gap: 15px;
+        padding: 15px;
     }
     
     .version-item .btn {
@@ -1142,6 +1201,39 @@ input:checked + .slider:before {
         grid-template-columns: 1fr;
     }
     
+    /* 表格容器 - 横向滚动 */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -10px;
+        padding: 0 10px;
+    }
+    
+    .users-table,
+    .instances-table {
+        min-width: 800px;
+        font-size: 13px;
+    }
+    
+    .users-table th,
+    .users-table td,
+    .instances-table th,
+    .instances-table td {
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+    
+    /* 操作按钮 */
+    .action-buttons {
+        gap: 3px;
+    }
+    
+    .btn-action {
+        font-size: 1rem;
+        padding: 4px;
+    }
+    
+    /* 日志控制 */
     .logs-controls {
         flex-direction: column;
         align-items: stretch;
@@ -1157,16 +1249,108 @@ input:checked + .slider:before {
     
     .log-actions {
         width: 100%;
+        flex-wrap: wrap;
     }
     
     .log-actions .btn {
         flex: 1;
+        min-width: 80px;
     }
     
     .logs-info {
         flex-direction: column;
         align-items: flex-start;
         gap: 5px;
+        font-size: 12px;
+    }
+    
+    .logs-container {
+        font-size: 12px;
+        max-height: 400px;
+    }
+    
+    /* 卡片优化 */
+    .info-card,
+    .control-card,
+    .stats-card,
+    .tips-card,
+    .setup-card,
+    .version-card,
+    .logs-card,
+    .users-card,
+    .instances-card,
+    .danger-zone-card {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .info-card h2,
+    .control-card h2,
+    .stats-card h2,
+    .setup-card h2,
+    .version-card h2,
+    .logs-card h2,
+    .users-card h2,
+    .instances-card h2 {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+    }
+    
+    /* 管理员顶部栏优化 */
+    .admin-top-bar {
+        padding: 10px 0;
+    }
+    
+    .admin-top-content {
+        padding: 0 10px;
+        gap: 10px;
+    }
+    
+    .admin-top-content h1 {
+        font-size: 1.2rem !important;
+    }
+    
+    /* 表单优化 */
+    .form-input {
+        font-size: 16px; /* 防止iOS缩放 */
+    }
+    
+    /* 开关按钮 */
+    .switch {
+        transform: scale(0.9);
+    }
+    
+    /* Dashboard main区域 */
+    .dashboard-main {
+        padding: 0 10px;
+        margin: 20px auto;
+    }
+    
+    /* Tips卡片 */
+    .tips-card li {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    
+    /* 危险操作区域 */
+    .danger-zone-card {
+        padding: 15px;
+    }
+    
+    .danger-zone-card h3 {
+        font-size: 16px;
+    }
+    
+    /* 固定按钮调整 */
+    div[style*="position: fixed"][style*="top: 20px"] {
+        top: 10px !important;
+        right: 10px !important;
+        flex-direction: column;
+    }
+    
+    div[style*="position: fixed"][style*="top: 20px"] .btn {
+        font-size: 12px;
+        padding: 8px 12px;
     }
 }
 
@@ -1245,4 +1429,65 @@ input:checked + .slider:before {
 .status-offline {
     background: #e2e8f0;
     color: #4a5568;
+}
+
+/* 小屏幕手机优化 (竖屏) */
+@media (max-width: 480px) {
+    /* 统计网格改为单列 */
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* 按钮组堆叠 */
+    .header-actions,
+    .log-type-selector,
+    .log-actions {
+        flex-direction: column;
+    }
+    
+    /* 表单按钮全宽 */
+    .btn {
+        width: 100%;
+        font-size: 14px;
+    }
+    
+    /* 卡片标题更小 */
+    .info-card h2,
+    .control-card h2,
+    .stats-card h2,
+    .users-card h2,
+    .instances-card h2 {
+        font-size: 1.2rem;
+    }
+    
+    /* Logo文字调整 */
+    .logo h1 {
+        font-size: 1.8rem;
+    }
+    
+    /* 表格字体更小 */
+    .users-table,
+    .instances-table {
+        font-size: 12px;
+    }
+    
+    .users-table th,
+    .users-table td,
+    .instances-table th,
+    .instances-table td {
+        padding: 6px 8px;
+    }
+    
+    /* 角色和状态标签更小 */
+    .role-badge,
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+    
+    /* 固定按钮更紧凑 */
+    div[style*="position: fixed"][style*="top"] .btn {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
 }
