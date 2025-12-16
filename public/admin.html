@@ -7,16 +7,13 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <!-- 固定顶部栏 -->
-    <div class="admin-top-bar">
-        <div class="admin-top-content">
-            <button onclick="logout()" class="btn btn-danger" style="margin: 0;">退出登录</button>
-            <h1 style="margin: 0; font-size: 1.5rem; color: white;">🔧 管理员面板</h1>
-            <a href="/dashboard.html" id="backToDashboard" class="btn btn-secondary" style="display: none; margin: 0;">返回用户面板</a>
+    <div class="container">
+        <!-- 顶部退出按钮 -->
+        <div style="position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px;">
+            <a href="/dashboard.html" id="backToDashboard" class="btn btn-secondary" style="display: none;">返回用户面板</a>
+            <button onclick="logout()" class="btn btn-danger">退出登录</button>
         </div>
-    </div>
-    
-    <div class="container" style="padding-top: 80px;">
+        
         <main class="main">
             <!-- 管理员说明 -->
             <div class="info-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 4px solid #5a67d8; padding: 15px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
