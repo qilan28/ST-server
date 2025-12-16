@@ -25,6 +25,7 @@ router.get('/hf-config', authenticateToken, async (req, res) => {
             success: true,
             config: {
                 hfRepo: config?.hf_repo || '',
+                hfEmail: config?.hf_email || '',
                 hfTokenSet: !!config?.hf_token,
                 hfTokenPreview: config?.hf_token ? 
                     `${config.hf_token.substring(0, 6)}...${config.hf_token.substring(config.hf_token.length - 4)}` : 
@@ -44,13 +45,13 @@ router.get('/hf-config', authenticateToken, async (req, res) => {
 router.post('/hf-config', authenticateToken, async (req, res) => {
     try {
         const username = req.user.username;
-        const { hfToken, hfRepo } = req.body;
+        const { hfToken, hfRepo, hfEmail } = req.body;
         
         // 验证输入
-        if (!hfToken || !hfRepo) {
+        if (!hfToken || !hfRepo || !hfEmail) {
             return res.status(400).json({ 
                 success: false, 
-                error: '缺少必要的配置信息' 
+                error: '缺少必要的配置信息（Token、仓库名、邮箱）' 
             });
         }
 
@@ -61,9 +62,18 @@ router.post('/hf-config', authenticateToken, async (req, res) => {
                 error: '仓库名格式错误，应为: username/repo-name' 
             });
         }
+        
+        // 验证邮箱格式
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(hfEmail)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: '邮箱格式不正确' 
+            });
+        }
 
         // 更新配置
-        updateUserHFConfig(username, hfToken, hfRepo);
+        updateUserHFConfig(username, hfToken, hfRepo, hfEmail);
         
         console.log(`[Backup API] 用户 ${username} 更新了 HF 配置`);
         
@@ -130,24 +140,16 @@ router.post('/backup', authenticateToken, async (req, res) => {
             });
         }
 
-        // 检查是否为管理员（管理员没有数据目录）
-        if (user.role === 'admin') {
-            return res.status(400).json({ 
-                success: false, 
-                error: '管理员账户没有数据可备份' 
-            });
-        }
-
-        // 获取配置
+        // 获取用户的 HF 配置
         const config = getUserHFConfig(username);
         
-        if (!config?.hf_token || !config?.hf_repo) {
+        if (!config || !config.hf_token || !config.hf_repo) {
             return res.status(400).json({ 
                 success: false, 
                 error: '请先配置 Hugging Face Token 和仓库名' 
             });
         }
-
+        
         // 检查数据目录是否存在
         const dataDir = path.join(user.data_dir, 'st-data');
         
@@ -172,15 +174,46 @@ router.post('/backup', authenticateToken, async (req, res) => {
             });
         }
         
-        // 执行备份
-        const result = await backupToHuggingFace(
-            dataDir,
-            username,
-            config.hf_token,
-            config.hf_repo
-        );
+        // 设置 SSE 响应头
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
         
-        res.json(result);
+        // 日志回调函数
+        const logCallback = (message, type = 'info') => {
+            const data = {
+                type: type,
+                message: message,
+                timestamp: new Date().toISOString()
+            };
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        };
+        
+        // 发送开始消息
+        logCallback('🚀 开始备份流程...', 'start');
+        logCallback(`📂 数据目录: ${dataDir}`, 'info');
+        
+        // 执行备份
+        try {
+            const result = await backupToHuggingFace(
+                dataDir,
+                username,
+                config.hf_token,
+                config.hf_repo,
+                config.hf_email || 'backup@sillytavern.local',
+                logCallback  // 传递日志回调
+            );
+            
+            // 发送成功消息
+            logCallback('✅ 备份完成！', 'success');
+            res.write(`data: ${JSON.stringify({ type: 'done', result: result })}\n\n`);
+            res.end();
+        } catch (error) {
+            console.error('[Backup API] 备份失败:', error);
+            logCallback(`❌ 备份失败: ${error.message}`, 'error');
+            res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+            res.end();
+        }
     } catch (error) {
         console.error('[Backup API] 备份失败:', error);
         res.status(500).json({ 

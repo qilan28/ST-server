@@ -57,8 +57,12 @@ export async function compressDirectory(sourceDir, outputPath) {
  * @param {string} filename - 在仓库中的文件名
  * @returns {Promise<object>} 上传结果
  */
-export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename) {
+export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename, username, hfEmail, logCallback = null) {
     let repoPath = null;
+    const log = (msg, type = 'info') => {
+        console.log(`[HF Backup] ${msg}`);
+        if (logCallback) logCallback(msg, type);
+    };
     
     try {
         // 验证参数
@@ -89,7 +93,7 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename) {
             console.log(`[HF Backup] ⚠️  大文件: ${fileSizeGB} GB`);
         }
         
-        console.log(`[HF Backup] 开始上传文件: ${filename} (${fileSizeMB} MB)`);
+        log(`📤 开始上传文件: ${filename} (${fileSizeMB} MB)`);
         
         // 创建临时工作目录
         const workDir = path.join(__dirname, '..', 'temp', 'hf-repo');
@@ -108,7 +112,7 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename) {
         // 构建带认证的 Git URL
         const gitUrl = `https://${hfUser}:${hfToken}@huggingface.co/datasets/${hfRepo}`;
         
-        console.log('[HF Backup] 克隆仓库...');
+        log('📥 克隆仓库...');
         try {
             await execAsync(`git clone ${gitUrl} "${repoPath}"`, { 
                 timeout: 60000,
@@ -116,19 +120,21 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename) {
             });
         } catch (cloneError) {
             // 如果克隆失败，可能是空仓库，尝试初始化
-            console.log('[HF Backup] 仓库可能为空，尝试初始化...');
+            log('🔧 仓库为空，初始化...');
             fs.mkdirSync(repoPath, { recursive: true });
             await execAsync(`git init`, { cwd: repoPath });
             await execAsync(`git remote add origin ${gitUrl}`, { cwd: repoPath });
         }
         
-        // 配置 Git
-        await execAsync(`git config user.email "backup@sillytavern.local"`, { cwd: repoPath });
-        await execAsync(`git config user.name "ST Backup"`, { cwd: repoPath });
+        // 配置 Git 用户信息（使用用户配置的邮箱）
+        const gitEmail = hfEmail || 'backup@sillytavern.local';
+        const gitName = username || 'ST-Backup-Bot';
+        await execAsync(`git config user.email "${gitEmail}"`, { cwd: repoPath });
+        await execAsync(`git config user.name "${gitName}"`, { cwd: repoPath });
         
         // 如果文件大于 10MB，配置 Git LFS
         if (fileSize > 10 * 1024 * 1024) {
-            console.log('[HF Backup] 配置 Git LFS...');
+            log('💾 配置 Git LFS（大文件支持）...');
             try {
                 await execAsync('git lfs install', { cwd: repoPath });
                 await execAsync('git lfs track "*.zip"', { cwd: repoPath });
@@ -138,31 +144,59 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename) {
                     await execAsync('git add .gitattributes', { cwd: repoPath });
                 }
             } catch (lfsError) {
-                console.log('[HF Backup] Git LFS 未安装，使用常规 Git 上传');
+                log('⚠️ Git LFS 未安装，使用常规 Git 上传', 'warning');
             }
         }
         
-        // 复制备份文件到仓库
-        console.log('[HF Backup] 复制备份文件...');
+        // 复制备份文件到仓库（如果已存在则覆盖）
+        log('📋 复制备份文件到仓库...');
         const targetPath = path.join(repoPath, filename);
+        
+        // 如果文件已存在，先删除（处理重复备份）
+        if (fs.existsSync(targetPath)) {
+            log('🗑️ 删除旧文件...');
+            fs.unlinkSync(targetPath);
+        }
+        
         fs.copyFileSync(filePath, targetPath);
         
         // Git 操作
-        console.log('[HF Backup] 提交更改...');
+        log('💬 提交更改到 Git...');
         await execAsync('git add .', { cwd: repoPath });
         
+        // 生成 commit 信息：用户名-备份时间（大小）
+        const commitDate = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        const commitMessage = `${username}-${commitDate} (${fileSizeMB} MB)`;
+        
         try {
-            await execAsync(`git commit -m "Backup: ${filename} (${fileSizeMB} MB)"`, { cwd: repoPath });
+            await execAsync(`git commit -m "${commitMessage}"`, { cwd: repoPath });
         } catch (commitError) {
-            if (commitError.message.includes('nothing to commit')) {
-                console.log('[HF Backup] 没有新的变更需要提交');
-                throw new Error('备份文件已存在，无需重复上传');
+            // 检查是否是 "没有变更" 错误
+            const stdout = commitError.stdout || '';
+            if (stdout.includes('nothing to commit') || stdout.includes('working tree clean')) {
+                log('⚠️ 没有新的变更（文件已存在且内容相同）', 'warning');
+                
+                // 清理临时仓库
+                if (fs.existsSync(repoPath)) {
+                    fs.rmSync(repoPath, { recursive: true, force: true });
+                }
+                
+                // 构建文件URL
+                const fileUrl = `https://huggingface.co/datasets/${hfRepo}/blob/main/${filename}`;
+                
+                return {
+                    success: true,
+                    url: fileUrl,
+                    size: fileSize,
+                    message: '备份文件已存在，无需重复上传',
+                    skipped: true
+                };
             }
             throw commitError;
         }
         
         // 推送到远程
-        console.log('[HF Backup] 推送到 Hugging Face...');
+        log('🚀 推送到 Hugging Face...');
         try {
             await execAsync('git push origin main', { 
                 cwd: repoPath,
@@ -180,7 +214,7 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename) {
             }
         }
         
-        console.log('[HF Backup] ✅ 上传成功');
+        log('✅ 上传成功', 'success');
         
         // 清理临时仓库
         if (fs.existsSync(repoPath)) {
@@ -230,10 +264,13 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename) {
  * @param {string} hfRepo - Hugging Face 仓库名
  * @returns {Promise<object>} 备份结果
  */
-export async function backupToHuggingFace(dataDir, username, hfToken, hfRepo) {
+export async function backupToHuggingFace(dataDir, username, hfToken, hfRepo, hfEmail, logCallback = null) {
+    const log = (msg, type = 'info') => {
+        console.log(`[HF Backup] ${msg}`);
+        if (logCallback) logCallback(msg, type);
+    };
+    
     try {
-        console.log('[HF Backup] 开始备份流程...');
-        console.log(`[HF Backup] 数据目录: ${dataDir}`);
         
         // 验证数据目录是否存在
         if (!fs.existsSync(dataDir)) {
@@ -246,14 +283,14 @@ export async function backupToHuggingFace(dataDir, username, hfToken, hfRepo) {
             fs.mkdirSync(tempDir, { recursive: true });
         }
 
-        // 生成备份文件名（包含时间戳）
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-        const time = new Date().toISOString().replace(/[:.]/g, '-').split('T')[1].split('-')[0];
-        const backupFilename = `${username}_backup_${timestamp}_${time}.zip`;
+        // 生成备份文件名（纯时间戳格式）
+        const now = new Date();
+        const timestamp = now.getTime(); // Unix 时间戳（毫秒）
+        const backupFilename = `${timestamp}.zip`;
         const tempZipPath = path.join(tempDir, backupFilename);
 
         // 压缩数据目录
-        console.log('[HF Backup] 正在压缩数据目录...');
+        log('🗜️ 正在压缩数据目录...');
         await compressDirectory(dataDir, tempZipPath);
 
         // 获取文件大小
@@ -261,29 +298,29 @@ export async function backupToHuggingFace(dataDir, username, hfToken, hfRepo) {
         const fileSizeMB = (fileSize / 1024 / 1024).toFixed(2);
         const fileSizeGB = (fileSize / 1024 / 1024 / 1024).toFixed(2);
         
-        console.log(`[HF Backup] 压缩包大小: ${fileSizeMB} MB`);
+        log(`📦 压缩完成: ${fileSizeMB} MB`);
         
         // 大文件警告
         if (fileSize > 5 * 1024 * 1024 * 1024) { // > 5GB
-            console.warn(`[HF Backup] ⚠️  警告: 文件非常大 (${fileSizeGB} GB)，上传可能需要较长时间`);
+            log(`⚠️ 文件非常大 (${fileSizeGB} GB)，上传可能需要较长时间`, 'warning');
         } else if (fileSize > 1 * 1024 * 1024 * 1024) { // > 1GB
-            console.log(`[HF Backup] ℹ️  文件较大 (${fileSizeGB} GB)，上传可能需要几分钟`);
+            log(`ℹ️ 文件较大 (${fileSizeGB} GB)，上传可能需要几分钟`, 'info');
         }
 
         // 上传到 Hugging Face
-        console.log('[HF Backup] 正在上传到 Hugging Face...');
         const uploadResult = await uploadToHuggingFace(
             tempZipPath,
             hfToken,
             hfRepo,
-            backupFilename
+            backupFilename,
+            username,
+            hfEmail,
+            logCallback
         );
 
         // 清理临时文件
-        console.log('[HF Backup] 清理临时文件...');
+        log('🧹 清理临时文件...');
         fs.unlinkSync(tempZipPath);
-
-        console.log('[HF Backup] ✅ 备份完成！');
         
         return {
             success: true,

@@ -76,6 +76,7 @@ const migrateAddHFFields = () => {
         const columns = checkColumn.all();
         const hasHFToken = columns.some(col => col.name === 'hf_token');
         const hasHFRepo = columns.some(col => col.name === 'hf_repo');
+        const hasHFEmail = columns.some(col => col.name === 'hf_email');
         
         if (!hasHFToken) {
             console.log('[Database] 添加 hf_token 字段...');
@@ -87,6 +88,12 @@ const migrateAddHFFields = () => {
             console.log('[Database] 添加 hf_repo 字段...');
             db.exec(`ALTER TABLE users ADD COLUMN hf_repo TEXT`);
             console.log('[Database] ✅ hf_repo 字段添加成功');
+        }
+        
+        if (!hasHFEmail) {
+            console.log('[Database] 添加 hf_email 字段...');
+            db.exec(`ALTER TABLE users ADD COLUMN hf_email TEXT`);
+            console.log('[Database] ✅ hf_email 字段添加成功');
         }
     } catch (error) {
         console.error('[Database] ❌ HF 字段迁移失败:', error);
@@ -309,19 +316,19 @@ export const deleteUser = (username) => {
 // ==================== Hugging Face 备份配置 ====================
 
 // 更新用户的 Hugging Face 配置
-export const updateUserHFConfig = (username, hfToken, hfRepo) => {
+export const updateUserHFConfig = (username, hfToken, hfRepo, hfEmail) => {
     const stmt = db.prepare(`
         UPDATE users 
-        SET hf_token = ?, hf_repo = ? 
+        SET hf_token = ?, hf_repo = ?, hf_email = ? 
         WHERE username = ?
     `);
-    return stmt.run(hfToken, hfRepo, username);
+    return stmt.run(hfToken, hfRepo, hfEmail, username);
 };
 
 // 获取用户的 Hugging Face 配置
 export const getUserHFConfig = (username) => {
     const stmt = db.prepare(`
-        SELECT hf_token, hf_repo 
+        SELECT hf_token, hf_repo, hf_email 
         FROM users 
         WHERE username = ?
     `);
