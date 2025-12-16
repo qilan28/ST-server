@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.js';
 import { findUserByUsername } from '../database.js';
 import { 
@@ -68,7 +70,13 @@ router.post('/start', async (req, res) => {
         }
         
         // 数据目录
-        const dataDir = user.data_dir.replace(/sillytavern$/, 'st-data');
+        const dataDir = path.join(user.data_dir, 'st-data');
+        
+        // 确保数据目录存在
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+            console.log(`[Instance] 创建数据目录: ${dataDir}`);
+        }
         
         await startInstance(user.username, user.port, user.st_dir, dataDir);
         

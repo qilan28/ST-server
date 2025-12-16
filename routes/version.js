@@ -88,6 +88,12 @@ router.post('/setup', authenticateToken, async (req, res) => {
         const stDir = path.join(userBaseDir, 'sillytavern');
         const dataDir = path.join(userBaseDir, 'st-data');
         
+        // 确保数据目录存在（SillyTavern 在 standalone 模式下不会自动创建）
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+            console.log(`[${user.username}] 创建数据目录: ${dataDir}`);
+        }
+        
         // 更新状态为安装中
         updateSTSetupStatus(user.username, 'installing');
         
@@ -291,6 +297,13 @@ router.post('/switch', authenticateToken, async (req, res) => {
         // 设置目录路径
         const userBaseDir = path.join(__dirname, '..', 'data', user.username);
         const stDir = path.join(userBaseDir, 'sillytavern');
+        const dataDir = path.join(userBaseDir, 'st-data');
+        
+        // 确保数据目录存在（SillyTavern 在 standalone 模式下不会自动创建）
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+            console.log(`[${user.username}] 创建数据目录: ${dataDir}`);
+        }
         
         // 删除旧版本（如果存在）
         if (user.st_dir) {

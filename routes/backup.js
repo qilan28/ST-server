@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { authenticateToken } from '../middleware/auth.js';
 import { 
     findUserByUsername, 
@@ -152,6 +153,24 @@ router.post('/backup', authenticateToken, async (req, res) => {
         
         console.log(`[Backup API] 开始备份用户 ${username} 的数据`);
         console.log(`[Backup API] 数据目录: ${dataDir}`);
+        
+        // 检查目录是否存在
+        if (!fs.existsSync(dataDir)) {
+            return res.status(400).json({
+                success: false,
+                error: 'SillyTavern 尚未安装，请先安装后再备份'
+            });
+        }
+        
+        // 检查目录是否为空或只有系统文件
+        const files = fs.readdirSync(dataDir);
+        const contentFiles = files.filter(f => !f.startsWith('_') && !f.startsWith('.'));
+        if (contentFiles.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: '数据目录为空，请先启动 SillyTavern 实例生成数据后再备份'
+            });
+        }
         
         // 执行备份
         const result = await backupToHuggingFace(
