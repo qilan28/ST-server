@@ -1597,6 +1597,59 @@ input:checked + .slider:before {
     }
 }
 
+/* ==================== 公告轮播样式 ==================== */
+
+/* 轮播按钮hover效果 */
+#announcementControls button:hover,
+#dashboardAnnouncementControls button:hover {
+    background: rgba(255,255,255,0.3) !important;
+    transform: scale(1.1);
+}
+
+#announcementControls button:active,
+#dashboardAnnouncementControls button:active {
+    transform: scale(0.95);
+}
+
+/* 指示器hover效果 */
+#announcementIndicators span:hover,
+#dashboardAnnouncementIndicators span:hover {
+    background: rgba(255,255,255,0.8) !important;
+}
+
+/* 移动端轮播优化 */
+@media (max-width: 768px) {
+    #announcementControls,
+    #dashboardAnnouncementControls {
+        margin-top: 12px !important;
+    }
+    
+    #announcementControls button,
+    #dashboardAnnouncementControls button {
+        padding: 5px 12px !important;
+        font-size: 16px !important;
+    }
+    
+    #announcementIndicators span,
+    #dashboardAnnouncementIndicators span {
+        width: 8px !important;
+        height: 8px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #announcementControls button,
+    #dashboardAnnouncementControls button {
+        padding: 4px 10px !important;
+        font-size: 14px !important;
+    }
+    
+    #announcementIndicators,
+    #dashboardAnnouncementIndicators {
+        gap: 6px !important;
+    }
+}
+
 /* ==================== 模态框样式 ==================== */
 
 /* 模态框背景 */

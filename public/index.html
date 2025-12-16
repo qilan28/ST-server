@@ -14,14 +14,21 @@
                 <p>多开管理平台</p>
             </div>
 
-            <!-- 公告区域 -->
-            <div id="announcementContainer" style="display: none; margin-bottom: 20px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 15px; color: white;">
+            <!-- 公告轮播区域 -->
+            <div id="announcementContainer" style="display: none; margin-bottom: 20px; position: relative;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 15px; color: white; position: relative;">
                     <h3 style="margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
                         📢 <span id="announcementTitle"></span>
                     </h3>
-                    <p id="announcementContent" style="margin: 0; line-height: 1.6; font-size: 14px;"></p>
+                    <p id="announcementContent" style="margin: 0; line-height: 1.6; font-size: 14px; white-space: pre-wrap;"></p>
                     <small id="announcementDate" style="display: block; margin-top: 10px; opacity: 0.8; font-size: 12px;"></small>
+                    
+                    <!-- 轮播控制 -->
+                    <div id="announcementControls" style="display: none; margin-top: 15px; display: flex; align-items: center; justify-content: space-between;">
+                        <button onclick="prevAnnouncement()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 18px;">❮</button>
+                        <div id="announcementIndicators" style="display: flex; gap: 8px;"></div>
+                        <button onclick="nextAnnouncement()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 18px;">❯</button>
+                    </div>
                 </div>
             </div>
 

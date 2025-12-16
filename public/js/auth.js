@@ -1,5 +1,10 @@
 const API_BASE = '/api';
 
+// 公告轮播相关变量
+let loginAnnouncements = [];
+let currentAnnouncementIndex = 0;
+let announcementInterval = null;
+
 // 加载登录页公告
 async function loadLoginAnnouncements() {
     try {
@@ -7,20 +12,98 @@ async function loadLoginAnnouncements() {
         if (!response.ok) return;
         
         const data = await response.json();
-        const announcements = data.announcements;
+        loginAnnouncements = data.announcements;
         
-        if (announcements && announcements.length > 0) {
-            const announcement = announcements[0]; // 显示第一个
-            document.getElementById('announcementTitle').textContent = announcement.title;
-            document.getElementById('announcementContent').textContent = announcement.content;
-            
-            const date = new Date(announcement.created_at);
-            document.getElementById('announcementDate').textContent = `发布于 ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
-            
+        if (loginAnnouncements && loginAnnouncements.length > 0) {
             document.getElementById('announcementContainer').style.display = 'block';
+            showAnnouncement(0);
+            
+            // 如果有多个公告，显示控制按钮并启动自动轮播
+            if (loginAnnouncements.length > 1) {
+                document.getElementById('announcementControls').style.display = 'flex';
+                createIndicators();
+                startAutoPlay();
+            }
         }
     } catch (error) {
         console.error('Load announcements error:', error);
+    }
+}
+
+// 显示指定索引的公告
+function showAnnouncement(index) {
+    if (!loginAnnouncements || loginAnnouncements.length === 0) return;
+    
+    currentAnnouncementIndex = index;
+    const announcement = loginAnnouncements[index];
+    
+    document.getElementById('announcementTitle').textContent = announcement.title;
+    document.getElementById('announcementContent').textContent = announcement.content;
+    
+    const date = new Date(announcement.created_at);
+    document.getElementById('announcementDate').textContent = `发布于 ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+    
+    updateIndicators();
+}
+
+// 创建指示器
+function createIndicators() {
+    const container = document.getElementById('announcementIndicators');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < loginAnnouncements.length; i++) {
+        const dot = document.createElement('span');
+        dot.style.cssText = 'width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.3s;';
+        dot.onclick = () => {
+            stopAutoPlay();
+            showAnnouncement(i);
+            startAutoPlay();
+        };
+        container.appendChild(dot);
+    }
+}
+
+// 更新指示器
+function updateIndicators() {
+    const dots = document.getElementById('announcementIndicators').children;
+    for (let i = 0; i < dots.length; i++) {
+        dots[i].style.background = i === currentAnnouncementIndex ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.5)';
+        dots[i].style.transform = i === currentAnnouncementIndex ? 'scale(1.2)' : 'scale(1)';
+    }
+}
+
+// 上一个公告
+function prevAnnouncement() {
+    stopAutoPlay();
+    const newIndex = (currentAnnouncementIndex - 1 + loginAnnouncements.length) % loginAnnouncements.length;
+    showAnnouncement(newIndex);
+    startAutoPlay();
+}
+
+// 下一个公告
+function nextAnnouncement() {
+    stopAutoPlay();
+    const newIndex = (currentAnnouncementIndex + 1) % loginAnnouncements.length;
+    showAnnouncement(newIndex);
+    startAutoPlay();
+}
+
+// 启动自动轮播
+function startAutoPlay() {
+    stopAutoPlay();
+    if (loginAnnouncements.length > 1) {
+        announcementInterval = setInterval(() => {
+            const newIndex = (currentAnnouncementIndex + 1) % loginAnnouncements.length;
+            showAnnouncement(newIndex);
+        }, 5000); // 每5秒切换
+    }
+}
+
+// 停止自动轮播
+function stopAutoPlay() {
+    if (announcementInterval) {
+        clearInterval(announcementInterval);
+        announcementInterval = null;
     }
 }
 

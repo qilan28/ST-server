@@ -1,6 +1,11 @@
 const API_BASE = '/api';
 let statusCheckInterval = null;
 
+// 公告轮播相关变量
+let dashboardAnnouncements = [];
+let currentDashboardAnnouncementIndex = 0;
+let dashboardAnnouncementInterval = null;
+
 // 加载用户面板公告
 async function loadDashboardAnnouncements() {
     try {
@@ -8,20 +13,98 @@ async function loadDashboardAnnouncements() {
         if (!response.ok) return;
         
         const data = await response.json();
-        const announcements = data.announcements;
+        dashboardAnnouncements = data.announcements;
         
-        if (announcements && announcements.length > 0) {
-            const announcement = announcements[0]; // 显示第一个
-            document.getElementById('dashboardAnnouncementTitle').textContent = announcement.title;
-            document.getElementById('dashboardAnnouncementContent').textContent = announcement.content;
-            
-            const date = new Date(announcement.created_at);
-            document.getElementById('dashboardAnnouncementDate').textContent = `发布于 ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
-            
+        if (dashboardAnnouncements && dashboardAnnouncements.length > 0) {
             document.getElementById('dashboardAnnouncementContainer').style.display = 'block';
+            showDashboardAnnouncement(0);
+            
+            // 如果有多个公告，显示控制按钮并启动自动轮播
+            if (dashboardAnnouncements.length > 1) {
+                document.getElementById('dashboardAnnouncementControls').style.display = 'flex';
+                createDashboardIndicators();
+                startDashboardAutoPlay();
+            }
         }
     } catch (error) {
         console.error('Load dashboard announcements error:', error);
+    }
+}
+
+// 显示指定索引的公告
+function showDashboardAnnouncement(index) {
+    if (!dashboardAnnouncements || dashboardAnnouncements.length === 0) return;
+    
+    currentDashboardAnnouncementIndex = index;
+    const announcement = dashboardAnnouncements[index];
+    
+    document.getElementById('dashboardAnnouncementTitle').textContent = announcement.title;
+    document.getElementById('dashboardAnnouncementContent').textContent = announcement.content;
+    
+    const date = new Date(announcement.created_at);
+    document.getElementById('dashboardAnnouncementDate').textContent = `发布于 ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+    
+    updateDashboardIndicators();
+}
+
+// 创建指示器
+function createDashboardIndicators() {
+    const container = document.getElementById('dashboardAnnouncementIndicators');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < dashboardAnnouncements.length; i++) {
+        const dot = document.createElement('span');
+        dot.style.cssText = 'width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.3s;';
+        dot.onclick = () => {
+            stopDashboardAutoPlay();
+            showDashboardAnnouncement(i);
+            startDashboardAutoPlay();
+        };
+        container.appendChild(dot);
+    }
+}
+
+// 更新指示器
+function updateDashboardIndicators() {
+    const dots = document.getElementById('dashboardAnnouncementIndicators').children;
+    for (let i = 0; i < dots.length; i++) {
+        dots[i].style.background = i === currentDashboardAnnouncementIndex ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.5)';
+        dots[i].style.transform = i === currentDashboardAnnouncementIndex ? 'scale(1.3)' : 'scale(1)';
+    }
+}
+
+// 上一个公告
+function prevDashboardAnnouncement() {
+    stopDashboardAutoPlay();
+    const newIndex = (currentDashboardAnnouncementIndex - 1 + dashboardAnnouncements.length) % dashboardAnnouncements.length;
+    showDashboardAnnouncement(newIndex);
+    startDashboardAutoPlay();
+}
+
+// 下一个公告
+function nextDashboardAnnouncement() {
+    stopDashboardAutoPlay();
+    const newIndex = (currentDashboardAnnouncementIndex + 1) % dashboardAnnouncements.length;
+    showDashboardAnnouncement(newIndex);
+    startDashboardAutoPlay();
+}
+
+// 启动自动轮播
+function startDashboardAutoPlay() {
+    stopDashboardAutoPlay();
+    if (dashboardAnnouncements.length > 1) {
+        dashboardAnnouncementInterval = setInterval(() => {
+            const newIndex = (currentDashboardAnnouncementIndex + 1) % dashboardAnnouncements.length;
+            showDashboardAnnouncement(newIndex);
+        }, 5000); // 每5秒切换
+    }
+}
+
+// 停止自动轮播
+function stopDashboardAutoPlay() {
+    if (dashboardAnnouncementInterval) {
+        clearInterval(dashboardAnnouncementInterval);
+        dashboardAnnouncementInterval = null;
     }
 }
 
