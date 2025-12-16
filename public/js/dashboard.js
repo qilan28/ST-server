@@ -269,8 +269,10 @@ async function loadUserInfo() {
             accessLink.href = accessUrl;
             accessLink.title = accessUrl; // 悬停显示完整URL
             
-            // 增加点击事件日志
+            // 增加点击事件日志和 Cookie 检查
             accessLink.onclick = function(e) {
+                e.preventDefault(); // 阻止默认行为
+                
                 const token = localStorage.getItem('token');
                 const cookies = document.cookie;
                 console.log('\n========== [前端] 点击访问地址 ==========');
@@ -279,8 +281,32 @@ async function loadUserInfo() {
                 console.log('[前端] 🔑 localStorage token:', token ? `存在 (${token.substring(0, 20)}...)` : '不存在');
                 console.log('[前端] 🍪 所有 Cookies:', cookies || '无');
                 console.log('[前端] 🍪 st_token Cookie:', cookies.includes('st_token') ? '存在' : '❌ 不存在！');
-                console.log('[前端] 💡 提示: 打开新标签页后，请查看服务器日志了解权限验证结果');
+                
+                // 确保 Cookie 已设置
+                if (!cookies.includes('st_token') && token) {
+                    console.log('[前端] ⚠️  检测到 st_token Cookie 缺失，正在重新设置...');
+                    const success = setCookie('st_token', token);
+                    if (success) {
+                        console.log('[前端] ✅ st_token Cookie 已重新设置');
+                    } else {
+                        console.error('[前端] ❌ 无法设置 st_token Cookie，可能被浏览器阻止');
+                        alert('无法设置身份验证 Cookie，请检查浏览器设置是否允许 Cookie');
+                        console.log('==========================================\n');
+                        return;
+                    }
+                } else if (!token) {
+                    console.error('[前端] ❌ 未找到 token，请重新登录');
+                    alert('登录状态已失效，请重新登录');
+                    console.log('==========================================\n');
+                    window.location.href = '/';
+                    return;
+                }
+                
+                console.log('[前端] 💡 提示: 正在打开新标签页，请查看服务器日志了解权限验证结果');
                 console.log('==========================================\n');
+                
+                // 打开新标签页
+                window.open(accessUrl, '_blank');
             };
             
             // 更新版本管理区域

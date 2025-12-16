@@ -193,8 +193,8 @@
         </div>
 
         <div class="buttons">
-            <a href="/" class="btn btn-primary">返回首页</a>
-            <a href="/login.html" class="btn btn-secondary">登录账号</a>
+            <a href="/dashboard.html" class="btn btn-primary">返回控制台</a>
+            <a href="javascript:location.reload()" class="btn btn-secondary">重新尝试</a>
         </div>
 
         <div class="info-box">
@@ -211,16 +211,77 @@
         // 从 URL 中提取用户名并显示
         const path = window.location.pathname;
         const match = path.match(/\/(\w+)\/st/);
+        let targetUsername = null;
         if (match && match[1]) {
-            document.getElementById('username').textContent = match[1];
+            targetUsername = match[1];
+            document.getElementById('username').textContent = targetUsername;
         }
 
         // 如果在 Nginx 错误页面中，从 query 参数获取用户名
         const urlParams = new URLSearchParams(window.location.search);
         const usernameParam = urlParams.get('username');
         if (usernameParam) {
+            targetUsername = usernameParam;
             document.getElementById('username').textContent = usernameParam;
         }
+
+        // 智能处理：如果用户已登录且有 token，尝试设置 Cookie 并重定向
+        function setCookie(name, value, days = 365) {
+            document.cookie = `${name}=${value}; path=/; max-age=${days * 24 * 60 * 60}; SameSite=Lax`;
+            return document.cookie.includes(`${name}=`);
+        }
+
+        function tryAutoFix() {
+            const token = localStorage.getItem('token');
+            const currentUsername = localStorage.getItem('username');
+            
+            console.log('\n========== [Access Denied] 智能诊断 ==========');
+            console.log('[诊断] 当前登录用户:', currentUsername || '未登录');
+            console.log('[诊断] 目标访问用户:', targetUsername || '未知');
+            console.log('[诊断] localStorage token:', token ? '存在' : '不存在');
+            console.log('[诊断] Cookie st_token:', document.cookie.includes('st_token') ? '存在' : '不存在');
+            
+            if (token && currentUsername && targetUsername && currentUsername === targetUsername) {
+                console.log('[诊断] ⚠️  检测到用户已登录但权限验证失败');
+                console.log('[诊断] 💡 可能是 Cookie 问题，尝试自动修复...');
+                
+                if (!document.cookie.includes('st_token')) {
+                    console.log('[诊断] 正在设置 st_token Cookie...');
+                    const success = setCookie('st_token', token);
+                    
+                    if (success) {
+                        console.log('[诊断] ✅ Cookie 设置成功，3秒后自动重定向...');
+                        
+                        // 更新页面提示
+                        const messageEl = document.querySelector('.message');
+                        messageEl.innerHTML = `
+                            <p style="color: #48bb78; font-weight: 600;">✅ 检测到身份验证问题，正在自动修复...</p>
+                            <p style="margin-top: 15px;">3秒后将自动重新尝试访问</p>
+                        `;
+                        
+                        setTimeout(() => {
+                            console.log('[诊断] 重定向到:', `/${targetUsername}/st/`);
+                            console.log('==========================================\n');
+                            window.location.href = `/${targetUsername}/st/`;
+                        }, 3000);
+                        return;
+                    } else {
+                        console.error('[诊断] ❌ Cookie 设置失败，浏览器可能阻止了 Cookie');
+                    }
+                } else {
+                    console.log('[诊断] ⚠️  Cookie 已存在但验证仍失败，可能是其他权限问题');
+                }
+            } else if (!token) {
+                console.log('[诊断] ℹ️  用户未登录，需要重新登录');
+            } else if (currentUsername !== targetUsername) {
+                console.log('[诊断] ℹ️  用户尝试访问其他用户的实例');
+            }
+            
+            console.log('==========================================\n');
+        }
+
+        // 页面加载后执行诊断
+        tryAutoFix();
     </script>
 </body>
 </html>
