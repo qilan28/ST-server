@@ -163,18 +163,64 @@ const migrateAddAutoBackupPreference = () => {
 
 // 站点设置相关函数已在文件顶部导入
 
-// 初始化数据库
+// 初始化数据库 - 增强错误处理和恢复机制
 export const initDatabase = () => {
-    createUsersTable();
-    createAnnouncementsTable();
-    createAutoBackupConfigTable();
-    createSiteSettingsTable(db); // 添加站点设置表
-    migrateAddRoleField();
-    migrateAddLoginFields();
-    migrateAddHFFields();
-    migrateAddAutoBackupPreference();
-    fixAdminUserPorts();
-    console.log('[Database] ✅ 数据库初始化成功');
+    try {
+        console.log('[Database] 开始初始化数据库...');
+
+        // 检查数据库文件是否可写
+        try {
+            const testStmt = db.prepare('PRAGMA user_version');
+            testStmt.get();
+            console.log('[Database] ✅ 数据库连接测试成功');
+        } catch (error) {
+            console.error('[Database] ⚠️ 数据库连接测试失败:', error);
+            console.error('[Database] 请确保服务器对数据库文件有读写权限');
+        }
+
+        // 创建表和迁移数据库
+        createUsersTable();
+        createAnnouncementsTable();
+        createAutoBackupConfigTable();
+        
+        // 创建站点设置表并测试写入
+        try {
+            createSiteSettingsTable(db);
+            console.log('[Database] ✅ 站点设置表已初始化');
+            
+            // 测试读写
+            const testSettings = db.prepare('SELECT * FROM site_settings WHERE id = 1').get();
+            if (testSettings) {
+                console.log('[Database] ✅ 站点设置读取测试成功:', 
+                    `project_name=${testSettings.project_name}, ` +
+                    `site_name=${testSettings.site_name}`);
+            }
+            
+            // 测试更新
+            const updateTest = db.prepare(`
+                UPDATE site_settings 
+                SET updated_at = CURRENT_TIMESTAMP 
+                WHERE id = 1
+            `).run();
+            
+            console.log('[Database] ✅ 站点设置更新测试完成:', updateTest.changes > 0 ? '成功' : '无变更');
+            
+        } catch (error) {
+            console.error('[Database] ❗ 站点设置表操作失败:', error);
+        }
+        
+        // 其他数据库操作
+        migrateAddRoleField();
+        migrateAddLoginFields();
+        migrateAddHFFields();
+        migrateAddAutoBackupPreference();
+        fixAdminUserPorts();
+        
+        console.log('[Database] ✅ 数据库初始化成功');
+    } catch (error) {
+        console.error('[Database] ❌ 数据库初始化失败:', error);
+        console.error('请检查服务器对数据库文件夹和文件的读写权限');
+    }
 };
 
 // 查找可用端口（3001-4000）

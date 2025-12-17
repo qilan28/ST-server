@@ -50,6 +50,43 @@ export const getSiteSettings = (db) => {
 // 更新站点设置
 export const updateSiteSettings = (db, projectName, siteName, faviconPath) => {
     try {
+        // 生成日志 ID
+        const logId = Date.now().toString(36);
+        console.log(`[Database:${logId}] 开始更新站点设置...`);
+        console.log(`[Database:${logId}] 参数: projectName=${projectName}, siteName=${siteName}, faviconPath=${faviconPath || 'null'}`);
+        
+        // 试图获取当前设置
+        try {
+            const current = db.prepare('SELECT * FROM site_settings WHERE id = 1').get();
+            console.log(`[Database:${logId}] 当前设置:`, current || '未找到记录');
+        } catch (readError) {
+            console.error(`[Database:${logId}] 无法读取当前设置:`, readError);
+        }
+        
+        // 检查是否需要创建记录
+        const recordExists = db.prepare('SELECT COUNT(*) as count FROM site_settings WHERE id = 1').get();
+        if (recordExists && recordExists.count === 0) {
+            console.log(`[Database:${logId}] 记录不存在，尝试创建...`);
+            try {
+                const insertStmt = db.prepare(`
+                    INSERT INTO site_settings (id, project_name, site_name, favicon_path)
+                    VALUES (1, ?, ?, ?)
+                `);
+                const insertResult = insertStmt.run(
+                    projectName || '公益云酒馆多开管理平台', 
+                    siteName || 'SillyTavern 多开管理平台', 
+                    faviconPath || '/favicon.ico'
+                );
+                console.log(`[Database:${logId}] 新记录创建结果:`, insertResult);
+                return true;
+            } catch (insertError) {
+                console.error(`[Database:${logId}] 创建记录失败:`, insertError);
+                return false;
+            }
+        }
+        
+        // 更新记录
+        console.log(`[Database:${logId}] 执行更新操作...`);
         const stmt = db.prepare(`
             UPDATE site_settings 
             SET 
@@ -61,7 +98,18 @@ export const updateSiteSettings = (db, projectName, siteName, faviconPath) => {
         `);
         
         const result = stmt.run(projectName, siteName, faviconPath);
-        return result.changes > 0;
+        console.log(`[Database:${logId}] 更新结果: changes=${result.changes}`);
+        
+        // 查询更新后的记录
+        try {
+            const updated = db.prepare('SELECT * FROM site_settings WHERE id = 1').get();
+            console.log(`[Database:${logId}] 更新后的设置:`, updated);
+        } catch (readError) {
+            console.error(`[Database:${logId}] 无法读取更新后的设置:`, readError);
+        }
+        
+        // 即使没有更改也返回成功，因为可能是相同的值
+        return true;
     } catch (error) {
         console.error('[Database] 更新站点设置失败:', error);
         return false;

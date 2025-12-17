@@ -66,31 +66,70 @@ router.get('/', (req, res) => {
 
 // 更新网站设置 - 仅管理员
 router.put('/', authenticateToken, requireAdmin, (req, res) => {
-    console.log('[API] 收到更新网站设置请求');
-    console.log('[API] 请求体:', req.body);
+    // 增强日志与调试信息
+    const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    console.log(`[API:${requestId}] 收到更新网站设置请求`);
+    console.log(`[API:${requestId}] 请求体:`, req.body);
+    console.log(`[API:${requestId}] 用户: ${req.user.username}, 角色: ${req.user.role}`);
     
     try {
         const { project_name, site_name } = req.body;
-        console.log('[API] 解析数据:', { project_name, site_name });
+        
+        // 参数验证
+        if (!project_name || !site_name) {
+            console.error(`[API:${requestId}] 缺少必要参数`);
+            return res.status(400).json({
+                success: false,
+                error: '缺少必要参数'
+            });
+        }
+        
+        console.log(`[API:${requestId}] 解析数据:`, { project_name, site_name });
+        
+        // 先测试数据库连接
+        try {
+            const testQuery = db.prepare('PRAGMA user_version').get();
+            console.log(`[API:${requestId}] 数据库连接测试成功, user_version=${testQuery.user_version}`);
+        } catch (dbError) {
+            console.error(`[API:${requestId}] 数据库连接测试失败:`, dbError);
+            return res.status(500).json({
+                success: false,
+                error: '数据库连接失败, 请检查服务器配置'
+            });
+        }
+        
+        // 查询当前设置
+        const currentSettings = db.prepare('SELECT * FROM site_settings WHERE id = 1').get();
+        console.log(`[API:${requestId}] 当前设置:`, currentSettings || '无记录');
         
         // 更新文本设置
-        console.log('[API] 开始更新设置...');
+        console.log(`[API:${requestId}] 开始更新设置...`);
         const result = updateSiteSettings(db, project_name, site_name, null);
-        console.log('[API] 更新结果:', result);
+        console.log(`[API:${requestId}] 更新结果:`, result);
+        
+        // 检查是否更新成功
+        const updatedSettings = db.prepare('SELECT * FROM site_settings WHERE id = 1').get();
+        console.log(`[API:${requestId}] 更新后的设置:`, updatedSettings || '无记录');
         
         if (result) {
             res.json({
                 success: true,
-                message: '网站设置更新成功'
+                message: '网站设置更新成功',
+                data: {
+                    project_name: updatedSettings.project_name,
+                    site_name: updatedSettings.site_name,
+                    updated_at: updatedSettings.updated_at
+                }
             });
         } else {
+            console.error(`[API:${requestId}] 更新失败或无变化`);
             res.status(500).json({
                 success: false,
-                error: '网站设置更新失败'
+                error: '网站设置更新失败或无变化'
             });
         }
     } catch (error) {
-        console.error('更新网站设置失败:', error);
+        console.error(`[API:${requestId}] 更新网站设置失败:`, error);
         res.status(500).json({ 
             success: false,
             error: '更新网站设置失败: ' + error.message
