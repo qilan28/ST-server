@@ -7,7 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dbPath = path.join(__dirname, 'database.sqlite');
-const db = new Database(dbPath);
+// 导出db变量以便其他模块使用
+export const db = new Database(dbPath);
 
 // 启用外键约束
 db.pragma('foreign_keys = ON');
@@ -159,11 +160,15 @@ const migrateAddAutoBackupPreference = () => {
     }
 };
 
+// 导入站点设置相关函数
+import { createSiteSettingsTable } from './database-site-settings.js';
+
 // 初始化数据库
 export const initDatabase = () => {
     createUsersTable();
     createAnnouncementsTable();
     createAutoBackupConfigTable();
+    createSiteSettingsTable(); // 添加站点设置表
     migrateAddRoleField();
     migrateAddLoginFields();
     migrateAddHFFields();

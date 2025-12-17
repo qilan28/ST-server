@@ -15,6 +15,7 @@ import configRoutes from './routes/config.js';
 import announcementsRoutes from './routes/announcements.js';
 import backupRoutes from './routes/backup.js';
 import proxyRoutes from './routes/proxy.js';
+import siteSettingsRoutes from './routes/site-settings.js';
 import './database.js';
 import { findUserByUsername, createAdminUser } from './database.js';
 import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
@@ -133,6 +134,7 @@ app.use('/api/config', configRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/proxy', proxyRoutes);
+app.use('/api/site-settings', siteSettingsRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

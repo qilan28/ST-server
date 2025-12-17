@@ -6,6 +6,7 @@
     <title>管理员面板 - SillyTavern 管理平台</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/table-fix.css">
+    <script src="/js/apply-site-settings.js"></script>
 </head>
 <body>
     <div class="container">
@@ -68,6 +69,55 @@
             <div class="stats-card">
                 <h2>⚙️ 系统配置</h2>
                 <div id="configMessage" class="message"></div>
+                
+                <!-- 站点设置 -->
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🌐 网站设置</h3>
+                    <div id="siteSettingsMessage" class="message" style="margin-bottom: 15px; display: none;"></div>
+                    <div style="display: grid; gap: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                项目名称
+                            </label>
+                            <input type="text" id="projectName" class="form-input" placeholder="公益云酒馆多开管理平台">
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                显示在各个页面的标题、带宽等处
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                网站名称
+                            </label>
+                            <input type="text" id="siteName" class="form-input" placeholder="SillyTavern 多开管理平台">
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                显示在浏览器标签页等处
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                网站图标
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <img id="currentFavicon" src="/favicon.ico" alt="当前图标" style="width: 32px; height: 32px; border: 1px solid #e2e8f0;">
+                                <div style="flex-grow: 1;">
+                                    <form id="faviconForm" enctype="multipart/form-data" style="display: flex; gap: 10px;">
+                                        <input type="file" id="faviconFile" class="form-input" accept="image/png,image/jpeg,image/gif,image/x-icon" style="flex-grow: 1;">
+                                        <button type="button" id="uploadFavicon" class="btn btn-primary">上传</button>
+                                    </form>
+                                    <small style="display: block; margin-top: 5px; color: #718096;">
+                                        支持 PNG, JPG, GIF, ICO 格式，最大 1MB
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button id="saveSiteSettings" class="btn btn-primary">保存网站设置</button>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Nginx 配置 -->
                 <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -300,5 +350,6 @@
     <script src="/js/modal.js"></script>
     <script src="/js/admin.js"></script>
     <script src="/js/user-search.js"></script>
+    <script src="/js/site-settings.js"></script>
 </body>
 </html>
