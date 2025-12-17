@@ -228,8 +228,17 @@ export async function uploadToHuggingFace(filePath, hfToken, hfRepo, filename, u
         log('💬 提交更改到 Git...');
         await execAsync('git add .', { cwd: repoPath });
         
-        // 生成 commit 信息：用户名-备份时间（大小）
-        const commitDate = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        // 生成 commit 信息：用户名-备份时间（大小）（中国时区）
+        const commitDate = new Date().toLocaleString('zh-CN', {
+            timeZone: 'Asia/Shanghai',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }).replace(/\//g, '-').replace(',', '');
         const commitMessage = `${username}-${commitDate} (${fileSizeMB} MB)`;
         
         try {
@@ -776,11 +785,19 @@ export async function restoreFromHuggingFace(hfToken, hfRepo, dataDir, filename 
             if (!targetBackup) {
                 throw new Error(`找不到指定的备份文件: ${filename}`);
             }
-            log(`📦 选择备份: ${filename} (${new Date(targetBackup.timestamp).toLocaleString()})`);
+            const dateStr = new Date(targetBackup.timestamp).toLocaleString('zh-CN', { 
+                timeZone: 'Asia/Shanghai',
+                hour12: false 
+            });
+            log(`📦 选择备份: ${filename} (${dateStr})`);
         } else {
             // 默认选择最早的备份（最后一个）
             targetBackup = backupFiles[backupFiles.length - 1];
-            log(`📦 使用最早的备份: ${targetBackup.filename} (${new Date(targetBackup.timestamp).toLocaleString()})`);
+            const dateStr = new Date(targetBackup.timestamp).toLocaleString('zh-CN', { 
+                timeZone: 'Asia/Shanghai',
+                hour12: false 
+            });
+            log(`📦 使用最早的备份: ${targetBackup.filename} (${dateStr})`);
         }
         
         // 创建临时目录
@@ -810,11 +827,10 @@ export async function restoreFromHuggingFace(hfToken, hfRepo, dataDir, filename 
         await extract(tempZipPath, { dir: tempExtractPath });
         log('✅ 解压完成');
         
-        // 备份现有数据（如果存在）
+        // 清除现有数据（如果存在）
         if (fs.existsSync(dataDir)) {
-            const backupOldDir = `${dataDir}_backup_${Date.now()}`;
-            log(`💾 备份现有数据到: ${backupOldDir}`);
-            fs.renameSync(dataDir, backupOldDir);
+            log('🗑️ 清除现有数据...');
+            fs.rmSync(dataDir, { recursive: true, force: true });
         }
         
         // 恢复数据

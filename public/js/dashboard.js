@@ -76,7 +76,17 @@ function showDashboardAnnouncement(index) {
     document.getElementById('dashboardAnnouncementContent').textContent = announcement.content;
     
     const date = new Date(announcement.created_at);
-    document.getElementById('dashboardAnnouncementDate').textContent = `发布于 ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+    const dateStr = date.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    document.getElementById('dashboardAnnouncementDate').textContent = `发布于 ${dateStr}`;
     
     updateDashboardIndicators();
 }
@@ -1156,8 +1166,14 @@ function addBackupLog(message, type = 'info') {
     const logEntry = document.createElement('div');
     logEntry.className = `log-entry log-${type}`;
     
-    // 添加时间戳
-    const timestamp = new Date().toLocaleTimeString();
+    // 添加时间戳（中国时区）
+    const timestamp = new Date().toLocaleTimeString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
     logEntry.innerHTML = `
         <span class="log-time">[${timestamp}]</span>
         <span class="log-message">${escapeHtml(message)}</span>
@@ -1276,7 +1292,17 @@ async function handleShowRestorePanel() {
                     
                     data.backups.forEach(backup => {
                         const date = new Date(backup.timestamp);
-                        const dateStr = date.toLocaleString('zh-CN');
+                        // 转换为中国时区 (UTC+8)
+                        const dateStr = date.toLocaleString('zh-CN', { 
+                            timeZone: 'Asia/Shanghai',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        });
                         const sizeMB = (backup.size / 1024 / 1024).toFixed(2);
                         
                         html += '<tr>';
@@ -1315,7 +1341,7 @@ async function handleRestore(filename = null) {
     const restoreLogs = document.getElementById('restoreLogs');
     
     // 确认操作
-    let confirmMsg = '确定要恢复备份吗？\n\n⚠️ 警告：此操作将：\n1. 备份当前数据到临时目录\n2. 用备份文件替换当前数据\n3. 自动重启 SillyTavern 实例\n\n是否继续？';
+    let confirmMsg = '确定要恢复备份吗？\n\n⚠️ 警告：此操作将：\n1. 清除当前 st-data 目录的所有数据\n2. 用备份文件替换当前数据\n3. 自动重启 SillyTavern 实例\n\n⚠️ 现有数据将被永久删除，无法恢复！\n\n是否继续？';
     if (filename) {
         confirmMsg = `确定要恢复备份 "${filename}" 吗？\n\n` + confirmMsg;
     } else {
@@ -1401,8 +1427,14 @@ function addRestoreLog(message, type = 'info') {
     const logEntry = document.createElement('div');
     logEntry.className = `log-entry log-${type}`;
     
-    // 添加时间戳
-    const timestamp = new Date().toLocaleTimeString();
+    // 添加时间戳（中国时区）
+    const timestamp = new Date().toLocaleTimeString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
     logEntry.innerHTML = `
         <span class="log-time">[${timestamp}]</span>
         <span class="log-message">${escapeHtml(message)}</span>
