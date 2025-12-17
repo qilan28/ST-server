@@ -195,9 +195,11 @@ async function loadUsers() {
         
         tbody.innerHTML = users.map(user => `
             <tr>
-                <td style="display: flex; align-items: center; gap: 10px;">
-                    <img src="${getAvatarUrl(user.username)}" alt="头像" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid #ddd;">
-                    ${user.username}
+                <td style="padding: 0;">
+                    <div class="user-cell-content">
+                        <img src="${getAvatarUrl(user.username)}" alt="头像" class="user-avatar">
+                        <span>${user.username}</span>
+                    </div>
                 </td>
                 <td>${user.email}</td>
                 <td>
