@@ -4,26 +4,74 @@ const API_BASE = '/api';
 // 加载站点设置
 async function loadSiteSettings() {
     try {
-        const response = await fetch(`${API_BASE}/site-settings`);
+        console.log('开始加载站点设置...');
+        
+        const response = await fetch(`${API_BASE}/site-settings`, {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        
+        console.log('站点设置 API 响应状态:', response.status);
         
         if (!response.ok) {
-            showSiteSettingsMessage('加载设置失败', 'error');
+            const errorText = await response.text();
+            console.error('加载设置响应错误:', errorText);
+            showSiteSettingsMessage('加载设置失败 (' + response.status + ')', 'error');
             return;
         }
         
         const data = await response.json();
+        console.log('站点设置 API 响应数据:', data);
+        
+        const projectNameInput = document.getElementById('projectName');
+        const siteNameInput = document.getElementById('siteName');
+        const currentFaviconImg = document.getElementById('currentFavicon');
+        
+        if (!projectNameInput || !siteNameInput) {
+            console.error('未找到表单元素:', {
+                projectNameInput: !!projectNameInput,
+                siteNameInput: !!siteNameInput
+            });
+            showSiteSettingsMessage('表单元素不存在', 'error');
+            return;
+        }
         
         if (data.success && data.settings) {
-            // 填充表单
-            document.getElementById('projectName').value = data.settings.project_name || '';
-            document.getElementById('siteName').value = data.settings.site_name || '';
+            // 显示原始值用于调试
+            console.log('收到的设置数据:', {
+                project_name: data.settings.project_name,
+                site_name: data.settings.site_name,
+                favicon_path: data.settings.favicon_path
+            });
             
-            // 显示当前图标
-            if (data.settings.favicon_path) {
-                document.getElementById('currentFavicon').src = data.settings.favicon_path;
+            // 确保有值才填充
+            if (data.settings.project_name) {
+                projectNameInput.value = data.settings.project_name;
             }
             
-            console.log('站点设置加载成功');
+            if (data.settings.site_name) {
+                siteNameInput.value = data.settings.site_name;
+            }
+            
+            // 显示当前图标
+            if (currentFaviconImg && data.settings.favicon_path) {
+                currentFaviconImg.src = data.settings.favicon_path + '?t=' + new Date().getTime();
+                currentFaviconImg.style.display = 'block';
+            }
+            
+            console.log('站点设置加载成功', {
+                projectNameValue: projectNameInput.value,
+                siteNameValue: siteNameInput.value
+            });
+            
+            // 显示成功消息
+            showSiteSettingsMessage('站点设置已加载', 'success', 2000);
+        } else {
+            console.warn('站点设置数据无效:', data);
+            showSiteSettingsMessage('加载站点设置失败: 无效数据', 'error');
         }
     } catch (error) {
         console.error('加载站点设置失败:', error);
@@ -339,35 +387,90 @@ function updatePageTitle(siteName) {
 
 // 初始化站点设置
 function initSiteSettings() {
-    console.log('初始化站点设置...');
+    const logPrefix = '初始化:';
+    console.log(`${logPrefix} 开始初始化站点设置...`);
     
     try {
+        // 检查表单元素是否存在
+        const projectNameInput = document.getElementById('projectName');
+        const siteNameInput = document.getElementById('siteName');
+        
+        if (!projectNameInput || !siteNameInput) {
+            console.error(`${logPrefix} 关键表单元素缺失:`, {
+                projectNameInput: !!projectNameInput,
+                siteNameInput: !!siteNameInput
+            });
+        } else {
+            console.log(`${logPrefix} 表单元素已找到`);
+            
+            // 添加变更检测
+            projectNameInput.addEventListener('change', function() {
+                console.log('项目名称已更改:', this.value);
+            });
+            
+            siteNameInput.addEventListener('change', function() {
+                console.log('网站名称已更改:', this.value);
+            });
+        }
+        
         // 加载设置
-        loadSiteSettings();
+        setTimeout(() => {
+            console.log(`${logPrefix} 延迟加载站点设置...`);
+            loadSiteSettings();
+        }, 500); // 等待DOM完全加载
         
         // 保存按钮事件
         const saveButton = document.getElementById('saveSiteSettings');
         if (saveButton) {
-            console.log('找到保存按钮，绑定事件');
-            // 移除可能的旧事件监听器
-            saveButton.removeEventListener('click', saveSiteSettings);
+            console.log(`${logPrefix} 找到保存按钮，绑定事件`);
+            
+            // 移除内联点击处理程序
+            saveButton.onclick = null;
+            
+            // 移除所有点击事件监听器
+            const oldClickListeners = getEventListeners(saveButton, 'click');
+            if (oldClickListeners.length > 0) {
+                console.log(`${logPrefix} 移除 ${oldClickListeners.length} 个旧的点击事件监听器`);
+                oldClickListeners.forEach(listener => {
+                    saveButton.removeEventListener('click', listener);
+                });
+            }
+            
             // 添加新的事件监听器
             saveButton.addEventListener('click', function(e) {
                 e.preventDefault();
-                console.log('保存按钮被点击');
-                saveSiteSettings();
+                e.stopPropagation(); // 阻止事件冒泡
+                console.log(`${logPrefix} 保存按钮被点击`);
+                
+                // 直接调用directSaveSettings而不是saveSiteSettings
+                if (typeof directSaveSettings === 'function') {
+                    directSaveSettings();
+                } else {
+                    saveSiteSettings();
+                }
             });
             
             // 添加额外的视觉反馈
             saveButton.addEventListener('mousedown', function() {
                 this.style.transform = 'scale(0.97)';
             });
+            
             saveButton.addEventListener('mouseup', function() {
                 this.style.transform = 'scale(1)';
             });
         } else {
-            console.error('未找到保存按钮 ID: saveSiteSettings');
+            console.error(`${logPrefix} 未找到保存按钮 ID: saveSiteSettings`);
         }
+        
+        // 添加帮助函数
+        window.debugSiteSettings = function() {
+            const inputs = {
+                projectName: document.getElementById('projectName')?.value,
+                siteName: document.getElementById('siteName')?.value
+            };
+            console.log('当前表单状态:', inputs);
+            return inputs;
+        };
         
         // 上传图标按钮事件
         const uploadButton = document.getElementById('uploadFavicon');
@@ -424,6 +527,30 @@ function createMessageElement() {
             console.log('已创建消息元素');
         }
     }
+}
+
+// 获取事件监听器
+function getEventListeners(element, eventType) {
+    // 在没有浏览器原生 API 的情况下模拟
+    // 我们不能直接获取已注册的监听器
+    // 在这里返回空数组，但会执行清除操作
+    
+    // 使用更直接的方法清除事件
+    if (element && eventType) {
+        // 将元素的指定事件处理程序设置为空
+        try {
+            const clonedElement = element.cloneNode(true);
+            // 替换原始元素
+            if (element.parentNode) {
+                element.parentNode.replaceChild(clonedElement, element);
+                console.log('成功清除事件监听器通过克隆元素');
+                return [() => {}]; // 返回非空数组以指示已清除事件
+            }
+        } catch (e) {
+            console.error('尝试清除事件监听器时出错:', e);
+        }
+    }
+    return [];
 }
 
 // 当页面加载完成后初始化
