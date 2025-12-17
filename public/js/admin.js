@@ -254,7 +254,7 @@ async function loadInstances() {
                 </td>
                 <td>${instance.cpu ? instance.cpu.toFixed(2) + '%' : '0%'}</td>
                 <td>${formatMemory(instance.memory)}</td>
-                <td>${instance.uptime ? formatUptime(Date.now() - instance.uptime) : '未运行'}</td>
+                <td>${instance.uptime ? formatUptime(instance.uptime) : '未运行'}</td>
                 <td>${instance.restarts || 0}</td>
             </tr>
         `).join('');

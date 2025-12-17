@@ -166,11 +166,15 @@ export const getInstanceStatus = async (username) => {
                 resolve(null);
             } else {
                 const proc = processDescription[0];
+                // 计算运行时长：当前时间 - 启动时间
+                const uptime = proc.pm2_env.status === 'online' 
+                    ? Date.now() - proc.pm2_env.pm_uptime 
+                    : 0;
                 resolve({
                     status: proc.pm2_env.status,
                     cpu: proc.monit.cpu,
                     memory: proc.monit.memory,
-                    uptime: proc.pm2_env.pm_uptime,
+                    uptime: uptime,
                     restarts: proc.pm2_env.restart_time
                 });
             }
@@ -195,15 +199,21 @@ export const listAllInstances = async () => {
             } else {
                 const stInstances = processDescriptionList
                     .filter(proc => proc.name.startsWith('st-'))
-                    .map(proc => ({
-                        name: proc.name,
-                        username: proc.name.replace('st-', ''),
-                        status: proc.pm2_env.status,
-                        cpu: proc.monit.cpu,
-                        memory: proc.monit.memory,
-                        uptime: proc.pm2_env.pm_uptime,
-                        restarts: proc.pm2_env.restart_time
-                    }));
+                    .map(proc => {
+                        // 计算运行时长：当前时间 - 启动时间
+                        const uptime = proc.pm2_env.status === 'online' 
+                            ? Date.now() - proc.pm2_env.pm_uptime 
+                            : 0;
+                        return {
+                            name: proc.name,
+                            username: proc.name.replace('st-', ''),
+                            status: proc.pm2_env.status,
+                            cpu: proc.monit.cpu,
+                            memory: proc.monit.memory,
+                            uptime: uptime,
+                            restarts: proc.pm2_env.restart_time
+                        };
+                    });
                 resolve(stInstances);
             }
         });
