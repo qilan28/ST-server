@@ -49,17 +49,41 @@ const upload = multer({
 
 // 获取网站设置 - 公开API，无需验证
 router.get('/', (req, res) => {
+    const requestId = 'API:' + Math.random().toString(36).substring(2, 10);
+    console.log(`[${requestId}] 接收到获取站点设置请求`);
+    
+    // 添加CORS头部确保跨域请求工作
+    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+    
     try {
+        console.log(`[${requestId}] 正在查询数据库...`);
         const settings = getSiteSettings(db);
-        res.json({
-            success: true,
-            settings
-        });
+        
+        if (!settings) {
+            console.warn(`[${requestId}] 未找到站点设置数据，返回默认值`);
+            res.json({
+                success: true,
+                settings: {
+                    project_name: '公益云酒馆多开管理平台', 
+                    site_name: 'SillyTavern 多开管理平台', 
+                    favicon_path: '/favicon.ico'
+                },
+                message: '使用默认设置'
+            });
+        } else {
+            console.log(`[${requestId}] 成功获取站点设置:`, settings);
+            res.json({
+                success: true,
+                settings
+            });
+        }
     } catch (error) {
-        console.error('获取网站设置失败:', error);
+        console.error(`[${requestId}] 获取网站设置失败:`, error);
         res.status(500).json({ 
             success: false,
-            error: '获取网站设置失败' 
+            error: '获取网站设置失败: ' + error.message 
         });
     }
 });

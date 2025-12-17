@@ -7,12 +7,24 @@ async function loadSiteSettings() {
     try {
         console.log('开始加载站点设置...');
         
-        const response = await fetch(`${API_BASE}/site-settings`, {
+        // 生成随机查询参数防止缓存
+        const timestamp = new Date().getTime();
+        const apiUrl = `${API_BASE}/site-settings?_nocache=${timestamp}`;
+        
+        // 使用协议辅助工具或默认URL
+        const finalUrl = window.protocolHelper ? 
+            window.protocolHelper.getApiUrl(apiUrl) : apiUrl;
+        
+        console.log('签发站点设置请求到:', finalUrl);
+        
+        const response = await fetch(finalUrl, {
             method: 'GET',
             headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            },
+            credentials: 'same-origin' // 确保发送cookie
         });
         
         console.log('站点设置 API 响应状态:', response.status);
@@ -25,8 +37,9 @@ async function loadSiteSettings() {
         }
         
         const data = await response.json();
-        console.log('站点设置 API 响应数据:', data);
+        console.log('站点设置 API 原始响应数据:', data);
         
+        // 查找表单元素
         const projectNameInput = document.getElementById('projectName');
         const siteNameInput = document.getElementById('siteName');
         const currentFaviconImg = document.getElementById('currentFavicon');
@@ -48,20 +61,33 @@ async function loadSiteSettings() {
                 favicon_path: data.settings.favicon_path
             });
             
-            // 确保有值才填充
-            if (data.settings.project_name) {
-                projectNameInput.value = data.settings.project_name;
-            }
+            // 强制设置表单值，即使为空也需要设置
+            projectNameInput.value = data.settings.project_name || '';
+            console.log('设置项目名称为:', projectNameInput.value);
             
-            if (data.settings.site_name) {
-                siteNameInput.value = data.settings.site_name;
-            }
+            siteNameInput.value = data.settings.site_name || '';
+            console.log('设置网站名称为:', siteNameInput.value);
+            
+            // 验证设置的值是否生效
+            setTimeout(() => {
+                console.log('检查表单实际值:', {
+                    projectName: projectNameInput.value,
+                    siteName: siteNameInput.value
+                });
+            }, 100);
             
             // 显示当前图标
             if (currentFaviconImg && data.settings.favicon_path) {
                 currentFaviconImg.src = data.settings.favicon_path + '?t=' + new Date().getTime();
                 currentFaviconImg.style.display = 'block';
             }
+            
+            // 使用DOM API直接设置值以确保它生效
+            document.querySelector('#projectName').setAttribute('value', data.settings.project_name || '');
+            document.querySelector('#siteName').setAttribute('value', data.settings.site_name || '');
+            
+            // 更新页面标题
+            updatePageTitle(data.settings.site_name);
             
             console.log('站点设置加载成功', {
                 projectNameValue: projectNameInput.value,
