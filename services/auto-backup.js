@@ -4,7 +4,7 @@ import {
     getUsersForAutoBackup, 
     updateAutoBackupLastRun 
 } from '../database.js';
-import { createBackup } from '../utils/hf-backup.js';
+import { backupToHuggingFace } from '../utils/hf-backup.js';
 
 let cronJob = null;
 let isBackupRunning = false;
@@ -46,11 +46,11 @@ async function executeAutoBackup() {
                 console.log(`\n[自动备份] 🔄 正在备份用户: ${user.username}`);
                 
                 // 创建备份
-                await createBackup(
+                await backupToHuggingFace(
                     user.data_dir,
+                    user.username,
                     user.hf_token,
                     user.hf_repo,
-                    user.username,
                     user.hf_email,
                     (message) => {
                         // 日志回调

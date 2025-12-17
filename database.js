@@ -450,12 +450,20 @@ export const getAutoBackupConfig = () => {
 
 // 更新自动备份配置
 export const updateAutoBackupConfig = (enabled, intervalHours, backupType) => {
+    // 获取当前配置
+    const current = getAutoBackupConfig();
+    
+    // 只更新提供的字段
+    const newEnabled = enabled !== undefined ? enabled : current.enabled;
+    const newIntervalHours = intervalHours !== undefined ? intervalHours : current.interval_hours;
+    const newBackupType = backupType !== undefined ? backupType : current.backup_type;
+    
     const stmt = db.prepare(`
         UPDATE auto_backup_config 
         SET enabled = ?, interval_hours = ?, backup_type = ?, updated_at = CURRENT_TIMESTAMP 
         WHERE id = 1
     `);
-    return stmt.run(enabled, intervalHours, backupType);
+    return stmt.run(newEnabled, newIntervalHours, newBackupType);
 };
 
 // 更新最后运行时间
