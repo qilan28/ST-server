@@ -1272,11 +1272,44 @@ async function handleBackup() {
     }
 }
 
-// 添加备份日志
+// 添加备份日志（优化版 - 防止卡死）
+let lastScrollTime = 0;
+const MAX_LOG_ENTRIES = 100; // 最多保留100条日志
+const SCROLL_THROTTLE = 200; // 滚动节流 200ms
+
 function addBackupLog(message, type = 'info') {
     const logsDiv = document.getElementById('backupLogs');
+    if (!logsDiv) return;
+    
+    // 检查是否是进度类日志（包含百分比或"下载进度"）
+    const isProgressLog = message.includes('%') || message.includes('下载进度') || message.includes('进度:');
+    
+    // 如果是进度日志，尝试更新最后一条而不是追加
+    if (isProgressLog) {
+        const lastEntry = logsDiv.lastElementChild;
+        if (lastEntry && lastEntry.classList.contains('log-progress')) {
+            // 更新最后一条进度日志
+            const messageSpan = lastEntry.querySelector('.log-message');
+            if (messageSpan) {
+                messageSpan.textContent = message;
+                
+                // 节流滚动
+                const now = Date.now();
+                if (now - lastScrollTime > SCROLL_THROTTLE) {
+                    logsDiv.scrollTop = logsDiv.scrollHeight;
+                    lastScrollTime = now;
+                }
+                return;
+            }
+        }
+    }
+    
+    // 创建新日志条目
     const logEntry = document.createElement('div');
     logEntry.className = `log-entry log-${type}`;
+    if (isProgressLog) {
+        logEntry.classList.add('log-progress');
+    }
     
     // 添加时间戳（中国时区）
     const timestamp = new Date().toLocaleTimeString('zh-CN', {
@@ -1293,8 +1326,18 @@ function addBackupLog(message, type = 'info') {
     
     logsDiv.appendChild(logEntry);
     
-    // 自动滚动到底部
-    logsDiv.scrollTop = logsDiv.scrollHeight;
+    // 限制日志条数，删除旧的
+    const logEntries = logsDiv.children;
+    while (logEntries.length > MAX_LOG_ENTRIES) {
+        logsDiv.removeChild(logEntries[0]);
+    }
+    
+    // 节流滚动到底部
+    const now = Date.now();
+    if (now - lastScrollTime > SCROLL_THROTTLE) {
+        logsDiv.scrollTop = logsDiv.scrollHeight;
+        lastScrollTime = now;
+    }
 }
 
 // 转义 HTML
