@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
-import { authenticateToken, authorizeAdmin } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getSiteSettings, updateSiteSettings } from '../database-site-settings.js';
 import { db } from '../database.js';
 
@@ -65,7 +65,7 @@ router.get('/', (req, res) => {
 });
 
 // 更新网站设置 - 仅管理员
-router.put('/', authenticateToken, authorizeAdmin, (req, res) => {
+router.put('/', authenticateToken, requireAdmin, (req, res) => {
     try {
         const { project_name, site_name } = req.body;
         
@@ -93,7 +93,7 @@ router.put('/', authenticateToken, authorizeAdmin, (req, res) => {
 });
 
 // 上传网站图标 - 仅管理员
-router.post('/favicon', authenticateToken, authorizeAdmin, upload.single('favicon'), (req, res) => {
+router.post('/favicon', authenticateToken, requireAdmin, upload.single('favicon'), (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
