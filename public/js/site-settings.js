@@ -33,11 +33,19 @@ async function loadSiteSettings() {
 
 // 保存站点设置（项目名和网站名）
 async function saveSiteSettings() {
+    // 直接在点击时显示消息，用于调试
+    console.log('点击了保存网站设置按钮');
+    showSiteSettingsMessage('正在保存设置...', 'info');
+    
     try {
         const projectName = document.getElementById('projectName').value.trim();
         const siteName = document.getElementById('siteName').value.trim();
         
+        console.log('要保存的数据:', { projectName, siteName });
+        
         const token = localStorage.getItem('token');
+        console.log('Token存在:', !!token);
+        
         const response = await fetch(`${API_BASE}/site-settings`, {
             method: 'PUT',
             headers: {
@@ -192,21 +200,53 @@ function updateFaviconInPage(faviconPath) {
 
 // 显示站点设置消息
 function showSiteSettingsMessage(message, type = 'info') {
-    const messageEl = document.getElementById('siteSettingsMessage');
-    if (!messageEl) return;
+    console.log('显示消息:', message, type);
     
-    // 确保消息区域可见
+    const messageEl = document.getElementById('siteSettingsMessage');
+    if (!messageEl) {
+        console.error('未找到消息元素!');
+        alert(message); // 如果消息元素不存在，则使用alert显示
+        return;
+    }
+    
+    // 确保消息区域可见且有明显样式
     messageEl.style.display = 'block';
+    messageEl.style.padding = '10px';
+    messageEl.style.margin = '10px 0';
+    messageEl.style.borderRadius = '4px';
+    
+    switch(type) {
+        case 'error':
+            messageEl.style.backgroundColor = '#fee2e2';
+            messageEl.style.color = '#b91c1c';
+            messageEl.style.border = '1px solid #f87171';
+            break;
+        case 'success':
+            messageEl.style.backgroundColor = '#dcfce7';
+            messageEl.style.color = '#15803d';
+            messageEl.style.border = '1px solid #86efac';
+            break;
+        default:
+            messageEl.style.backgroundColor = '#e0f2fe';
+            messageEl.style.color = '#0369a1';
+            messageEl.style.border = '1px solid #7dd3fc';
+    }
+    
     messageEl.textContent = message;
     messageEl.className = `message show ${type}`;
     
     // 滚动到消息区域，确保用户看到
     messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
-    // 5秒后隐藏消息
-    setTimeout(() => {
+    // 清除之前的定时器
+    if (messageEl._hideTimer) {
+        clearTimeout(messageEl._hideTimer);
+    }
+    
+    // 8秒后隐藏消息
+    messageEl._hideTimer = setTimeout(() => {
         messageEl.style.display = 'none';
-    }, 5000);
+    }, 8000);
 }
 
 // 更新页面标题

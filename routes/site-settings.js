@@ -66,11 +66,17 @@ router.get('/', (req, res) => {
 
 // 更新网站设置 - 仅管理员
 router.put('/', authenticateToken, requireAdmin, (req, res) => {
+    console.log('[API] 收到更新网站设置请求');
+    console.log('[API] 请求体:', req.body);
+    
     try {
         const { project_name, site_name } = req.body;
+        console.log('[API] 解析数据:', { project_name, site_name });
         
         // 更新文本设置
+        console.log('[API] 开始更新设置...');
         const result = updateSiteSettings(db, project_name, site_name, null);
+        console.log('[API] 更新结果:', result);
         
         if (result) {
             res.json({
