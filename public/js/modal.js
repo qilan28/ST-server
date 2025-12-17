@@ -124,8 +124,81 @@ function showConfirm(message, title = '确认操作', options = {}) {
     });
 }
 
+// 显示提示消息（非确认对话框）
+function showAlert(message, title = '提示', type = 'info') {
+    return new Promise((resolve) => {
+        let modal = document.getElementById('customModal');
+        if (!modal) {
+            createModalDOM();
+            modal = document.getElementById('customModal');
+        }
+        
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const confirmBtn = document.getElementById('modalConfirmBtn');
+        const cancelBtn = document.getElementById('modalCancelBtn');
+        
+        // 设置标题图标
+        const icons = {
+            'success': '✅',
+            'error': '❌',
+            'warning': '⚠️',
+            'info': '💡'
+        };
+        modalTitle.textContent = title;
+        modalTitle.style.setProperty('--icon', `"${icons[type] || '💬'}"`);
+        
+        modalMessage.innerHTML = message.replace(/\n/g, '<br>');
+        
+        // 只显示确定按钮
+        confirmBtn.textContent = '确定';
+        cancelBtn.style.display = 'none';
+        
+        // 根据类型设置按钮样式
+        if (type === 'error') {
+            confirmBtn.classList.add('modal-btn-danger');
+        } else {
+            confirmBtn.classList.remove('modal-btn-danger');
+        }
+        
+        modal.classList.add('show');
+        
+        const handleConfirm = () => {
+            modal.classList.remove('show');
+            cancelBtn.style.display = '';
+            cleanup();
+            resolve();
+        };
+        
+        const cleanup = () => {
+            confirmBtn.removeEventListener('click', handleConfirm);
+            modal.removeEventListener('click', handleOverlayClick);
+            document.removeEventListener('keydown', handleEscape);
+        };
+        
+        const handleOverlayClick = (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                handleConfirm();
+            }
+        };
+        
+        const handleEscape = (e) => {
+            if (e.key === 'Escape' || e.key === 'Enter') {
+                handleConfirm();
+            }
+        };
+        
+        confirmBtn.addEventListener('click', handleConfirm);
+        modal.addEventListener('click', handleOverlayClick);
+        document.addEventListener('keydown', handleEscape);
+        
+        setTimeout(() => confirmBtn.focus(), 100);
+    });
+}
+
 // 导出为全局函数（兼容性）
 window.showConfirm = showConfirm;
+window.showAlert = showAlert;
 
 // 页面加载完成后创建 DOM
 if (document.readyState === 'loading') {
