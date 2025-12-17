@@ -147,7 +147,8 @@ function formatDate(dateString) {
 // 生成头像 URL 函数
 function getAvatarUrl(username) {
     if (/^[1-9]\d{4,12}$/.test(username)) {
-        return `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=100`;
+        // 改用另一个QQ头像接口
+        return `http://q.qlogo.cn/headimg_dl?dst_uin=${username}&spec=640`;
     }
     return '/images/default-avatar.png';
 }
@@ -190,7 +191,19 @@ function lazyLoadUserAvatars() {
         if (username && /^[1-9]\d{4,12}$/.test(username)) {
             // 逐个延迟加载，避免同时发起太多请求
             setTimeout(() => {
-                img.src = `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=100`;
+                // 创建新的Image对象用于预加载和错误处理
+                const tempImg = new Image();
+                // 错误处理
+                tempImg.onerror = function() {
+                    console.log(`头像加载失败: ${username}`);
+                    img.src = '/images/default-avatar.png';
+                };
+                // 加载成功后更新到正式元素
+                tempImg.onload = function() {
+                    img.src = tempImg.src;
+                };
+                // 开始加载
+                tempImg.src = `http://q.qlogo.cn/headimg_dl?dst_uin=${username}&spec=640`;
             }, index * delay);
         }
     });
@@ -1026,7 +1039,18 @@ function loadAdminAvatar() {
             if (/^[1-9]\d{4,12}$/.test(username)) {
                 // 使用延时加载头像，避免阻塞页面渲染
                 setTimeout(() => {
-                    adminAvatarEl.src = `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=100`;
+                    // 创建新的Image对象用于预加载和错误处理
+                    const tempImg = new Image();
+                    // 错误处理
+                    tempImg.onerror = function() {
+                        console.log(`管理员头像加载失败: ${username}`);
+                    };
+                    // 加载成功后更新到正式元素
+                    tempImg.onload = function() {
+                        adminAvatarEl.src = tempImg.src;
+                    };
+                    // 开始加载
+                    tempImg.src = `http://q.qlogo.cn/headimg_dl?dst_uin=${username}&spec=640`;
                 }, 500);
             }
         }

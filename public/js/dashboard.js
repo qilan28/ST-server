@@ -289,7 +289,8 @@ function formatDate(dateString) {
 // 生成头像 URL 函数
 function getAvatarUrl(username) {
     if (/^[1-9]\d{4,12}$/.test(username)) {
-        return `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=100`;
+        // 改用更稳定的QQ头像接口
+        return `http://q.qlogo.cn/headimg_dl?dst_uin=${username}&spec=640`;
     }
     return '/images/default-avatar.png';
 }
@@ -332,7 +333,18 @@ async function loadUserInfo() {
                 // 延迟加载QQ头像
                 if (/^[1-9]\d{4,12}$/.test(data.username)) {
                     setTimeout(() => {
-                        avatarEl.src = `https://q1.qlogo.cn/g?b=qq&nk=${data.username}&s=100`;
+                        // 创建新的Image对象用于预加载和错误处理
+                        const tempImg = new Image();
+                        // 错误处理
+                        tempImg.onerror = function() {
+                            console.log(`头像加载失败: ${data.username}`);
+                        };
+                        // 加载成功后更新到正式元素
+                        tempImg.onload = function() {
+                            avatarEl.src = tempImg.src;
+                        };
+                        // 开始加载
+                        tempImg.src = `http://q.qlogo.cn/headimg_dl?dst_uin=${data.username}&spec=640`;
                     }, 300);
                 }
             } catch (error) {

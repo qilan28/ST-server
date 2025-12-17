@@ -227,8 +227,16 @@ function updateQQAvatar() {
     // 验证QQ号格式 (5-13位纯数字)
     if (/^[1-9]\d{4,12}$/.test(qqNumber)) {
         // 显示QQ头像
-        const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${qqNumber}&s=100`;
-        qqAvatar.src = avatarUrl;
+        const tempImg = new Image();
+        tempImg.onerror = function() {
+            console.log(`头像加载失败: ${qqNumber}`);
+            // 使用默认头像
+            qqAvatar.src = '/images/default-avatar.png';
+        };
+        tempImg.onload = function() {
+            qqAvatar.src = tempImg.src;
+        };
+        tempImg.src = `http://q.qlogo.cn/headimg_dl?dst_uin=${qqNumber}&spec=640`;
         avatarContainer.style.display = 'block';
     } else {
         // 隐藏头像容器
