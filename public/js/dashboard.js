@@ -998,7 +998,74 @@ async function loadBackupConfig() {
                 }
             }
         }
+        
+        // 加载自动备份偏好
+        await loadAutoBackupPreference();
     } catch (error) {
+    }
+}
+
+// 加载自动备份偏好
+async function loadAutoBackupPreference() {
+    try {
+        const response = await fetch(`${API_BASE}/backup/auto-backup-preference`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('autoBackupEnabled').checked = Boolean(data.enabled);
+            }
+        }
+    } catch (error) {
+    }
+}
+
+// 处理自动备份开关切换
+async function handleAutoBackupToggle() {
+    const checkbox = document.getElementById('autoBackupEnabled');
+    const enabled = checkbox.checked;
+    const messageDiv = document.getElementById('backupMessage');
+    
+    try {
+        const response = await fetch(`${API_BASE}/backup/auto-backup-preference`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ enabled: enabled })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await showAlert(
+                data.message || (enabled ? '已启用自动备份' : '已停用自动备份'),
+                enabled ? '✅ 已启用' : '🔴 已停用',
+                'success'
+            );
+        } else {
+            // 恢复复选框状态
+            checkbox.checked = !enabled;
+            
+            if (data.error === '请先配置 Hugging Face 备份信息') {
+                await showAlert(
+                    '请先填写完整的 HF 配置信息（Token、仓库名、邮箱）并保存，\n然后再启用自动备份。',
+                    '⚠️ 未配置 HF',
+                    'warning'
+                );
+            } else {
+                await showAlert(data.error || '操作失败', '❌ 失败', 'error');
+            }
+        }
+    } catch (error) {
+        // 恢复复选框状态
+        checkbox.checked = !enabled;
+        await showAlert('设置失败：' + error.message, '❌ 错误', 'error');
     }
 }
 

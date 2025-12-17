@@ -183,6 +183,52 @@
                     </table>
                 </div>
             </div>
+
+            <!-- 自动备份配置 -->
+            <div class="users-card">
+                <h2>⏰ 自动备份配置</h2>
+                <div id="autoBackupMessage" class="message" style="display: none;"></div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="autoBackupEnabled">
+                        <span>启用自动备份</span>
+                    </label>
+                    <small style="color: #718096; margin-left: 30px;">定时自动备份所有符合条件的用户数据</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="backupIntervalHours">备份间隔（小时）*</label>
+                    <input type="number" id="backupIntervalHours" class="form-input" min="1" max="168" value="24" placeholder="1-168小时">
+                    <small style="color: #718096;">最小1小时，最大168小时（7天）</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="backupType">备份类型 *</label>
+                    <select id="backupType" class="form-input">
+                        <option value="all">所有用户</option>
+                        <option value="logged_in_today">当日登录过的用户</option>
+                        <option value="running">运行中的实例</option>
+                    </select>
+                    <small style="color: #718096;">只会备份已配置HF且启用自动备份的用户</small>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button onclick="saveAutoBackupConfig()" class="btn btn-primary">💾 保存配置</button>
+                    <button onclick="showAutoBackupUsers()" class="btn btn-secondary">👥 查看备份用户</button>
+                    <button onclick="triggerAutoBackup()" class="btn btn-warning">⚡ 立即执行</button>
+                </div>
+
+                <div id="autoBackupStatus" style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; display: none;">
+                    <h3 style="margin: 0 0 10px 0; font-size: 16px;">📊 备份状态</h3>
+                    <div id="autoBackupStatusContent"></div>
+                </div>
+
+                <div id="autoBackupUsersList" style="margin-top: 20px; display: none;">
+                    <h3 style="margin: 0 0 10px 0;">符合备份条件的用户</h3>
+                    <div id="autoBackupUsersContent"></div>
+                </div>
+            </div>
         </main>
     </div>
 

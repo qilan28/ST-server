@@ -10,7 +10,10 @@ import {
     createAnnouncement,
     updateAnnouncement,
     deleteAnnouncement,
-    toggleAnnouncementStatus
+    toggleAnnouncementStatus,
+    getAutoBackupConfig,
+    updateAutoBackupConfig,
+    getUsersForAutoBackup
 } from '../database.js';
 import { 
     startInstance,
@@ -21,6 +24,11 @@ import {
 } from '../pm2-manager.js';
 import { generateAccessUrl } from '../utils/url-helper.js';
 import { deleteSillyTavern } from '../git-manager.js';
+import { 
+    reloadAutoBackupScheduler, 
+    triggerManualBackup,
+    getAutoBackupStatus
+} from '../services/auto-backup.js';
 import fs from 'fs';
 
 const router = express.Router();
@@ -352,6 +360,114 @@ router.delete('/announcements/:id', async (req, res) => {
     } catch (error) {
         console.error('Delete announcement error:', error);
         res.status(500).json({ error: 'Failed to delete announcement' });
+    }
+});
+
+// ==================== 自动备份配置管理 ====================
+
+// 获取自动备份配置
+router.get('/auto-backup/config', (req, res) => {
+    try {
+        const config = getAutoBackupConfig();
+        const status = getAutoBackupStatus();
+        
+        res.json({
+            success: true,
+            config: config,
+            status: status
+        });
+    } catch (error) {
+        console.error('Get auto backup config error:', error);
+        res.status(500).json({ error: 'Failed to get auto backup config' });
+    }
+});
+
+// 更新自动备份配置
+router.put('/auto-backup/config', (req, res) => {
+    try {
+        const { enabled, interval_hours, backup_type } = req.body;
+        
+        // 验证参数
+        if (interval_hours !== undefined && (interval_hours < 1 || interval_hours > 168)) {
+            return res.status(400).json({ error: '间隔时间必须在 1-168 小时之间' });
+        }
+        
+        const validBackupTypes = ['all', 'logged_in_today', 'running'];
+        if (backup_type !== undefined && !validBackupTypes.includes(backup_type)) {
+            return res.status(400).json({ error: '无效的备份类型' });
+        }
+        
+        // 更新配置
+        updateAutoBackupConfig(
+            enabled !== undefined ? (enabled ? 1 : 0) : undefined,
+            interval_hours,
+            backup_type
+        );
+        
+        // 重新加载调度器
+        reloadAutoBackupScheduler();
+        
+        const newConfig = getAutoBackupConfig();
+        res.json({
+            success: true,
+            message: '自动备份配置已更新',
+            config: newConfig
+        });
+    } catch (error) {
+        console.error('Update auto backup config error:', error);
+        res.status(500).json({ error: 'Failed to update auto backup config' });
+    }
+});
+
+// 获取符合备份条件的用户列表
+router.get('/auto-backup/users', (req, res) => {
+    try {
+        const config = getAutoBackupConfig();
+        const users = getUsersForAutoBackup(config.backup_type);
+        
+        // 只返回必要的信息
+        const userList = users.map(user => ({
+            username: user.username,
+            email: user.email,
+            status: user.status,
+            last_login_at: user.last_login_at,
+            hasHFConfig: !!(user.hf_token && user.hf_repo),
+            auto_backup_enabled: Boolean(user.auto_backup_enabled)
+        }));
+        
+        res.json({
+            success: true,
+            backup_type: config.backup_type,
+            total: userList.length,
+            users: userList
+        });
+    } catch (error) {
+        console.error('Get auto backup users error:', error);
+        res.status(500).json({ error: 'Failed to get auto backup users' });
+    }
+});
+
+// 手动触发自动备份
+router.post('/auto-backup/trigger', async (req, res) => {
+    try {
+        const status = getAutoBackupStatus();
+        
+        if (status.isRunning) {
+            return res.status(400).json({ error: '备份任务正在运行中' });
+        }
+        
+        // 异步执行备份
+        triggerManualBackup().catch(error => {
+            console.error('[自动备份] 手动触发失败:', error);
+        });
+        
+        res.json({
+            success: true,
+            message: '自动备份已触发，正在后台执行'
+        });
+    } catch (error) {
+        console.error('Trigger auto backup error:', error);
+        res.status(500).json({ error: 'Failed to trigger auto backup' });
     }
 });
 

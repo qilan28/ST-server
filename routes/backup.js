@@ -6,7 +6,9 @@ import { authenticateToken, JWT_SECRET } from '../middleware/auth.js';
 import { 
     findUserByUsername, 
     updateUserHFConfig, 
-    getUserHFConfig 
+    getUserHFConfig,
+    updateUserAutoBackupPreference,
+    getUserAutoBackupPreference
 } from '../database.js';
 import { 
     backupToHuggingFace, 
@@ -390,6 +392,65 @@ router.get('/restore', async (req, res) => {
             success: false, 
             error: '恢复失败',
             message: error.message
+        });
+    }
+});
+
+// ==================== 用户自动备份偏好 ====================
+
+// 获取用户自动备份偏好
+router.get('/auto-backup-preference', authenticateToken, (req, res) => {
+    try {
+        const username = req.user.username;
+        const enabled = getUserAutoBackupPreference(username);
+        
+        res.json({
+            success: true,
+            enabled: enabled
+        });
+    } catch (error) {
+        console.error('Get auto backup preference error:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to get auto backup preference' 
+        });
+    }
+});
+
+// 更新用户自动备份偏好
+router.put('/auto-backup-preference', authenticateToken, (req, res) => {
+    try {
+        const username = req.user.username;
+        const { enabled } = req.body;
+        
+        if (enabled === undefined) {
+            return res.status(400).json({ 
+                success: false,
+                error: '缺少 enabled 参数' 
+            });
+        }
+        
+        // 检查用户是否配置了 HF
+        const config = getUserHFConfig(username);
+        if (!config.hfToken || !config.hfRepo) {
+            return res.status(400).json({
+                success: false,
+                error: '请先配置 Hugging Face 备份信息'
+            });
+        }
+        
+        updateUserAutoBackupPreference(username, enabled);
+        
+        res.json({
+            success: true,
+            message: enabled ? '已启用自动备份' : '已停用自动备份',
+            enabled: enabled
+        });
+    } catch (error) {
+        console.error('Update auto backup preference error:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to update auto backup preference' 
         });
     }
 });

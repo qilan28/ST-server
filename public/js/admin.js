@@ -559,6 +559,7 @@ async function init() {
     await loadUsers();
     await loadInstances();
     await loadAnnouncements();
+    await loadAutoBackupConfig();
     
     // 定时刷新（每5秒）
     refreshInterval = setInterval(() => {
@@ -754,4 +755,213 @@ async function deleteAnnouncementAction(id) {
         console.error('Delete announcement error:', error);
         showMessage('删除失败', 'error');
     }
+}
+
+// ==================== 自动备份配置 ====================
+
+// 加载自动备份配置
+async function loadAutoBackupConfig() {
+    try {
+        const response = await apiRequest(`${API_BASE}/admin/auto-backup/config`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (data.success && data.config) {
+            document.getElementById('autoBackupEnabled').checked = Boolean(data.config.enabled);
+            document.getElementById('backupIntervalHours').value = data.config.interval_hours || 24;
+            document.getElementById('backupType').value = data.config.backup_type || 'all';
+            
+            // 显示状态
+            if (data.status) {
+                const statusDiv = document.getElementById('autoBackupStatus');
+                const statusContent = document.getElementById('autoBackupStatusContent');
+                statusDiv.style.display = 'block';
+                
+                let statusHtml = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <strong>状态：</strong> ${data.config.enabled ? '🟢 已启用' : '🔴 已停用'}
+                        </div>
+                        <div>
+                            <strong>运行中：</strong> ${data.status.isRunning ? '⏳ 是' : '❌ 否'}
+                        </div>
+                        <div>
+                            <strong>调度器：</strong> ${data.status.hasScheduler ? '✅ 运行中' : '❌ 未运行'}
+                        </div>
+                        <div>
+                            <strong>最后运行：</strong> ${data.config.last_run_at || '从未运行'}
+                        </div>
+                    </div>
+                `;
+                statusContent.innerHTML = statusHtml;
+            }
+        }
+    } catch (error) {
+        console.error('Load auto backup config error:', error);
+    }
+}
+
+// 保存自动备份配置
+async function saveAutoBackupConfig() {
+    try {
+        const enabled = document.getElementById('autoBackupEnabled').checked;
+        const intervalHours = parseInt(document.getElementById('backupIntervalHours').value);
+        const backupType = document.getElementById('backupType').value;
+        const messageDiv = document.getElementById('autoBackupMessage');
+        
+        // 验证
+        if (intervalHours < 1 || intervalHours > 168) {
+            messageDiv.className = 'message error show';
+            messageDiv.textContent = '❌ 间隔时间必须在 1-168 小时之间';
+            messageDiv.style.display = 'block';
+            return;
+        }
+        
+        messageDiv.className = 'message info show';
+        messageDiv.textContent = '⏳ 保存中...';
+        messageDiv.style.display = 'block';
+        
+        const response = await apiRequest(`${API_BASE}/admin/auto-backup/config`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                enabled: enabled,
+                interval_hours: intervalHours,
+                backup_type: backupType
+            })
+        });
+        
+        if (!response) {
+            messageDiv.className = 'message error show';
+            messageDiv.textContent = '❌ 保存失败';
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            messageDiv.className = 'message success show';
+            messageDiv.textContent = '✅ 配置保存成功！';
+            
+            // 显示成功弹窗
+            await showAlert('自动备份配置已更新\n\n' + (enabled ? '定时任务已启动' : '定时任务已停止'), '✅ 保存成功', 'success');
+            
+            // 重新加载配置
+            await loadAutoBackupConfig();
+        } else {
+            messageDiv.className = 'message error show';
+            messageDiv.textContent = '❌ ' + (data.error || '保存失败');
+        }
+    } catch (error) {
+        const messageDiv = document.getElementById('autoBackupMessage');
+        messageDiv.className = 'message error show';
+        messageDiv.textContent = '❌ 保存失败：' + error.message;
+        messageDiv.style.display = 'block';
+    }
+}
+
+// 查看符合备份条件的用户
+async function showAutoBackupUsers() {
+    try {
+        const response = await apiRequest(`${API_BASE}/admin/auto-backup/users`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const usersDiv = document.getElementById('autoBackupUsersList');
+            const usersContent = document.getElementById('autoBackupUsersContent');
+            
+            usersDiv.style.display = 'block';
+            
+            if (data.users && data.users.length > 0) {
+                let html = `
+                    <p style="margin-bottom: 15px;">
+                        备份类型：<strong>${getBackupTypeText(data.backup_type)}</strong> | 
+                        符合条件：<strong>${data.total}</strong> 个用户
+                    </p>
+                    <div style="overflow-x: auto;">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th>用户名</th>
+                                    <th>邮箱</th>
+                                    <th>状态</th>
+                                    <th>最后登录</th>
+                                    <th>HF配置</th>
+                                    <th>自动备份</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.users.forEach(user => {
+                    html += `
+                        <tr>
+                            <td>${user.username}</td>
+                            <td>${user.email}</td>
+                            <td><span class="status-badge status-${user.status}">${user.status === 'running' ? '运行中' : '已停止'}</span></td>
+                            <td>${user.last_login_at ? new Date(user.last_login_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '从未登录'}</td>
+                            <td>${user.hasHFConfig ? '✅ 已配置' : '❌ 未配置'}</td>
+                            <td>${user.auto_backup_enabled ? '✅ 已启用' : '❌ 已停用'}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                usersContent.innerHTML = html;
+            } else {
+                usersContent.innerHTML = '<p style="text-align: center; padding: 20px; color: #718096;">暂无符合条件的用户</p>';
+            }
+        }
+    } catch (error) {
+        console.error('Show auto backup users error:', error);
+        await showAlert('加载用户列表失败：' + error.message, '❌ 错误', 'error');
+    }
+}
+
+// 手动触发自动备份
+async function triggerAutoBackup() {
+    try {
+        if (!await showConfirm('确定要立即执行自动备份吗？\n\n这将备份所有符合条件的用户数据。', '⚡ 立即执行', { type: 'warning' })) {
+            return;
+        }
+        
+        const response = await apiRequest(`${API_BASE}/admin/auto-backup/trigger`, {
+            method: 'POST'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await showAlert('自动备份任务已触发！\n\n备份正在后台执行，请查看服务器日志了解进度。', '✅ 任务已启动', 'success');
+            
+            // 3秒后重新加载状态
+            setTimeout(() => {
+                loadAutoBackupConfig();
+            }, 3000);
+        } else {
+            await showAlert(data.error || '触发失败', '❌ 错误', 'error');
+        }
+    } catch (error) {
+        console.error('Trigger auto backup error:', error);
+        await showAlert('触发失败：' + error.message, '❌ 错误', 'error');
+    }
+}
+
+// 获取备份类型文本
+function getBackupTypeText(type) {
+    const map = {
+        'all': '所有用户',
+        'logged_in_today': '当日登录过的用户',
+        'running': '运行中的实例'
+    };
+    return map[type] || type;
 }

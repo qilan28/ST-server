@@ -115,13 +115,59 @@ const createAnnouncementsTable = () => {
     `);
 };
 
+// 创建自动备份配置表
+const createAutoBackupConfigTable = () => {
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS auto_backup_config (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            enabled INTEGER DEFAULT 0,
+            interval_hours INTEGER DEFAULT 24,
+            backup_type TEXT DEFAULT 'all',
+            last_run_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+    
+    // 插入默认配置（如果不存在）
+    const checkConfig = db.prepare('SELECT COUNT(*) as count FROM auto_backup_config');
+    const { count } = checkConfig.get();
+    if (count === 0) {
+        db.prepare(`
+            INSERT INTO auto_backup_config (id, enabled, interval_hours, backup_type)
+            VALUES (1, 0, 24, 'all')
+        `).run();
+    }
+};
+
+// 迁移：添加用户自动备份偏好字段
+const migrateAddAutoBackupPreference = () => {
+    try {
+        const checkColumn = db.prepare("PRAGMA table_info(users)");
+        const columns = checkColumn.all();
+        const hasAutoBackup = columns.some(col => col.name === 'auto_backup_enabled');
+        
+        if (!hasAutoBackup) {
+            console.log('[Database] 添加 auto_backup_enabled 字段...');
+            db.exec(`ALTER TABLE users ADD COLUMN auto_backup_enabled INTEGER DEFAULT 1`);
+            console.log('[Database] ✅ auto_backup_enabled 字段添加成功');
+        } else {
+            console.log('[Database] ℹ️  auto_backup_enabled 字段已存在');
+        }
+    } catch (error) {
+        console.error('[Database] ❌ 迁移失败:', error);
+    }
+};
+
 // 初始化数据库
 export const initDatabase = () => {
     createUsersTable();
     createAnnouncementsTable();
+    createAutoBackupConfigTable();
     migrateAddRoleField();
     migrateAddLoginFields();
     migrateAddHFFields();
+    migrateAddAutoBackupPreference();
     fixAdminUserPorts();
     console.log('[Database] ✅ 数据库初始化成功');
 };
@@ -392,6 +438,78 @@ export const toggleAnnouncementStatus = (id) => {
         WHERE id = ?
     `);
     return stmt.run(id);
+};
+
+// ==================== 自动备份配置管理 ====================
+
+// 获取自动备份配置
+export const getAutoBackupConfig = () => {
+    const stmt = db.prepare('SELECT * FROM auto_backup_config WHERE id = 1');
+    return stmt.get();
+};
+
+// 更新自动备份配置
+export const updateAutoBackupConfig = (enabled, intervalHours, backupType) => {
+    const stmt = db.prepare(`
+        UPDATE auto_backup_config 
+        SET enabled = ?, interval_hours = ?, backup_type = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = 1
+    `);
+    return stmt.run(enabled, intervalHours, backupType);
+};
+
+// 更新最后运行时间
+export const updateAutoBackupLastRun = () => {
+    const stmt = db.prepare(`
+        UPDATE auto_backup_config 
+        SET last_run_at = CURRENT_TIMESTAMP 
+        WHERE id = 1
+    `);
+    return stmt.run();
+};
+
+// 获取需要自动备份的用户列表
+export const getUsersForAutoBackup = (backupType) => {
+    let query = `
+        SELECT * FROM users 
+        WHERE role = 'user' 
+        AND auto_backup_enabled = 1
+        AND hf_token IS NOT NULL 
+        AND hf_repo IS NOT NULL
+    `;
+    
+    if (backupType === 'logged_in_today') {
+        // 当日登录过的用户
+        query += ` AND DATE(last_login_at) = DATE('now')`;
+    } else if (backupType === 'running') {
+        // 运行中的实例
+        query += ` AND status = 'running'`;
+    }
+    // backupType === 'all' 不需要额外条件
+    
+    const stmt = db.prepare(query);
+    return stmt.all();
+};
+
+// 更新用户自动备份偏好
+export const updateUserAutoBackupPreference = (username, enabled) => {
+    const stmt = db.prepare(`
+        UPDATE users 
+        SET auto_backup_enabled = ? 
+        WHERE username = ?
+    `);
+    return stmt.run(enabled ? 1 : 0, username);
+};
+
+// 获取用户自动备份偏好
+export const getUserAutoBackupPreference = (username) => {
+    const stmt = db.prepare(`
+        SELECT auto_backup_enabled 
+        FROM users 
+        WHERE username = ?
+    `);
+    const result = stmt.get(username);
+    return result ? Boolean(result.auto_backup_enabled) : false;
 };
 
 // 导出数据库实例（用于事务等高级操作）

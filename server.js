@@ -17,6 +17,7 @@ import backupRoutes from './routes/backup.js';
 import './database.js';
 import { findUserByUsername, createAdminUser } from './database.js';
 import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
+import { startAutoBackupScheduler, stopAutoBackupScheduler } from './services/auto-backup.js';
 
 // 加载环境变量
 dotenv.config();
@@ -160,15 +161,24 @@ app.listen(PORT, () => {
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`Database: ${path.join(__dirname, 'database.sqlite')}`);
     console.log('='.repeat(60));
+    
+    // 启动自动备份调度器
+    try {
+        startAutoBackupScheduler();
+    } catch (error) {
+        console.error('[自动备份] ❗ 启动失败:', error.message);
+    }
 });
 
 // 优雅关闭
 process.on('SIGTERM', () => {
     console.log('SIGTERM signal received: closing HTTP server');
+    stopAutoBackupScheduler();
     process.exit(0);
 });
 
 process.on('SIGINT', () => {
     console.log('SIGINT signal received: closing HTTP server');
+    stopAutoBackupScheduler();
     process.exit(0);
 });
