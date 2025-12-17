@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import path from 'path';
 import { 
     getAutoBackupConfig, 
     getUsersForAutoBackup, 
@@ -45,9 +46,13 @@ async function executeAutoBackup() {
             try {
                 console.log(`\n[自动备份] 🔄 正在备份用户: ${user.username}`);
                 
+                // 只备份 st-data 目录
+                const stDataDir = path.join(user.data_dir, 'st-data');
+                console.log(`[自动备份] 📁 备份目录: ${stDataDir}`);
+                
                 // 创建备份
                 await backupToHuggingFace(
-                    user.data_dir,
+                    stDataDir,
                     user.username,
                     user.hf_token,
                     user.hf_repo,
