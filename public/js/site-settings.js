@@ -32,93 +32,70 @@ async function loadSiteSettings() {
 }
 
 // 保存站点设置（项目名和网站名）
-async function saveSiteSettings() {
-    // 获取按钮并添加加载状态
-    const saveButton = document.getElementById('saveSiteSettings');
-    if (saveButton) {
-        saveButton.disabled = true;
-        saveButton.innerHTML = '<span style="display:inline-block;animation:spin 1s infinite linear;margin-right:5px;">⟳</span> 保存中...';
-        saveButton.style.opacity = '0.7';
-    }
-    
-    // 显示正在保存的提示
-    console.log('点击了保存网站设置按钮', new Date().toISOString());
-    showSiteSettingsMessage('正在保存设置...', 'info');
-    
+function saveSiteSettings() {
     try {
+        // 获取按钮
+        const saveButton = document.getElementById('saveSiteSettings');
+        console.log('开始保存站点设置...', saveButton ? '找到按钮' : '未找到按钮');
+    
+        // 显示通知
+        alert('保存按钮已点击，这是简化版本！');
+        
         // 获取表单数据
-        const projectNameInput = document.getElementById('projectName');
-        const siteNameInput = document.getElementById('siteName');
-        
-        if (!projectNameInput || !siteNameInput) {
-            throw new Error('无法找到表单字段');
-        }
-        
-        const projectName = projectNameInput.value.trim();
-        const siteName = siteNameInput.value.trim();
+        const projectName = document.getElementById('projectName').value.trim();
+        const siteName = document.getElementById('siteName').value.trim();
         
         if (!projectName || !siteName) {
-            throw new Error('项目名称和网站名称不能为空');
+            alert('错误: 项目名称和网站名称不能为空');
+            return;
         }
         
-        console.log('要保存的数据:', { projectName, siteName });
+        // 显示数据
+        alert(`将保存的数据:\n- 项目名称: ${projectName}\n- 网站名称: ${siteName}`);
         
-        // 获取认证Token
+        // 保存数据（这里简化为同步版本）
         const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('未找到认证令牌，请重新登录');
-        }
         
-        // 发送API请求
-        const response = await fetch(`${API_BASE}/site-settings`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                project_name: projectName,
-                site_name: siteName
-            }),
-            // 添加请求超时
-            signal: AbortSignal.timeout(10000) // 10秒超时
-        });
+        // 使用更简单的方式访问后端，避免可能的Promise问题
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', '/api/site-settings', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         
-        // 检查响应状态
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`服务器响应错误 (${response.status}): ${errorText || '未知错误'}`);
-        }
+        // 添加监听器
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // 成功处理
+                alert('✅ 成功！站点设置已保存。');
+                document.getElementById('siteSettingsMessage').textContent = '站点设置保存成功!';
+                document.getElementById('siteSettingsMessage').style.backgroundColor = '#dcfce7';
+                document.getElementById('siteSettingsMessage').style.display = 'block';
+            } else {
+                // 错误处理
+                alert('⚠️ 错误！保存失败。状态码: ' + xhr.status);
+                document.getElementById('siteSettingsMessage').textContent = '保存失败: ' + xhr.responseText;
+                document.getElementById('siteSettingsMessage').style.backgroundColor = '#fee2e2';
+                document.getElementById('siteSettingsMessage').style.display = 'block';
+            }
+        };
         
-        const data = await response.json();
+        xhr.onerror = function() {
+            alert('⚠️ 网络错误！无法连接到服务器。');
+            document.getElementById('siteSettingsMessage').textContent = '网络错误: 无法连接到服务器';
+            document.getElementById('siteSettingsMessage').style.backgroundColor = '#fee2e2';
+            document.getElementById('siteSettingsMessage').style.display = 'block';
+        };
         
-        // 处理响应
-        if (data.success) {
-            showSiteSettingsMessage('✅ 站点设置保存成功\n新设置将在页面刷新后生效', 'success');
-            updatePageTitle(siteName);
-            
-            // 添加动画效果等更多的反馈
-            if (projectNameInput) projectNameInput.style.backgroundColor = '#dcfce7';
-            if (siteNameInput) siteNameInput.style.backgroundColor = '#dcfce7';
-            
-            // 3秒后恢复正常背景色
-            setTimeout(() => {
-                if (projectNameInput) projectNameInput.style.backgroundColor = '';
-                if (siteNameInput) siteNameInput.style.backgroundColor = '';
-            }, 3000);
-        } else {
-            throw new Error(data.error || '保存失败，服务器没有提供错误详情');
-        }
+        // 发送数据
+        xhr.send(JSON.stringify({
+            project_name: projectName,
+            site_name: siteName
+        }));
+    
     } catch (error) {
-        console.error('保存站点设置失败:', error);
-        showSiteSettingsMessage('⚠️ 保存失败: ' + error.message, 'error');
-    } finally {
-        // 恢复按钮状态
-        if (saveButton) {
-            saveButton.disabled = false;
-            saveButton.innerHTML = '保存网站设置';
-            saveButton.style.opacity = '1';
-        }
+        // 捕获并显示任何错误
+        console.error('在保存过程中出现错误:', error);
+        alert('错误: ' + error.message);
     }
 }
 

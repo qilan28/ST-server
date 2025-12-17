@@ -18,6 +18,7 @@
                     <span id="adminUsername" style="color: #4a5568; font-weight: 600;"></span>
                 </div>
                 <a href="/dashboard.html" id="backToDashboard" class="btn btn-secondary" style="display: none;">返回用户面板</a>
+                <a href="/test-settings.html" class="btn btn-primary" target="_blank">测试设置页面</a>
                 <button onclick="logout()" class="btn btn-danger">退出登录</button>
             </div>
         </div>
@@ -175,8 +176,62 @@
                         </div>
                         
                         <div style="display: flex; gap: 10px;">
-                            <button id="saveSiteSettings" type="button" class="btn btn-primary">保存网站设置</button>
+                            <button id="saveSiteSettings" type="button" class="btn btn-primary" onclick="directSaveSettings()">保存网站设置</button>
                         </div>
+                        
+                        <script>
+                            // 直接保存函数，绕过复杂的事件处理
+                            function directSaveSettings() {
+                                try {
+                                    // 显示正在保存的消息
+                                    alert('正在尝试保存站点设置...');
+                                    const message = document.getElementById('siteSettingsMessage');
+                                    message.textContent = '正在保存设置...';
+                                    message.style.backgroundColor = '#e0f2fe';
+                                    message.style.color = '#0369a1';
+                                    message.style.display = 'block';
+                                    
+                                    // 获取表单数据
+                                    const projectName = document.getElementById('projectName').value;
+                                    const siteName = document.getElementById('siteName').value;
+                                    
+                                    // 发送 AJAX 请求
+                                    const xhr = new XMLHttpRequest();
+                                    xhr.open('PUT', '/api/site-settings', true);
+                                    xhr.setRequestHeader('Content-Type', 'application/json');
+                                    xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.getItem('token'));
+                                    
+                                    xhr.onload = function() {
+                                        if (xhr.status === 200) {
+                                            message.textContent = '设置已保存成功!';
+                                            message.style.backgroundColor = '#dcfce7';
+                                            message.style.color = '#15803d';
+                                            alert('成功！站点设置已保存。');
+                                        } else {
+                                            message.textContent = '保存失败: ' + xhr.responseText;
+                                            message.style.backgroundColor = '#fee2e2';
+                                            message.style.color = '#b91c1c';
+                                            alert('错误！保存失败。');
+                                        }
+                                    };
+                                    
+                                    xhr.onerror = function() {
+                                        message.textContent = '网络错误: 无法连接到服务器';
+                                        message.style.backgroundColor = '#fee2e2';
+                                        message.style.color = '#b91c1c';
+                                        message.style.display = 'block';
+                                        alert('网络错误！无法连接到服务器。');
+                                    };
+                                    
+                                    xhr.send(JSON.stringify({
+                                        project_name: projectName,
+                                        site_name: siteName
+                                    }));
+                                } catch (e) {
+                                    alert('错误: ' + e.message);
+                                }
+                            }
+                        </script>
                     </div>
                 </div>
                 
@@ -412,5 +467,51 @@
     <script src="/js/admin.js"></script>
     <script src="/js/user-search.js"></script>
     <script src="/js/site-settings.js"></script>
+    <!-- 添加调试/测试脚本 -->
+    <script src="/js/test-site-settings.js"></script>
+    
+    <!-- 调试信息区域 -->
+    <div id="debugInfo" style="position: fixed; bottom: 10px; right: 10px; background: #f8f9fa; border: 1px solid #ddd; padding: 10px; max-width: 300px; max-height: 200px; overflow: auto; z-index: 9999; font-size: 12px; display: none;">
+        <h4 style="margin-top: 0; margin-bottom: 5px;">调试信息</h4>
+        <div id="debugContent"></div>
+        <button onclick="document.getElementById('debugInfo').style.display='none'" style="position: absolute; top: 5px; right: 5px; background: none; border: none; cursor: pointer;">×</button>
+    </div>
+    
+    <script>
+        // 显示调试信息
+        function showDebug(message) {
+            const debugInfo = document.getElementById('debugInfo');
+            const debugContent = document.getElementById('debugContent');
+            if (debugInfo && debugContent) {
+                debugInfo.style.display = 'block';
+                const time = new Date().toLocaleTimeString();
+                debugContent.innerHTML += `<div><strong>${time}:</strong> ${message}</div>`;
+                // 自动滚动到底部
+                debugContent.scrollTop = debugContent.scrollHeight;
+            }
+        }
+        
+        // 监听控制台日志
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        console.log = function() {
+            originalConsoleLog.apply(console, arguments);
+            try {
+                const message = Array.from(arguments).map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg) : arg
+                ).join(' ');
+                showDebug('LOG: ' + message);
+            } catch (e) {}
+        };
+        console.error = function() {
+            originalConsoleError.apply(console, arguments);
+            try {
+                const message = Array.from(arguments).map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg) : arg
+                ).join(' ');
+                showDebug('<span style="color:red">ERROR: ' + message + '</span>');
+            } catch (e) {}
+        };
+    </script>
 </body>
 </html>
