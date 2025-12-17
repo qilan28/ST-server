@@ -1,5 +1,46 @@
 const API_BASE = '/api';
 let statusCheckInterval = null;
+let isPageLoaded = false;
+let isLoadingStatus = false; // 防止状态检查重复请求
+
+// 全局错误处理
+window.addEventListener('error', function(event) {
+    if (!isPageLoaded) {
+        hideGlobalLoading();
+        showAlert('页面加载失败，请刷新重试\n\n错误: ' + event.message, '❌ 加载失败', 'error').then(() => {
+            window.location.reload();
+        });
+    }
+});
+
+// Promise 错误处理
+window.addEventListener('unhandledrejection', function(event) {
+    if (!isPageLoaded && event.reason) {
+        hideGlobalLoading();
+        showAlert('网络请求失败，请检查网络连接\n\n' + event.reason, '❌ 网络错误', 'error').then(() => {
+            window.location.reload();
+        });
+    }
+});
+
+// 显示全局加载
+function showGlobalLoading() {
+    const loading = document.getElementById('globalLoading');
+    if (loading) {
+        loading.classList.remove('hidden');
+    }
+}
+
+// 隐藏全局加载
+function hideGlobalLoading() {
+    const loading = document.getElementById('globalLoading');
+    if (loading) {
+        loading.classList.add('hidden');
+        setTimeout(() => {
+            loading.style.display = 'none';
+        }, 300);
+    }
+}
 
 // 设置 Cookie
 function setCookie(name, value, days = 365) {
@@ -156,7 +197,7 @@ function getUsername() {
     return localStorage.getItem('username');
 }
 
-// API请求辅助函数
+// API请求辅助函数（带超时控制）
 async function apiRequest(url, options = {}) {
     const token = getToken();
     
@@ -166,20 +207,35 @@ async function apiRequest(url, options = {}) {
         ...options.headers
     };
     
-    const response = await fetch(url, {
-        ...options,
-        headers
-    });
+    // 创建超时控制
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), options.timeout || 8000); // 默认8秒超时
     
-    if (response.status === 401 || response.status === 403) {
-        // Token无效，跳转到登录页
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        window.location.href = '/';
-        return null;
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers,
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.status === 401 || response.status === 403) {
+            // Token无效，跳转到登录页
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            window.location.href = '/';
+            return null;
+        }
+        
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('请求超时，请检查网络连接');
+        }
+        throw error;
     }
-    
-    return response;
 }
 
 // 显示消息
@@ -337,9 +393,17 @@ function updateButtonStates(status) {
 
 // 加载实例状态
 async function loadInstanceStatus() {
+    // 防止重复请求
+    if (isLoadingStatus) return;
+    
+    isLoadingStatus = true;
+    
     try {
-        const response = await apiRequest(`${API_BASE}/instance/status`);
-        if (!response) return;
+        const response = await apiRequest(`${API_BASE}/instance/status`, { timeout: 5000 });
+        if (!response) {
+            isLoadingStatus = false;
+            return;
+        }
         
         const data = await response.json();
         
@@ -354,6 +418,9 @@ async function loadInstanceStatus() {
             document.getElementById('restarts').textContent = data.restarts || 0;
         }
     } catch (error) {
+        // 请求失败时不处理，避免影响页面
+    } finally {
+        isLoadingStatus = false;
     }
 }
 
@@ -1174,29 +1241,67 @@ function escapeHtml(text) {
 
 // 页面初始化
 async function init() {
-    if (!checkAuth()) return;
-    
-    // 确保 cookie 中也有 token（用于 Nginx 权限验证）
-    const token = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
-    
-    if (token) {
-        setCookie('st_token', token);
+    try {
+        if (!checkAuth()) {
+            hideGlobalLoading();
+            return;
+        }
+        
+        // 设置超时
+        const timeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('页面加载超时')), 10000);
+        });
+        
+        // 初始化逻辑
+        const initProcess = (async () => {
+            // 确保 cookie 中也有 token（用于 Nginx 权限验证）
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            
+            if (token) {
+                setCookie('st_token', token);
+            }
+            
+            await loadUserInfo();
+            await loadDashboardAnnouncements();
+            await loadBackupConfig();
+            startStatusCheck();
+            
+            // 初始加载日志
+            loadLogs('out');
+        })();
+        
+        // 等待初始化完成或超时
+        await Promise.race([initProcess, timeout]);
+        
+        // 标记页面已加载
+        isPageLoaded = true;
+        hideGlobalLoading();
+        
+    } catch (error) {
+        hideGlobalLoading();
+        await showAlert('页面初始化失败\n\n' + error.message + '\n\n点击确定刷新页面', '❌ 初始化失败', 'error');
+        window.location.reload();
     }
-    
-    await loadUserInfo();
-    await loadDashboardAnnouncements();
-    await loadBackupConfig();
-    startStatusCheck();
-    
-    // 初始加载日志
-    loadLogs('out');
 }
 
 // 页面卸载时停止状态检查和自动刷新
 window.addEventListener('beforeunload', () => {
     stopStatusCheck();
     stopAutoRefresh();
+});
+
+// 页面可见性变化时控制状态检查
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // 页面隐藏时停止状态检查
+        stopStatusCheck();
+    } else {
+        // 页面可见时恢复状态检查
+        if (isPageLoaded) {
+            startStatusCheck();
+        }
+    }
 });
 
 // ==================== 恢复备份功能 ====================
