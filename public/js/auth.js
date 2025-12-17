@@ -236,7 +236,7 @@ function updateQQAvatar() {
         tempImg.onload = function() {
             qqAvatar.src = tempImg.src;
         };
-        tempImg.src = `http://q.qlogo.cn/headimg_dl?dst_uin=${qqNumber}&spec=640`;
+        tempImg.src = `/api/proxy/qq-avatar/${qqNumber}`;
         avatarContainer.style.display = 'block';
     } else {
         // 隐藏头像容器
