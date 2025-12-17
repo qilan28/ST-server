@@ -5,17 +5,47 @@
     // 加载并应用站点设置
     async function applySiteSettings() {
         try {
-            const response = await fetch(`${API_BASE}/site-settings`);
+            console.log('正在加载站点设置...');
+            // 添加时间戳防止缓存
+            const timestamp = new Date().getTime();
+            const response = await fetch(`${API_BASE}/site-settings?_nocache=${timestamp}`, {
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
             
-            if (!response.ok) return;
+            if (!response.ok) {
+                console.error('获取站点设置失败:', response.status);
+                return;
+            }
             
             const data = await response.json();
+            console.log('获取到站点设置:', data);
             
             if (data.success && data.settings) {
                 const { project_name, site_name, favicon_path } = data.settings;
                 
+                // 应用项目名称到特定元素
+                if (project_name) {
+                    console.log('应用项目名称:', project_name);
+                    // 更新登录页面的多开管理平台文本
+                    const subtitleElements = document.querySelectorAll('.logo p, .subtitle');
+                    subtitleElements.forEach(el => {
+                        el.textContent = project_name;
+                    });
+                }
+                
                 // 应用网站标题
                 if (site_name) {
+                    console.log('应用网站标题:', site_name);
+                    // 更新所有带有网站名称的元素
+                    const siteNameElements = document.querySelectorAll('.logo h1, .site-name');
+                    siteNameElements.forEach(el => {
+                        el.textContent = site_name;
+                    });
+                    
                     // 保留页面特定的前缀，如"管理员面板 -"
                     const currentTitle = document.title;
                     const titleParts = currentTitle.split(' - ');
