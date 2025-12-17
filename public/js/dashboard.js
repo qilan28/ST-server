@@ -413,7 +413,7 @@ async function handleStart() {
 
 // 停止实例
 async function handleStop() {
-    if (!confirm('确定要停止实例吗？')) return;
+    if (!await showConfirm('确定要停止实例吗？', '停止实例')) return;
     
     const stopBtn = document.getElementById('stopBtn');
     stopBtn.disabled = true;
@@ -446,7 +446,7 @@ async function handleStop() {
 
 // 重启实例
 async function handleRestart() {
-    if (!confirm('确定要重启实例吗？')) return;
+    if (!await showConfirm('确定要重启实例吗？', '重启实例')) return;
     
     const restartBtn = document.getElementById('restartBtn');
     restartBtn.disabled = true;
@@ -478,8 +478,8 @@ async function handleRestart() {
 }
 
 // 退出登录
-function handleLogout() {
-    if (confirm('确定要退出登录吗？')) {
+async function handleLogout() {
+    if (await showConfirm('确定要退出登录吗？', '退出登录')) {
         localStorage.removeItem('token');
         localStorage.removeItem('username');
         // 同时清除 st_token cookie
@@ -639,7 +639,7 @@ async function loadVersionList() {
 
 // 切换版本
 async function handleSwitchVersion(version) {
-    if (!confirm(`确定要切换到版本 ${version} 吗？\n\n这将删除当前版本并安装新版本，请确保已停止实例。`)) {
+    if (!await showConfirm(`确定要切换到版本 ${version} 吗？\n\n这将删除当前版本并安装新版本，请确保已停止实例。`, '切换版本', { type: 'danger' })) {
         return;
     }
     
@@ -683,7 +683,7 @@ async function handleSwitchVersion(version) {
 
 // 重装依赖
 async function handleReinstallDependencies() {
-    if (!confirm('确定要重新安装依赖吗？\n\n请确保已停止实例。这可能需要几分钟时间。')) {
+    if (!await showConfirm('确定要重新安装依赖吗？\n\n请确保已停止实例。这可能需要几分钟时间。', '重装依赖')) {
         return;
     }
     
@@ -716,7 +716,7 @@ async function handleReinstallDependencies() {
 
 // 删除版本
 async function handleDeleteVersion() {
-    if (!confirm('确定要删除当前版本吗？\n\n这将删除所有 SillyTavern 代码文件，但不会删除您的数据。\n请确保已停止实例。')) {
+    if (!await showConfirm('确定要删除当前版本吗？\n\n这将删除所有 SillyTavern 代码文件，但不会删除您的数据。\n请确保已停止实例。', '删除版本', { type: 'danger' })) {
         return;
     }
     
@@ -898,7 +898,7 @@ async function handleDeleteAccount() {
     // 第二次确认
     const confirmMessage2 = `🚨 最后确认！\n\n您真的要删除账号 "${username}" 吗？\n\n点击"确定"将立即删除账号，此操作无法撤销！`;
     
-    if (!confirm(confirmMessage2)) {
+    if (!await showConfirm(confirmMessage2, '⚠️ 删除账号', { type: 'danger', confirmText: '确认删除', cancelText: '我再想想' })) {
         return;
     }
     
@@ -1079,7 +1079,7 @@ async function handleBackup() {
     const logsDiv = document.getElementById('backupLogs');
     
     // 确认操作
-    if (!confirm('确定要立即备份您的数据到 Hugging Face 吗？\n\n备份过程可能需要几分钟，取决于数据大小。')) {
+    if (!await showConfirm('确定要立即备份您的数据到 Hugging Face 吗？\n\n备份过程可能需要几分钟，取决于数据大小。', '立即备份')) {
         return;
     }
     
@@ -1348,7 +1348,7 @@ async function handleRestore(filename = null) {
         confirmMsg = '将恢复最早的备份。\n\n' + confirmMsg;
     }
     
-    if (!confirm(confirmMsg)) {
+    if (!await showConfirm(confirmMsg, '⚠️ 恢复备份', { type: 'danger', confirmText: '开始恢复', cancelText: '取消' })) {
         return;
     }
     

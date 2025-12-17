@@ -289,7 +289,7 @@ function getSetupStatusText(status) {
 
 // 启动用户实例
 async function startUserInstance(username) {
-    if (!confirm(`确定要启动 ${username} 的实例吗？`)) return;
+    if (!await showConfirm(`确定要启动 ${username} 的实例吗？`, '启动实例')) return;
     
     try {
         const response = await apiRequest(`${API_BASE}/admin/users/${username}/start`, {
@@ -318,7 +318,7 @@ async function startUserInstance(username) {
 
 // 停止用户实例
 async function stopUserInstance(username) {
-    if (!confirm(`确定要停止 ${username} 的实例吗？`)) return;
+    if (!await showConfirm(`确定要停止 ${username} 的实例吗？`, '停止实例')) return;
     
     try {
         const response = await apiRequest(`${API_BASE}/admin/users/${username}/stop`, {
@@ -347,7 +347,7 @@ async function stopUserInstance(username) {
 
 // 重启用户实例
 async function restartUserInstance(username) {
-    if (!confirm(`确定要重启 ${username} 的实例吗？`)) return;
+    if (!await showConfirm(`确定要重启 ${username} 的实例吗？`, '重启实例')) return;
     
     try {
         const response = await apiRequest(`${API_BASE}/admin/users/${username}/restart`, {
@@ -379,7 +379,7 @@ async function toggleUserRole(username, currentRole) {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
     const roleText = newRole === 'admin' ? '管理员' : '普通用户';
     
-    if (!confirm(`确定要将 ${username} 的角色切换为 ${roleText} 吗？`)) return;
+    if (!await showConfirm(`确定要将 ${username} 的角色切换为 ${roleText} 吗？`, '切换角色')) return;
     
     try {
         const response = await apiRequest(`${API_BASE}/admin/users/${username}/role`, {
@@ -406,7 +406,7 @@ async function toggleUserRole(username, currentRole) {
 
 // 删除用户
 async function deleteUserAccount(username) {
-    if (!confirm(`⚠️ 警告：确定要删除用户 ${username} 吗？\n\n这将删除该用户的所有数据，包括：\n- 用户账户\n- SillyTavern 实例\n- 所有数据文件\n\n此操作不可恢复！`)) {
+    if (!await showConfirm(`⚠️ 警告：确定要删除用户 ${username} 吗？\n\n这将删除该用户的所有数据，包括：\n- 用户账户\n- SillyTavern 实例\n- 所有数据文件\n\n此操作不可恢复！`, '⚠️ 删除用户', { type: 'danger', confirmText: '确认删除', cancelText: '取消' })) {
         return;
     }
     
@@ -733,8 +733,8 @@ async function toggleAnnouncementStatus(id) {
 }
 
 // 删除公告确认
-function deleteAnnouncementConfirm(id) {
-    if (confirm('确定要删除这条公告吗？此操作不可撤销！')) {
+async function deleteAnnouncementConfirm(id) {
+    if (await showConfirm('确定要删除这条公告吗？此操作不可撤销！', '删除公告', { type: 'danger' })) {
         deleteAnnouncementAction(id);
     }
 }

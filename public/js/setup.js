@@ -157,7 +157,7 @@ function renderBranches() {
 
 // 选择版本
 async function selectVersion(version, displayName) {
-    if (!confirm(`确定要安装 ${displayName} 吗？\n\n安装过程可能需要几分钟时间。`)) {
+    if (!await showConfirm(`确定要安装 ${displayName} 吗？\n\n安装过程可能需要几分钟时间。`, '安装版本')) {
         return;
     }
     
@@ -252,8 +252,8 @@ function goToDashboard() {
 }
 
 // 退出登录
-function handleLogout() {
-    if (confirm('确定要退出登录吗？')) {
+async function handleLogout() {
+    if (await showConfirm('确定要退出登录吗？', '退出登录')) {
         localStorage.removeItem('token');
         localStorage.removeItem('username');
         // 同时清除 st_token cookie
