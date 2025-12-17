@@ -197,6 +197,9 @@
                     <button class="btn btn-success" onclick="handleBackup()">
                         ☁️ 立即备份
                     </button>
+                    <button class="btn btn-warning" onclick="handleShowRestorePanel()">
+                        📥 恢复备份
+                    </button>
                 </div>
                 
                 <div id="backupMessage" class="message"></div>
@@ -210,6 +213,23 @@
                     <h4>📜 实时日志</h4>
                     <div class="logs-container" id="backupLogs">
                         <div class="empty-logs">等待备份开始...</div>
+                    </div>
+                </div>
+                
+                <!-- 恢复备份面板 -->
+                <div class="restore-panel" id="restorePanel" style="display: none;">
+                    <h4>📥 恢复备份</h4>
+                    <div id="restoreMessage" class="message"></div>
+                    
+                    <div class="restore-list" id="restoreList">
+                        <div class="loading">加载备份列表中...</div>
+                    </div>
+                    
+                    <div class="restore-logs" id="restoreLogsContainer" style="display: none;">
+                        <h4>📜 恢复日志</h4>
+                        <div class="logs-container" id="restoreLogs">
+                            <div class="empty-logs">等待恢复开始...</div>
+                        </div>
                     </div>
                 </div>
             </div>

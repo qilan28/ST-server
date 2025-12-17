@@ -1978,6 +1978,79 @@ input:checked + .slider:before {
     background: #666;
 }
 
+/* 恢复备份面板样式 */
+.restore-panel {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #ddd;
+}
+
+.restore-panel h4 {
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-size: 1.2rem;
+}
+
+.restore-list {
+    margin-bottom: 20px;
+}
+
+.backup-list-container {
+    margin-top: 10px;
+}
+
+.backup-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.backup-table thead {
+    background: var(--primary-color);
+    color: white;
+}
+
+.backup-table th,
+.backup-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.backup-table tbody tr:hover {
+    background: #f5f5f5;
+}
+
+.backup-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.875rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.restore-logs {
+    margin-top: 20px;
+}
+
+.restore-logs h4 {
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
 @media (max-width: 768px) {
     .backup-actions {
         flex-direction: column;
@@ -1990,5 +2063,14 @@ input:checked + .slider:before {
     .logs-container {
         height: 300px;
         font-size: 12px;
+    }
+    
+    .backup-table {
+        font-size: 0.875rem;
+    }
+    
+    .backup-table th,
+    .backup-table td {
+        padding: 8px 10px;
     }
 }

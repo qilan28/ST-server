@@ -5,6 +5,8 @@ import archiver from 'archiver';
 import { Readable } from 'stream';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { pipeline } from 'stream/promises';
+import extract from 'extract-zip';
 
 const execAsync = promisify(exec);
 
@@ -630,5 +632,230 @@ export async function testHuggingFaceConnection(hfToken, hfRepo) {
             success: false,
             message: `连接测试失败: ${error.message}`
         };
+    }
+}
+
+/**
+ * 列出 Hugging Face 仓库中的所有备份文件
+ * @param {string} hfToken - Hugging Face token
+ * @param {string} hfRepo - Hugging Face 仓库名
+ * @returns {Promise<Array>} 备份文件列表
+ */
+export async function listBackupFilesFromHF(hfToken, hfRepo) {
+    try {
+        console.log('[HF Backup] 获取仓库备份列表...');
+        
+        const url = `https://huggingface.co/api/datasets/${hfRepo}/tree/main`;
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${hfToken}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`获取文件列表失败: ${response.status}`);
+        }
+        
+        const files = await response.json();
+        
+        // 筛选出 .zip 备份文件
+        const backupFiles = files
+            .filter(f => f.type === 'file' && f.path.endsWith('.zip') && /^\d+\.zip$/.test(f.path))
+            .map(f => {
+                const timestamp = parseInt(f.path.replace('.zip', ''));
+                const date = new Date(timestamp);
+                return {
+                    filename: f.path,
+                    timestamp: timestamp,
+                    date: date.toISOString(),
+                    size: f.size,
+                    downloadUrl: `https://huggingface.co/datasets/${hfRepo}/resolve/main/${f.path}`
+                };
+            })
+            .sort((a, b) => b.timestamp - a.timestamp); // 从新到旧排序
+        
+        console.log(`[HF Backup] 找到 ${backupFiles.length} 个备份文件`);
+        return backupFiles;
+    } catch (error) {
+        console.error('[HF Backup] 获取备份列表失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 从 Hugging Face 下载备份文件
+ * @param {string} downloadUrl - 文件下载 URL
+ * @param {string} outputPath - 输出路径
+ * @param {function} progressCallback - 进度回调
+ * @returns {Promise<void>}
+ */
+async function downloadFile(downloadUrl, outputPath, progressCallback = null) {
+    try {
+        const response = await fetch(downloadUrl);
+        
+        if (!response.ok) {
+            throw new Error(`下载失败: ${response.status}`);
+        }
+        
+        const fileSize = parseInt(response.headers.get('content-length') || '0');
+        let downloadedSize = 0;
+        
+        // 创建写入流
+        const fileStream = fs.createWriteStream(outputPath);
+        
+        // 监听下载进度
+        const reader = response.body.getReader();
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            downloadedSize += value.length;
+            fileStream.write(value);
+            
+            // 回调进度
+            if (progressCallback && fileSize > 0) {
+                const progress = Math.round((downloadedSize / fileSize) * 100);
+                progressCallback(progress, downloadedSize, fileSize);
+            }
+        }
+        
+        fileStream.end();
+        
+        // 等待文件写入完成
+        await new Promise((resolve, reject) => {
+            fileStream.on('finish', resolve);
+            fileStream.on('error', reject);
+        });
+        
+    } catch (error) {
+        console.error('[HF Backup] 下载文件失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 恢复备份到本地
+ * @param {string} hfToken - Hugging Face token
+ * @param {string} hfRepo - Hugging Face 仓库名
+ * @param {string} dataDir - 用户数据目录 (st-data)
+ * @param {string} filename - 备份文件名（可选，默认最早的）
+ * @param {function} logCallback - 日志回调
+ * @returns {Promise<object>} 恢复结果
+ */
+export async function restoreFromHuggingFace(hfToken, hfRepo, dataDir, filename = null, logCallback = null) {
+    const log = (msg, type = 'info') => {
+        console.log(`[HF Backup] ${msg}`);
+        if (logCallback) logCallback(msg, type);
+    };
+    
+    let tempZipPath = null;
+    let tempExtractPath = null;
+    
+    try {
+        log('🔍 获取备份文件列表...');
+        
+        // 获取备份文件列表
+        const backupFiles = await listBackupFilesFromHF(hfToken, hfRepo);
+        
+        if (backupFiles.length === 0) {
+            throw new Error('仓库中没有找到备份文件');
+        }
+        
+        // 选择要恢复的备份文件
+        let targetBackup;
+        if (filename) {
+            targetBackup = backupFiles.find(f => f.filename === filename);
+            if (!targetBackup) {
+                throw new Error(`找不到指定的备份文件: ${filename}`);
+            }
+            log(`📦 选择备份: ${filename} (${new Date(targetBackup.timestamp).toLocaleString()})`);
+        } else {
+            // 默认选择最早的备份（最后一个）
+            targetBackup = backupFiles[backupFiles.length - 1];
+            log(`📦 使用最早的备份: ${targetBackup.filename} (${new Date(targetBackup.timestamp).toLocaleString()})`);
+        }
+        
+        // 创建临时目录
+        const tempDir = path.join(__dirname, '..', 'temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+        tempZipPath = path.join(tempDir, `restore_${Date.now()}.zip`);
+        tempExtractPath = path.join(tempDir, `restore_${Date.now()}`);
+        
+        // 下载备份文件
+        log('⬇️ 下载备份文件...');
+        const fileSizeMB = (targetBackup.size / 1024 / 1024).toFixed(2);
+        log(`   文件大小: ${fileSizeMB} MB`);
+        
+        await downloadFile(targetBackup.downloadUrl, tempZipPath, (progress, downloaded, total) => {
+            const downloadedMB = (downloaded / 1024 / 1024).toFixed(2);
+            const totalMB = (total / 1024 / 1024).toFixed(2);
+            log(`   下载进度: ${progress}% (${downloadedMB}/${totalMB} MB)`, 'progress');
+        });
+        
+        log('✅ 下载完成');
+        
+        // 解压备份文件
+        log('📂 解压备份文件...');
+        await extract(tempZipPath, { dir: tempExtractPath });
+        log('✅ 解压完成');
+        
+        // 备份现有数据（如果存在）
+        if (fs.existsSync(dataDir)) {
+            const backupOldDir = `${dataDir}_backup_${Date.now()}`;
+            log(`💾 备份现有数据到: ${backupOldDir}`);
+            fs.renameSync(dataDir, backupOldDir);
+        }
+        
+        // 恢复数据
+        log('🔄 恢复数据到目标目录...');
+        if (!fs.existsSync(path.dirname(dataDir))) {
+            fs.mkdirSync(path.dirname(dataDir), { recursive: true });
+        }
+        
+        // 移动解压后的文件到数据目录
+        fs.renameSync(tempExtractPath, dataDir);
+        
+        // 清理临时文件
+        log('🧹 清理临时文件...');
+        if (fs.existsSync(tempZipPath)) {
+            fs.unlinkSync(tempZipPath);
+        }
+        
+        log('✅ 恢复完成！');
+        
+        return {
+            success: true,
+            filename: targetBackup.filename,
+            timestamp: new Date(targetBackup.timestamp).toISOString(),
+            size: targetBackup.size,
+            dataDir: dataDir
+        };
+        
+    } catch (error) {
+        console.error('[HF Backup] 恢复失败:', error);
+        
+        // 清理临时文件
+        if (tempZipPath && fs.existsSync(tempZipPath)) {
+            try {
+                fs.unlinkSync(tempZipPath);
+            } catch (e) {
+                console.error('[HF Backup] 清理临时文件失败:', e);
+            }
+        }
+        
+        if (tempExtractPath && fs.existsSync(tempExtractPath)) {
+            try {
+                fs.rmSync(tempExtractPath, { recursive: true, force: true });
+            } catch (e) {
+                console.error('[HF Backup] 清理临时目录失败:', e);
+            }
+        }
+        
+        throw error;
     }
 }

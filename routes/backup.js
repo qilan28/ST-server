@@ -10,7 +10,9 @@ import {
 } from '../database.js';
 import { 
     backupToHuggingFace, 
-    testHuggingFaceConnection 
+    testHuggingFaceConnection,
+    listBackupFilesFromHF,
+    restoreFromHuggingFace
 } from '../utils/hf-backup.js';
 
 const router = express.Router();
@@ -240,6 +242,142 @@ router.get('/backup', async (req, res) => {
         res.status(500).json({ 
             success: false, 
             error: '备份失败',
+            message: error.message
+        });
+    }
+});
+
+// 列出备份文件列表
+router.get('/list', authenticateToken, async (req, res) => {
+    try {
+        const username = req.user.username;
+        const config = getUserHFConfig(username);
+        
+        if (!config || !config.hf_token || !config.hf_repo) {
+            return res.status(400).json({ 
+                success: false, 
+                error: '请先配置 Hugging Face Token 和仓库名' 
+            });
+        }
+        
+        console.log(`[Backup API] 列出用户 ${username} 的备份文件`);
+        
+        const backupFiles = await listBackupFilesFromHF(config.hf_token, config.hf_repo);
+        
+        res.json({ 
+            success: true, 
+            backups: backupFiles 
+        });
+    } catch (error) {
+        console.error('[Backup API] 列出备份失败:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: '获取备份列表失败',
+            message: error.message
+        });
+    }
+});
+
+// 恢复备份（支持 GET 用于 SSE）
+router.get('/restore', async (req, res) => {
+    // 从 query 参数获取 token（用于 EventSource）
+    const token = req.query.token || req.headers.authorization?.replace('Bearer ', '');
+    const filename = req.query.filename; // 可选的备份文件名
+    
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            error: '未提供认证令牌'
+        });
+    }
+    
+    // 验证 token
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = { username: decoded.username };
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            error: '认证失败'
+        });
+    }
+    
+    try {
+        const username = req.user.username;
+        const user = findUserByUsername(username);
+        
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                error: '用户不存在' 
+            });
+        }
+
+        // 获取用户的 HF 配置
+        const config = getUserHFConfig(username);
+        
+        if (!config || !config.hf_token || !config.hf_repo) {
+            return res.status(400).json({ 
+                success: false, 
+                error: '请先配置 Hugging Face Token 和仓库名' 
+            });
+        }
+        
+        // 检查数据目录
+        const dataDir = path.join(user.data_dir, 'st-data');
+        
+        console.log(`[Backup API] 开始恢复用户 ${username} 的备份`);
+        console.log(`[Backup API] 目标目录: ${dataDir}`);
+        if (filename) {
+            console.log(`[Backup API] 指定文件: ${filename}`);
+        } else {
+            console.log(`[Backup API] 使用最早的备份`);
+        }
+        
+        // 设置 SSE 响应头
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        // 日志回调函数
+        const logCallback = (message, type = 'info') => {
+            const data = {
+                type: type,
+                message: message,
+                timestamp: new Date().toISOString()
+            };
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        };
+        
+        // 发送开始消息
+        logCallback('🚀 开始恢复流程...', 'start');
+        logCallback(`📂 目标目录: ${dataDir}`, 'info');
+        
+        // 执行恢复
+        try {
+            const result = await restoreFromHuggingFace(
+                config.hf_token,
+                config.hf_repo,
+                dataDir,
+                filename,
+                logCallback
+            );
+            
+            // 发送成功消息
+            logCallback('✅ 恢复完成！', 'success');
+            res.write(`data: ${JSON.stringify({ type: 'done', result: result })}\n\n`);
+            res.end();
+        } catch (error) {
+            console.error('[Backup API] 恢复失败:', error);
+            logCallback(`❌ 恢复失败: ${error.message}`, 'error');
+            res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+            res.end();
+        }
+    } catch (error) {
+        console.error('[Backup API] 恢复失败:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: '恢复失败',
             message: error.message
         });
     }

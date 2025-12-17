@@ -1238,5 +1238,181 @@ window.addEventListener('beforeunload', () => {
     stopAutoRefresh();
 });
 
+// ==================== 恢复备份功能 ====================
+
+// 显示/隐藏恢复面板并加载备份列表
+async function handleShowRestorePanel() {
+    const restorePanel = document.getElementById('restorePanel');
+    const restoreList = document.getElementById('restoreList');
+    const restoreMessage = document.getElementById('restoreMessage');
+    
+    // 切换面板显示
+    if (restorePanel.style.display === 'none') {
+        restorePanel.style.display = 'block';
+        restoreMessage.className = 'message';
+        restoreMessage.textContent = '';
+        
+        // 加载备份列表
+        restoreList.innerHTML = '<div class="loading">加载备份列表中...</div>';
+        
+        try {
+            const response = await fetch(`${API_BASE}/backup/list`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.backups) {
+                if (data.backups.length === 0) {
+                    restoreList.innerHTML = '<div class="empty-logs">仓库中没有备份文件</div>';
+                } else {
+                    // 显示备份列表
+                    let html = '<div class="backup-list-container">';
+                    html += '<table class="backup-table">';
+                    html += '<thead><tr><th>备份时间</th><th>文件大小</th><th>操作</th></tr></thead>';
+                    html += '<tbody>';
+                    
+                    data.backups.forEach(backup => {
+                        const date = new Date(backup.timestamp);
+                        const dateStr = date.toLocaleString('zh-CN');
+                        const sizeMB = (backup.size / 1024 / 1024).toFixed(2);
+                        
+                        html += '<tr>';
+                        html += `<td>${dateStr}</td>`;
+                        html += `<td>${sizeMB} MB</td>`;
+                        html += `<td><button class="btn btn-sm btn-primary" onclick="handleRestore('${backup.filename}')">恢复</button></td>`;
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                    html += '<div style="margin-top: 10px; color: #666;">';
+                    html += '💡 提示：默认恢复最早的备份。点击"恢复"按钮将覆盖当前数据。';
+                    html += '</div>';
+                    html += '</div>';
+                    
+                    restoreList.innerHTML = html;
+                }
+            } else {
+                restoreList.innerHTML = `<div class="message error">加载失败: ${data.error || '未知错误'}</div>`;
+            }
+        } catch (error) {
+            console.error('Load backups error:', error);
+            restoreList.innerHTML = `<div class="message error">❌ 加载备份列表失败: ${error.message}</div>`;
+        }
+    } else {
+        restorePanel.style.display = 'none';
+    }
+}
+
+// 恢复备份（使用 SSE 实时日志）
+let restoreEventSource = null;
+
+async function handleRestore(filename = null) {
+    const restoreMessage = document.getElementById('restoreMessage');
+    const restoreLogsContainer = document.getElementById('restoreLogsContainer');
+    const restoreLogs = document.getElementById('restoreLogs');
+    
+    // 确认操作
+    let confirmMsg = '确定要恢复备份吗？\n\n⚠️ 警告：此操作将：\n1. 备份当前数据到临时目录\n2. 用备份文件替换当前数据\n3. 可能需要重启实例才能生效\n\n是否继续？';
+    if (filename) {
+        confirmMsg = `确定要恢复备份 "${filename}" 吗？\n\n` + confirmMsg;
+    } else {
+        confirmMsg = '将恢复最早的备份。\n\n' + confirmMsg;
+    }
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    try {
+        // 清空日志
+        restoreLogs.innerHTML = '';
+        restoreLogsContainer.style.display = 'block';
+        
+        restoreMessage.className = 'message info';
+        restoreMessage.textContent = '🚀 恢复中，请查看下方实时日志...';
+        
+        // 关闭旧的 EventSource
+        if (restoreEventSource) {
+            restoreEventSource.close();
+        }
+        
+        // 创建 SSE 连接
+        const url = filename 
+            ? `${API_BASE}/backup/restore?token=${localStorage.getItem('token')}&filename=${encodeURIComponent(filename)}`
+            : `${API_BASE}/backup/restore?token=${localStorage.getItem('token')}`;
+        
+        restoreEventSource = new EventSource(url);
+        
+        // 监听消息
+        restoreEventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                // 添加日志
+                addRestoreLog(data.message, data.type);
+                
+                // 检查完成状态
+                if (data.type === 'done') {
+                    restoreMessage.className = 'message success';
+                    restoreMessage.textContent = '✅ 恢复完成！请重启实例使更改生效。';
+                    
+                    restoreEventSource.close();
+                    restoreEventSource = null;
+                } else if (data.type === 'error') {
+                    restoreMessage.className = 'message error';
+                    restoreMessage.textContent = '❌ 恢复失败：' + data.error;
+                    
+                    restoreEventSource.close();
+                    restoreEventSource = null;
+                }
+            } catch (err) {
+                console.error('解析日志消息失败:', err);
+            }
+        };
+        
+        // 监听错误
+        restoreEventSource.onerror = (error) => {
+            console.error('SSE 连接错误:', error);
+            restoreMessage.className = 'message error';
+            restoreMessage.textContent = '❌ 连接失败，请重试';
+            
+            addRestoreLog('❌ 连接失败，请重试', 'error');
+            
+            if (restoreEventSource) {
+                restoreEventSource.close();
+                restoreEventSource = null;
+            }
+        };
+        
+    } catch (error) {
+        console.error('Restore error:', error);
+        restoreMessage.className = 'message error';
+        restoreMessage.textContent = '❌ 恢复失败：' + error.message;
+        restoreLogsContainer.style.display = 'none';
+    }
+}
+
+// 添加恢复日志
+function addRestoreLog(message, type = 'info') {
+    const logsDiv = document.getElementById('restoreLogs');
+    const logEntry = document.createElement('div');
+    logEntry.className = `log-entry log-${type}`;
+    
+    // 添加时间戳
+    const timestamp = new Date().toLocaleTimeString();
+    logEntry.innerHTML = `
+        <span class="log-time">[${timestamp}]</span>
+        <span class="log-message">${escapeHtml(message)}</span>
+    `;
+    
+    logsDiv.appendChild(logEntry);
+    
+    // 自动滚动到底部
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+}
+
 // 页面加载完成后初始化
 init();
