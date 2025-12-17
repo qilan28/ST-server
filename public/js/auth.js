@@ -217,21 +217,48 @@ async function handleLogin(event) {
     }
 }
 
+// 更新QQ头像
+function updateQQAvatar() {
+    const qqInput = document.getElementById('registerUsername');
+    const qqNumber = qqInput.value.trim();
+    const avatarContainer = document.getElementById('qqAvatarContainer');
+    const qqAvatar = document.getElementById('qqAvatar');
+    
+    // 验证QQ号格式 (5-13位纯数字)
+    if (/^[1-9]\d{4,12}$/.test(qqNumber)) {
+        // 显示QQ头像
+        const avatarUrl = `https://q1.qlogo.cn/g?b=qq&nk=${qqNumber}&s=100`;
+        qqAvatar.src = avatarUrl;
+        avatarContainer.style.display = 'block';
+    } else {
+        // 隐藏头像容器
+        avatarContainer.style.display = 'none';
+    }
+}
+
 // 处理注册
 async function handleRegister(event) {
     event.preventDefault();
     hideMessage();
     
     const username = document.getElementById('registerUsername').value.trim();
-    const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
     const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+    
+    // QQ号格式验证 (5-13位纯数字)
+    if (!/^[1-9]\d{4,12}$/.test(username)) {
+        showMessage('请输入正确的QQ号 (5-13位纯数字)');
+        return;
+    }
     
     // 验证密码确认
     if (password !== passwordConfirm) {
         showMessage('两次输入的密码不一致');
         return;
     }
+    
+    // 使用QQ邮箱作为邮箱地址
+    const email = `${username}@qq.com`;
     
     try {
         const response = await fetch(`${API_BASE}/auth/register`, {

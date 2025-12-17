@@ -25,13 +25,13 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'All fields are required' });
         }
         
-        // 用户名验证
-        if (username.length < 3 || username.length > 20) {
-            return res.status(400).json({ error: 'Username must be between 3 and 20 characters' });
+        // QQ号验证 (修改为5-13位纯数字)
+        if (username.length < 5 || username.length > 13) {
+            return res.status(400).json({ error: 'QQ号必须在5-13位之间' });
         }
         
-        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-            return res.status(400).json({ error: 'Username can only contain letters, numbers, and underscores' });
+        if (!/^[1-9]\d{4,12}$/.test(username)) {
+            return res.status(400).json({ error: 'QQ号必须是5-13位纯数字' });
         }
         
         // 密码验证

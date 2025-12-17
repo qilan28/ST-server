@@ -56,14 +56,16 @@
                 <h2>注册</h2>
                 <form onsubmit="handleRegister(event)">
                     <div class="form-group">
-                        <label for="registerUsername">用户名</label>
+                        <label for="registerUsername">QQ</label>
                         <input type="text" id="registerUsername" name="username" required 
-                               minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+">
-                        <small>3-20个字符，仅限字母、数字和下划线</small>
+                               minlength="5" maxlength="13" pattern="[0-9]+" oninput="updateQQAvatar()">
+                        <small>5-13个字符，仅限数字</small>
                     </div>
-                    <div class="form-group">
-                        <label for="registerEmail">邮箱</label>
-                        <input type="email" id="registerEmail" name="email" required>
+                    <!-- QQ头像预览 -->
+                    <div class="form-group" style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                        <div id="qqAvatarContainer" style="display: none; margin-top: 10px;">
+                            <img id="qqAvatar" src="" alt="QQ头像" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid #667eea; box-shadow: 0 3px 10px rgba(0,0,0,0.15);">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="registerPassword">密码</label>
