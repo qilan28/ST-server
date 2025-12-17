@@ -14,6 +14,7 @@ import {
     listBackupFilesFromHF,
     restoreFromHuggingFace
 } from '../utils/hf-backup.js';
+import { restartInstance } from '../pm2-manager.js';
 
 const router = express.Router();
 
@@ -363,8 +364,18 @@ router.get('/restore', async (req, res) => {
                 logCallback
             );
             
+            // 恢复完成后自动重启 SillyTavern 实例
+            logCallback('🔄 重启 SillyTavern 实例...', 'info');
+            try {
+                await restartInstance(username);
+                logCallback('✅ 实例重启成功！', 'success');
+            } catch (restartError) {
+                logCallback(`⚠️ 实例重启失败: ${restartError.message}`, 'warning');
+                logCallback('💡 请手动重启实例使更改生效', 'info');
+            }
+            
             // 发送成功消息
-            logCallback('✅ 恢复完成！', 'success');
+            logCallback('✅ 恢复完成！数据已恢复并实例已重启', 'success');
             res.write(`data: ${JSON.stringify({ type: 'done', result: result })}\n\n`);
             res.end();
         } catch (error) {

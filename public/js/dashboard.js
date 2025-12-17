@@ -1315,7 +1315,7 @@ async function handleRestore(filename = null) {
     const restoreLogs = document.getElementById('restoreLogs');
     
     // 确认操作
-    let confirmMsg = '确定要恢复备份吗？\n\n⚠️ 警告：此操作将：\n1. 备份当前数据到临时目录\n2. 用备份文件替换当前数据\n3. 可能需要重启实例才能生效\n\n是否继续？';
+    let confirmMsg = '确定要恢复备份吗？\n\n⚠️ 警告：此操作将：\n1. 备份当前数据到临时目录\n2. 用备份文件替换当前数据\n3. 自动重启 SillyTavern 实例\n\n是否继续？';
     if (filename) {
         confirmMsg = `确定要恢复备份 "${filename}" 吗？\n\n` + confirmMsg;
     } else {
@@ -1357,7 +1357,7 @@ async function handleRestore(filename = null) {
                 // 检查完成状态
                 if (data.type === 'done') {
                     restoreMessage.className = 'message success';
-                    restoreMessage.textContent = '✅ 恢复完成！请重启实例使更改生效。';
+                    restoreMessage.textContent = '✅ 恢复完成！数据已恢复并实例已重启。';
                     
                     restoreEventSource.close();
                     restoreEventSource = null;
