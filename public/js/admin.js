@@ -176,6 +176,26 @@ async function loadStats() {
 }
 
 // 加载用户列表
+// 延迟加载用户头像
+function lazyLoadUserAvatars() {
+    // 查找所有需要加载头像的元素
+    const avatarImgs = document.querySelectorAll('img.user-avatar[data-username]');
+    
+    // 计算加载间隔
+    const delay = Math.max(50, Math.min(200, Math.floor(2000 / (avatarImgs.length || 1))));
+    
+    // 逐个延迟加载头像
+    avatarImgs.forEach((img, index) => {
+        const username = img.getAttribute('data-username');
+        if (username && /^[1-9]\d{4,12}$/.test(username)) {
+            // 逐个延迟加载，避免同时发起太多请求
+            setTimeout(() => {
+                img.src = `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=100`;
+            }, index * delay);
+        }
+    });
+}
+
 async function loadUsers() {
     try {
         const response = await apiRequest(`${API_BASE}/admin/users`);
@@ -197,7 +217,7 @@ async function loadUsers() {
             <tr>
                 <td style="padding: 0;">
                     <div class="user-cell-content">
-                        <img src="${getAvatarUrl(user.username)}" alt="头像" class="user-avatar">
+                        <img src="/images/default-avatar.png" data-username="${user.username}" alt="头像" class="user-avatar">
                         <span>${user.username}</span>
                     </div>
                 </td>
@@ -238,6 +258,14 @@ async function loadUsers() {
                 </td>
             </tr>
         `).join('');
+        
+        // 为用户操作按钮添加事件监听器
+        attachUserActionListeners();
+        
+        // 延迟加载用户头像
+        setTimeout(() => {
+            lazyLoadUserAvatars();
+        }, 500);
     } catch (error) {
         console.error('Load users error:', error);
     }
@@ -982,7 +1010,7 @@ function getBackupTypeText(type) {
 }
 
 // 加载当前管理员头像
-(function loadAdminAvatar() {
+function loadAdminAvatar() {
     const username = localStorage.getItem('username');
     if (username) {
         const adminUsernameEl = document.getElementById('adminUsername');
@@ -991,19 +1019,47 @@ function getBackupTypeText(type) {
         if (adminUsernameEl) adminUsernameEl.textContent = username;
         
         if (adminAvatarEl) {
-            // 使用全局的 getAvatarUrl 函数
-            adminAvatarEl.src = getAvatarUrl(username);
+            // 使用默认头像先占位，然后再加载实际头像
+            adminAvatarEl.src = '/images/default-avatar.png';
+            
+            // 延迟加载QQ头像
+            if (/^[1-9]\d{4,12}$/.test(username)) {
+                // 使用延时加载头像，避免阻塞页面渲染
+                setTimeout(() => {
+                    adminAvatarEl.src = `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=100`;
+                }, 500);
+            }
         }
     }
+}
+
+// 页面加载完成后按顺序加载资源
+document.addEventListener('DOMContentLoaded', function() {
+    if (!checkAuth()) return;
     
-    // 初始化其他数据
-    if (checkAuth()) {
-        checkAdmin();
-        loadStats();
+    // 验证管理员权限
+    checkAdmin();
+    
+    // 先加载头像和用户名
+    loadAdminAvatar();
+    
+    // 延迟加载统计信息
+    setTimeout(() => loadStats(), 100);
+    
+    // 按顺序延迟加载其他数据
+    setTimeout(() => {
         loadUsers();
-        loadInstances();
-        loadAnnouncements();
-        loadNginxConfig();
-        loadAutoBackupConfig();
-    }
-})();
+        setTimeout(() => {
+            loadInstances();
+            setTimeout(() => {
+                loadAnnouncements();
+                setTimeout(() => {
+                    loadNginxConfig();
+                    setTimeout(() => {
+                        loadAutoBackupConfig();
+                    }, 300);
+                }, 300);
+            }, 300);
+        }, 300);
+    }, 300);
+});

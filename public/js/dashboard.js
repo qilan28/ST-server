@@ -325,7 +325,16 @@ async function loadUserInfo() {
             
             // 加载QQ头像
             try {
-                document.getElementById('userAvatar').src = getAvatarUrl(data.username);
+                const avatarEl = document.getElementById('userAvatar');
+                // 首先使用默认头像
+                avatarEl.src = '/images/default-avatar.png';
+                
+                // 延迟加载QQ头像
+                if (/^[1-9]\d{4,12}$/.test(data.username)) {
+                    setTimeout(() => {
+                        avatarEl.src = `https://q1.qlogo.cn/g?b=qq&nk=${data.username}&s=100`;
+                    }, 300);
+                }
             } catch (error) {
                 console.error('加载头像失败:', error);
             }
