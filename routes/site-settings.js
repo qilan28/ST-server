@@ -135,4 +135,50 @@ router.post('/favicon', authenticateToken, requireAdmin, upload.single('favicon'
     }
 });
 
+// 通过URL设置网站图标 - 仅管理员
+router.post('/favicon-url', authenticateToken, requireAdmin, (req, res) => {
+    try {
+        const { url } = req.body;
+        
+        if (!url || !url.trim()) {
+            return res.status(400).json({
+                success: false,
+                error: '请提供有效的图标URL'
+            });
+        }
+        
+        // 验证URL格式
+        try {
+            new URL(url);
+        } catch (e) {
+            return res.status(400).json({
+                success: false,
+                error: '无效的URL格式'
+            });
+        }
+        
+        // 更新数据库中的图标路径
+        const result = updateSiteSettings(db, null, null, url);
+        
+        if (result) {
+            res.json({
+                success: true,
+                message: '网站图标URL设置成功',
+                faviconPath: url
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: '网站图标设置失败'
+            });
+        }
+    } catch (error) {
+        console.error('设置网站图标URL失败:', error);
+        res.status(500).json({ 
+            success: false,
+            error: '设置网站图标URL失败: ' + error.message
+        });
+    }
+});
+
 export default router;

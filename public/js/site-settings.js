@@ -108,18 +108,8 @@ async function uploadFavicon() {
             // 更新当前显示的图标
             document.getElementById('currentFavicon').src = data.faviconPath + '?t=' + new Date().getTime();
             
-            // 刷新页面上的图标（带时间戳避免缓存）
-            const links = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
-            if (links.length > 0) {
-                links.forEach(link => {
-                    link.href = data.faviconPath + '?t=' + new Date().getTime();
-                });
-            } else {
-                const link = document.createElement('link');
-                link.rel = 'icon';
-                link.href = data.faviconPath + '?t=' + new Date().getTime();
-                document.head.appendChild(link);
-            }
+            // 刷新页面上的图标
+            updateFaviconInPage(data.faviconPath);
             
             // 清空文件输入
             fileInput.value = '';
@@ -132,14 +122,86 @@ async function uploadFavicon() {
     }
 }
 
+// 通过URL设置图标
+async function setFaviconUrl() {
+    try {
+        const urlInput = document.getElementById('faviconUrl');
+        const url = urlInput.value.trim();
+        
+        if (!url) {
+            showSiteSettingsMessage('请输入图标URL', 'error');
+            return;
+        }
+        
+        // 验证URL格式
+        try {
+            new URL(url);
+        } catch (e) {
+            showSiteSettingsMessage('无效的URL格式', 'error');
+            return;
+        }
+        
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE}/site-settings/favicon-url`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ url })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSiteSettingsMessage('图标URL设置成功', 'success');
+            
+            // 更新当前显示的图标
+            document.getElementById('currentFavicon').src = data.faviconPath + '?t=' + new Date().getTime();
+            
+            // 刷新页面上的图标（带时间戳避免缓存）
+            updateFaviconInPage(data.faviconPath);
+            
+            // 清空输入框
+            urlInput.value = '';
+        } else {
+            showSiteSettingsMessage(data.error || '设置失败', 'error');
+        }
+    } catch (error) {
+        console.error('设置图标URL失败:', error);
+        showSiteSettingsMessage('设置失败: ' + error.message, 'error');
+    }
+}
+
+// 更新页面上的图标
+function updateFaviconInPage(faviconPath) {
+    const timestamp = new Date().getTime(); // 避免缓存
+    const links = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+    
+    if (links.length > 0) {
+        links.forEach(link => {
+            link.href = `${faviconPath}?t=${timestamp}`;
+        });
+    } else {
+        const link = document.createElement('link');
+        link.rel = 'icon';
+        link.href = `${faviconPath}?t=${timestamp}`;
+        document.head.appendChild(link);
+    }
+}
+
 // 显示站点设置消息
 function showSiteSettingsMessage(message, type = 'info') {
     const messageEl = document.getElementById('siteSettingsMessage');
     if (!messageEl) return;
     
+    // 确保消息区域可见
+    messageEl.style.display = 'block';
     messageEl.textContent = message;
     messageEl.className = `message show ${type}`;
-    messageEl.style.display = 'block';
+    
+    // 滚动到消息区域，确保用户看到
+    messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
     // 5秒后隐藏消息
     setTimeout(() => {
@@ -169,5 +231,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadButton = document.getElementById('uploadFavicon');
     if (uploadButton) {
         uploadButton.addEventListener('click', uploadFavicon);
+    }
+    
+    // URL图标设置按钮事件
+    const setUrlButton = document.getElementById('setFaviconUrl');
+    if (setUrlButton) {
+        setUrlButton.addEventListener('click', setFaviconUrl);
+    }
+    
+    // 增强消息区域显示
+    const messageEl = document.getElementById('siteSettingsMessage');
+    if (messageEl) {
+        messageEl.style.transition = 'opacity 0.3s ease';
     }
 });

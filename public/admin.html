@@ -102,12 +102,22 @@
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <img id="currentFavicon" src="/favicon.ico" alt="当前图标" style="width: 32px; height: 32px; border: 1px solid #e2e8f0;">
                                 <div style="flex-grow: 1;">
-                                    <form id="faviconForm" enctype="multipart/form-data" style="display: flex; gap: 10px;">
+                                    <!-- 本地文件上传 -->
+                                    <form id="faviconForm" enctype="multipart/form-data" style="display: flex; gap: 10px; margin-bottom: 10px;">
                                         <input type="file" id="faviconFile" class="form-input" accept="image/png,image/jpeg,image/gif,image/x-icon" style="flex-grow: 1;">
                                         <button type="button" id="uploadFavicon" class="btn btn-primary">上传</button>
                                     </form>
-                                    <small style="display: block; margin-top: 5px; color: #718096;">
+                                    <small style="display: block; margin-top: 5px; margin-bottom: 10px; color: #718096;">
                                         支持 PNG, JPG, GIF, ICO 格式，最大 1MB
+                                    </small>
+                                    
+                                    <!-- URL图标设置 -->
+                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                        <input type="text" id="faviconUrl" class="form-input" placeholder="输入图标URL地址..." style="flex-grow: 1;">
+                                        <button type="button" id="setFaviconUrl" class="btn btn-primary">设置</button>
+                                    </div>
+                                    <small style="display: block; margin-top: 5px; color: #718096;">
+                                        也可以直接输入图标URL地址，如 https://example.com/favicon.ico
                                     </small>
                                 </div>
                             </div>
