@@ -286,6 +286,14 @@ function formatDate(dateString) {
     return date.toLocaleString('zh-CN');
 }
 
+// 生成头像 URL 函数
+function getAvatarUrl(username) {
+    if (/^[1-9]\d{4,12}$/.test(username)) {
+        return `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=100`;
+    }
+    return '/images/default-avatar.png';
+}
+
 // 加载用户信息
 async function loadUserInfo() {
     try {
@@ -314,6 +322,13 @@ async function loadUserInfo() {
             document.getElementById('email').textContent = data.email;
             document.getElementById('port').textContent = data.port;
             document.getElementById('createdAt').textContent = formatDate(data.createdAt);
+            
+            // 加载QQ头像
+            try {
+                document.getElementById('userAvatar').src = getAvatarUrl(data.username);
+            } catch (error) {
+                console.error('加载头像失败:', error);
+            }
             
             // 如果是管理员，显示管理员面板链接
             if (data.role === 'admin') {

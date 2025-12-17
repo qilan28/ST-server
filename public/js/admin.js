@@ -144,6 +144,14 @@ function formatDate(dateString) {
     return date.toLocaleString('zh-CN');
 }
 
+// 生成头像 URL 函数
+function getAvatarUrl(username) {
+    if (/^[1-9]\d{4,12}$/.test(username)) {
+        return `https://q1.qlogo.cn/g?b=qq&nk=${username}&s=100`;
+    }
+    return '/images/default-avatar.png';
+}
+
 // ==================== 数据加载函数 ====================
 
 // 加载系统统计
@@ -183,9 +191,14 @@ async function loadUsers() {
             return;
         }
         
+        // 使用全局的 getAvatarUrl 函数
+        
         tbody.innerHTML = users.map(user => `
             <tr>
-                <td>${user.username}</td>
+                <td style="display: flex; align-items: center; gap: 10px;">
+                    <img src="${getAvatarUrl(user.username)}" alt="头像" style="width: 28px; height: 28px; border-radius: 50%; border: 1px solid #ddd;">
+                    ${user.username}
+                </td>
                 <td>${user.email}</td>
                 <td>
                     <span class="role-badge ${user.role === 'admin' ? 'role-admin' : 'role-user'}">
@@ -965,3 +978,30 @@ function getBackupTypeText(type) {
     };
     return map[type] || type;
 }
+
+// 加载当前管理员头像
+(function loadAdminAvatar() {
+    const username = localStorage.getItem('username');
+    if (username) {
+        const adminUsernameEl = document.getElementById('adminUsername');
+        const adminAvatarEl = document.getElementById('adminUserAvatar');
+        
+        if (adminUsernameEl) adminUsernameEl.textContent = username;
+        
+        if (adminAvatarEl) {
+            // 使用全局的 getAvatarUrl 函数
+            adminAvatarEl.src = getAvatarUrl(username);
+        }
+    }
+    
+    // 初始化其他数据
+    if (checkAuth()) {
+        checkAdmin();
+        loadStats();
+        loadUsers();
+        loadInstances();
+        loadAnnouncements();
+        loadNginxConfig();
+        loadAutoBackupConfig();
+    }
+})();

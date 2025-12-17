@@ -8,10 +8,16 @@
 </head>
 <body>
     <div class="container">
-        <!-- 顶部退出按钮 -->
+        <!-- 顶部导航区 -->
         <div class="admin-header-buttons">
-            <a href="/dashboard.html" id="backToDashboard" class="btn btn-secondary" style="display: none;">返回用户面板</a>
-            <button onclick="logout()" class="btn btn-danger">退出登录</button>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img id="adminUserAvatar" src="" alt="头像" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                    <span id="adminUsername" style="color: #4a5568; font-weight: 600;"></span>
+                </div>
+                <a href="/dashboard.html" id="backToDashboard" class="btn btn-secondary" style="display: none;">返回用户面板</a>
+                <button onclick="logout()" class="btn btn-danger">退出登录</button>
+            </div>
         </div>
         
         <main class="main">
