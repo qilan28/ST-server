@@ -430,9 +430,9 @@ router.put('/auto-backup-preference', authenticateToken, (req, res) => {
             });
         }
         
-        // 检查用户是否配置了 HF
+        // 检查用户是否配置了 HF (注意：数据库字段是蛇形命名)
         const config = getUserHFConfig(username);
-        if (!config.hfToken || !config.hfRepo) {
+        if (!config || !config.hf_token || !config.hf_repo) {
             return res.status(400).json({
                 success: false,
                 error: '请先配置 Hugging Face 备份信息'

@@ -2117,6 +2117,25 @@ input:checked + .slider:before {
     100% { transform: rotate(360deg); }
 }
 
+/* ==================== 复选框样式 ==================== */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+label {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* 修复复选框和文字对齐 */
+label input[type="checkbox"] {
+    vertical-align: middle;
+}
+
 /* ==================== 美化确认对话框样式 ==================== */
 .custom-modal {
     position: fixed;
