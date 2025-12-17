@@ -1,5 +1,6 @@
 // 站点设置管理
-const API_BASE = '/api';
+// 自动适应当前协议，而不是硬编码 HTTP 或 HTTPS
+const API_BASE = '/api';  // 使用相对路径，自动采用当前协议
 
 // 加载站点设置
 async function loadSiteSettings() {
@@ -86,27 +87,32 @@ function saveSiteSettings() {
         const saveButton = document.getElementById('saveSiteSettings');
         console.log('开始保存站点设置...', saveButton ? '找到按钮' : '未找到按钮');
     
-        // 显示通知
-        alert('保存按钮已点击，这是简化版本！');
+        // 显示通知在消息区域
+        showSiteSettingsMessage('正在保存设置...', 'info');
         
         // 获取表单数据
         const projectName = document.getElementById('projectName').value.trim();
         const siteName = document.getElementById('siteName').value.trim();
         
         if (!projectName || !siteName) {
-            alert('错误: 项目名称和网站名称不能为空');
+            showSiteSettingsMessage('错误: 项目名称和网站名称不能为空', 'error');
             return;
         }
         
-        // 显示数据
-        alert(`将保存的数据:\n- 项目名称: ${projectName}\n- 网站名称: ${siteName}`);
+        // 显示数据在控制台
+        console.log(`将保存的数据: 项目名称=${projectName}, 网站名称=${siteName}`);
         
         // 保存数据（这里简化为同步版本）
         const token = localStorage.getItem('token');
         
         // 使用更简单的方式访问后端，避免可能的Promise问题
         const xhr = new XMLHttpRequest();
-        xhr.open('PUT', '/api/site-settings', true);
+        
+        // 使用相对路径，自动适应当前协议 (HTTP/HTTPS)
+        const apiUrl = '/api/site-settings';
+        console.log('发送保存请求到:', apiUrl, '当前协议:', window.location.protocol);
+        
+        xhr.open('PUT', apiUrl, true);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         
@@ -114,13 +120,11 @@ function saveSiteSettings() {
         xhr.onload = function() {
             if (xhr.status >= 200 && xhr.status < 300) {
                 // 成功处理
-                alert('✅ 成功！站点设置已保存。');
                 document.getElementById('siteSettingsMessage').textContent = '站点设置保存成功!';
                 document.getElementById('siteSettingsMessage').style.backgroundColor = '#dcfce7';
                 document.getElementById('siteSettingsMessage').style.display = 'block';
             } else {
                 // 错误处理
-                alert('⚠️ 错误！保存失败。状态码: ' + xhr.status);
                 document.getElementById('siteSettingsMessage').textContent = '保存失败: ' + xhr.responseText;
                 document.getElementById('siteSettingsMessage').style.backgroundColor = '#fee2e2';
                 document.getElementById('siteSettingsMessage').style.display = 'block';
@@ -128,7 +132,7 @@ function saveSiteSettings() {
         };
         
         xhr.onerror = function() {
-            alert('⚠️ 网络错误！无法连接到服务器。');
+            console.error('网络错误！无法连接到服务器。');
             document.getElementById('siteSettingsMessage').textContent = '网络错误: 无法连接到服务器';
             document.getElementById('siteSettingsMessage').style.backgroundColor = '#fee2e2';
             document.getElementById('siteSettingsMessage').style.display = 'block';

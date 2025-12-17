@@ -6,6 +6,17 @@
     <title>管理员面板 - SillyTavern 管理平台</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/table-fix.css">
+    
+    <!-- 网络请求协议处理工具在head中先加载 -->
+    <script src="/js/protocol-helper.js"></script>
+    <script>
+        // 确保使用安全请求
+        if (window.protocolHelper) {
+            console.log('协议帮手加载成功，当前协议: ' + window.protocolHelper.detectCurrentProtocol());
+        } else {
+            console.warn('协议帮手未加载，可能存在协议不匹配问题');
+        }
+    </script>
     <script src="/js/apply-site-settings.js"></script>
 </head>
 <body>
@@ -184,7 +195,6 @@
                             function directSaveSettings() {
                                 try {
                                     // 显示正在保存的消息
-                                    alert('正在尝试保存站点设置...');
                                     const message = document.getElementById('siteSettingsMessage');
                                     message.textContent = '正在保存设置...';
                                     message.style.backgroundColor = '#e0f2fe';
@@ -197,7 +207,13 @@
                                     
                                     // 发送 AJAX 请求
                                     const xhr = new XMLHttpRequest();
-                                    xhr.open('PUT', '/api/site-settings', true);
+                                    // 使用协议帮手获取安全的URL
+                                    const apiUrl = window.protocolHelper ? 
+                                        window.protocolHelper.getApiUrl('/api/site-settings') : 
+                                        '/api/site-settings';
+                                    console.log('发送请求到:', apiUrl, '当前协议:', window.location.protocol);
+                                    
+                                    xhr.open('PUT', apiUrl, true);
                                     xhr.setRequestHeader('Content-Type', 'application/json');
                                     xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.getItem('token'));
                                     
@@ -206,12 +222,10 @@
                                             message.textContent = '设置已保存成功!';
                                             message.style.backgroundColor = '#dcfce7';
                                             message.style.color = '#15803d';
-                                            alert('成功！站点设置已保存。');
                                         } else {
                                             message.textContent = '保存失败: ' + xhr.responseText;
                                             message.style.backgroundColor = '#fee2e2';
                                             message.style.color = '#b91c1c';
-                                            alert('错误！保存失败。');
                                         }
                                     };
                                     
@@ -220,7 +234,6 @@
                                         message.style.backgroundColor = '#fee2e2';
                                         message.style.color = '#b91c1c';
                                         message.style.display = 'block';
-                                        alert('网络错误！无法连接到服务器。');
                                     };
                                     
                                     xhr.send(JSON.stringify({
@@ -228,7 +241,14 @@
                                         site_name: siteName
                                     }));
                                 } catch (e) {
-                                    alert('错误: ' + e.message);
+                                    console.error('保存过程发生错误:', e);
+                                    const message = document.getElementById('siteSettingsMessage');
+                                    if (message) {
+                                        message.textContent = '错误: ' + e.message;
+                                        message.style.backgroundColor = '#fee2e2';
+                                        message.style.color = '#b91c1c';
+                                        message.style.display = 'block';
+                                    }
                                 }
                             }
                         </script>
@@ -463,6 +483,9 @@
         </div>
     </div>
 
+    <!-- 协议检测与修复工具，放在最前面 -->
+    <script src="/js/protocol-helper.js"></script>
+    
     <script src="/js/modal.js"></script>
     <script src="/js/admin.js"></script>
     <script src="/js/user-search.js"></script>

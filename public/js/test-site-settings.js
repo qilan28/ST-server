@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // 测试保存站点设置
 async function testSaveSettings() {
     console.log('测试保存站点设置...');
-    alert('保存按钮点击测试 - 如果看到此消息，按钮点击事件正常工作');
+    // 测试点击事件正常工作
     
     const projectName = document.getElementById('projectName')?.value || '测试项目名';
     const siteName = document.getElementById('siteName')?.value || '测试网站名';
@@ -28,12 +28,19 @@ async function testSaveSettings() {
     try {
         const token = localStorage.getItem('token');
         if (!token) {
-            alert('错误: 未找到认证令牌，请重新登录');
+            console.error('错误: 未找到认证令牌，请重新登录');
             return;
         }
         
         console.log('开始发送API请求...');
-        const response = await fetch('/api/site-settings', {
+        
+        // 使用相对路径和当前协议
+        const protocol = window.location.protocol;
+        const host = window.location.host;
+        const apiUrl = '/api/site-settings';
+        console.log(`当前环境: 协议=${protocol}, 主机=${host}, API路径=${apiUrl}`);
+        
+        const response = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -51,9 +58,10 @@ async function testSaveSettings() {
         const data = await response.json();
         console.log('响应数据:', data);
         
-        alert('API响应: ' + JSON.stringify(data));
+        console.log('API响应:', data);
     } catch (error) {
         console.error('测试保存设置时出错:', error);
-        alert('错误: ' + error.message);
+        // 在控制台显示错误而不是弹窗
+        console.error('错误消息:', error.message);
     }
 }
