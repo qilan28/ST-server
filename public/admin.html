@@ -23,6 +23,27 @@
         </div>
         
         <main class="main">
+            <!-- 刷新控制 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="manualRefresh()" class="btn btn-secondary" title="立即刷新数据">🔄 刷新</button>
+                    <div>
+                        <label for="refreshIntervalSelect" style="margin-right: 10px; white-space: nowrap;">自动刷新间隔：</label>
+                        <select id="refreshIntervalSelect" class="form-input" style="width: auto;">
+                            <option value="0">关闭</option>
+                            <option value="10000">10 秒</option>
+                            <option value="15000">15 秒</option>
+                            <option value="30000" selected>30 秒</option>
+                            <option value="60000">1 分钟</option>
+                            <option value="300000">5 分钟</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span>刷新状态：</span>
+                    <span id="refreshStatusIndicator" class="status-badge status-running">30秒</span>
+                </div>
+            </div>
             <!-- 管理员说明 -->
             <div class="info-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 4px solid #5a67d8; padding: 15px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <p style="margin: 0; color: #ffffff; font-size: 14px;">

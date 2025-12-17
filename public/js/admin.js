@@ -588,6 +588,52 @@ async function generateNginxConfig() {
 
 let refreshInterval = null;
 
+// 定义默认刷新间隔（30秒）
+const DEFAULT_REFRESH_INTERVAL = 30000;
+let currentRefreshInterval = DEFAULT_REFRESH_INTERVAL;
+
+// 设置数据刷新定时器
+function setRefreshTimer() {
+    // 清除现有的定时器
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+    
+    // 如果刷新被禁用，不设置新定时器
+    if (currentRefreshInterval <= 0) {
+        console.log('数据刷新已暂停');
+        return;
+    }
+    
+    // 设置新的定时器
+    refreshInterval = setInterval(() => {
+        loadStats();
+        loadUsers();
+        loadInstances();
+        loadAnnouncements();
+        
+        // 更新刷新状态指示器
+        updateRefreshStatusIndicator();
+    }, currentRefreshInterval);
+    
+    console.log(`数据刷新间隔已设置为 ${currentRefreshInterval/1000} 秒`);
+}
+
+// 更新刷新状态指示器
+function updateRefreshStatusIndicator() {
+    const indicator = document.getElementById('refreshStatusIndicator');
+    if (!indicator) return;
+    
+    if (currentRefreshInterval <= 0) {
+        indicator.textContent = '已暂停';
+        indicator.className = 'status-badge status-stopped';
+    } else {
+        indicator.textContent = `${currentRefreshInterval/1000}秒`;
+        indicator.className = 'status-badge status-running';
+    }
+}
+
 // 检查当前管理员是否有 ST 实例
 async function checkAdminSTStatus() {
     try {
@@ -628,13 +674,47 @@ async function init() {
     await loadAnnouncements();
     await loadAutoBackupConfig();
     
-    // 定时刷新（每5秒）
-    refreshInterval = setInterval(() => {
-        loadStats();
-        loadUsers();
-        loadInstances();
-        loadAnnouncements();
-    }, 5000);
+    // 初始化刷新控制器
+    initRefreshControls();
+    
+    // 设置数据刷新定时器
+    setRefreshTimer();
+}
+
+// 初始化刷新控制器
+function initRefreshControls() {
+    // 找到刷新控制器元素
+    const refreshSelect = document.getElementById('refreshIntervalSelect');
+    if (!refreshSelect) return;
+    
+    // 设置初始值
+    refreshSelect.value = currentRefreshInterval.toString();
+    
+    // 添加事件监听器
+    refreshSelect.addEventListener('change', function() {
+        currentRefreshInterval = parseInt(this.value);
+        setRefreshTimer();
+        
+        // 保存用户偏好到localStorage
+        localStorage.setItem('admin_refresh_interval', currentRefreshInterval.toString());
+        
+        // 显示状态消息
+        if (currentRefreshInterval <= 0) {
+            showMessage('数据自动刷新已暂停', 'info');
+        } else {
+            showMessage(`数据刷新间隔已设置为 ${currentRefreshInterval/1000} 秒`, 'success');
+        }
+    });
+    
+    // 从localStorage读取用户偏好
+    const savedInterval = localStorage.getItem('admin_refresh_interval');
+    if (savedInterval) {
+        currentRefreshInterval = parseInt(savedInterval);
+        refreshSelect.value = savedInterval;
+    }
+    
+    // 更新刷新状态指示器
+    updateRefreshStatusIndicator();
 }
 
 // 页面卸载时停止刷新
@@ -643,6 +723,30 @@ window.addEventListener('beforeunload', () => {
         clearInterval(refreshInterval);
     }
 });
+
+// 手动刷新按钮
+function manualRefresh() {
+    // 显示加载指示器
+    showMessage('正在刷新数据...', 'info');
+    
+    // 定义默认刷新间隔（30秒）
+    // 立即刷新，无需使用刷新间隔
+
+    // 立即刷新数据
+    Promise.all([
+        loadStats(),
+        loadUsers(),
+        loadInstances(),
+        loadAnnouncements()
+    ])
+    .then(() => {
+        showMessage('数据已刷新', 'success');
+    })
+    .catch(error => {
+        console.error('Refresh error:', error);
+        showMessage('数据刷新失败', 'error');
+    });
+}
 
 // 页面加载完成后初始化
 init();
