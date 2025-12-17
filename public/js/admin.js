@@ -217,6 +217,11 @@ async function loadUsers() {
         const data = await response.json();
         const users = data.users;
         
+        // 存储原始用户数据，用于搜索功能
+        if (typeof storeUsers === 'function') {
+            storeUsers(users);
+        }
+        
         const tbody = document.getElementById('usersTableBody');
         
         if (users.length === 0) {
@@ -274,6 +279,12 @@ async function loadUsers() {
         
         // 为用户操作按钮添加事件监听器
         attachUserActionListeners();
+        
+        // 显示用户总数
+        const resultCountElement = document.getElementById('searchResultCount');
+        if (resultCountElement) {
+            resultCountElement.textContent = `共 ${users.length} 条`;
+        }
         
         // 延迟加载用户头像
         setTimeout(() => {

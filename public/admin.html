@@ -115,6 +115,27 @@
             <div class="users-card">
                 <h2>👥 用户管理</h2>
                 <div id="adminMessage" class="message"></div>
+                
+                <!-- 搜索工具栏 -->
+                <div class="search-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                    <div style="position: relative; flex-grow: 1;">
+                        <input type="text" id="userSearchInput" class="form-input" placeholder="搜索用户名/QQ、邮箱或端口..." style="padding-left: 35px; padding-right: 35px; width: 100%;" title="支持搜索用户名、QQ号、邮箱或端口号">
+                        <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #718096;">🔍</span>
+                        <button id="clearSearchBtn" type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #718096; cursor: pointer; display: none; font-size: 16px;">✕</button>
+                    </div>
+                    <div id="searchResultCount" style="white-space: nowrap; color: #718096; font-size: 0.9rem;"></div>
+                    <select id="userRoleFilter" class="form-input" style="width: auto;">
+                        <option value="all">所有角色</option>
+                        <option value="user">只显示用户</option>
+                        <option value="admin">只显示管理员</option>
+                    </select>
+                    <select id="userStatusFilter" class="form-input" style="width: auto;">
+                        <option value="all">所有状态</option>
+                        <option value="running">运行中</option>
+                        <option value="stopped">已停止</option>
+                    </select>
+                </div>
+                
                 <div class="table-container">
                     <table class="users-table">
                         <thead>
@@ -278,5 +299,6 @@
 
     <script src="/js/modal.js"></script>
     <script src="/js/admin.js"></script>
+    <script src="/js/user-search.js"></script>
 </body>
 </html>
