@@ -1005,9 +1005,15 @@ async function loadBackupConfig() {
     }
 }
 
+// 全局变量存储备份间隔小时数
+let autoBackupIntervalHours = 24; // 默认值
+
 // 加载自动备份偏好
 async function loadAutoBackupPreference() {
     try {
+        // 先加载系统配置获取备份间隔
+        await loadAutoBackupConfig();
+        
         const response = await fetch(`${API_BASE}/backup/auto-backup-preference`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -1018,9 +1024,42 @@ async function loadAutoBackupPreference() {
             const data = await response.json();
             if (data.success) {
                 document.getElementById('autoBackupEnabled').checked = Boolean(data.enabled);
+                
+                // 更新显示文本，添加备份间隔信息
+                updateAutoBackupLabel();
             }
         }
     } catch (error) {
+        console.error('加载备份偏好失败:', error);
+    }
+}
+
+// 加载自动备份系统配置
+async function loadAutoBackupConfig() {
+    try {
+        const response = await fetch(`${API_BASE}/backup/auto-backup-config`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.config) {
+                autoBackupIntervalHours = data.config.interval_hours || 24;
+                console.log(`自动备份间隔: ${autoBackupIntervalHours}小时`);
+            }
+        }
+    } catch (error) {
+        console.error('加载备份配置失败:', error);
+    }
+}
+
+// 更新自动备份标签文本
+function updateAutoBackupLabel() {
+    const autoBackupLabel = document.querySelector('#autoBackupEnabled').nextElementSibling;
+    if (autoBackupLabel) {
+        autoBackupLabel.innerHTML = `⏰ 参与自动备份(${autoBackupIntervalHours}小时 备份)`;
     }
 }
 
@@ -1048,6 +1087,9 @@ async function handleAutoBackupToggle() {
                 enabled ? '✅ 已启用' : '🔴 已停用',
                 'success'
             );
+            
+            // 更新标签显示
+            updateAutoBackupLabel();
         } else {
             // 恢复复选框状态
             checkbox.checked = !enabled;

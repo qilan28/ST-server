@@ -155,12 +155,12 @@
                 
                 <div class="backup-config">
                     <div class="form-group">
-                        <label for="hfRepo">Hugging Face 仓库名 (格式: username/repo-name)</label>
+                        <label for="hfRepo">Hugging Face Datasets 仓库名 (格式: username/Datasets-name)</label>
                         <input 
                             type="text" 
                             id="hfRepo" 
                             class="form-input" 
-                            placeholder="例如: myusername/sillytavern-backup"
+                            placeholder="例如: Qilan/sillytavern-backup"
                         >
                     </div>
                     
@@ -179,22 +179,22 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="hfEmail">Git 邮箱 ⭐ 必填</label>
+                        <label for="hfEmail">Hugging Face 邮箱 ⭐ 必填</label>
                         <input 
                             type="email" 
                             id="hfEmail" 
                             class="form-input" 
-                            placeholder="用于 Git commit 的邮箱，例如: user@example.com"
+                            placeholder="Hugging Face的注册邮箱，例如: user@example.com"
                         >
                         <small style="color: #666; margin-top: 5px; display: block;">
-                            用于 Hugging Face 仓库的 Git 提交身份验证
+                            用于 Hugging Face Datasets 仓库的身份验证
                         </small>
                     </div>
 
                     <div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
                         <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                             <input type="checkbox" id="autoBackupEnabled" onchange="handleAutoBackupToggle()">
-                            <span style="font-weight: 600;">⏰ 参与自动备份</span>
+                            <span style="font-weight: 600;">⏰ 参与自动备份(管理员设置的时间\小时 备份)</span>
                         </label>
                         <small style="color: #666; margin-top: 8px; display: block; margin-left: 30px;">
                             管理员可以设置定时自动备份。启用后，您的数据将定期自动备份到 HF。<br>

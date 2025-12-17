@@ -398,6 +398,27 @@ router.get('/restore', async (req, res) => {
 
 // ==================== 用户自动备份偏好 ====================
 
+// 获取自动备份系统配置（用于用户面板显示）
+router.get('/auto-backup-config', authenticateToken, (req, res) => {
+    try {
+        // 获取全局备份配置
+        const config = getAutoBackupConfig();
+        
+        res.json({
+            success: true,
+            config: {
+                interval_hours: config.interval_hours
+            }
+        });
+    } catch (error) {
+        console.error('Get auto backup config error:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to get auto backup config' 
+        });
+    }
+});
+
 // 获取用户自动备份偏好
 router.get('/auto-backup-preference', authenticateToken, (req, res) => {
     try {
