@@ -686,12 +686,18 @@ export async function listBackupFilesFromHF(hfToken, hfRepo) {
  * 从 Hugging Face 下载备份文件
  * @param {string} downloadUrl - 文件下载 URL
  * @param {string} outputPath - 输出路径
+ * @param {string} hfToken - Hugging Face token（用于私有仓库）
  * @param {function} progressCallback - 进度回调
  * @returns {Promise<void>}
  */
-async function downloadFile(downloadUrl, outputPath, progressCallback = null) {
+async function downloadFile(downloadUrl, outputPath, hfToken, progressCallback = null) {
     try {
-        const response = await fetch(downloadUrl);
+        const headers = {};
+        if (hfToken) {
+            headers['Authorization'] = `Bearer ${hfToken}`;
+        }
+        
+        const response = await fetch(downloadUrl, { headers });
         
         if (!response.ok) {
             throw new Error(`下载失败: ${response.status}`);
@@ -791,7 +797,7 @@ export async function restoreFromHuggingFace(hfToken, hfRepo, dataDir, filename 
         const fileSizeMB = (targetBackup.size / 1024 / 1024).toFixed(2);
         log(`   文件大小: ${fileSizeMB} MB`);
         
-        await downloadFile(targetBackup.downloadUrl, tempZipPath, (progress, downloaded, total) => {
+        await downloadFile(targetBackup.downloadUrl, tempZipPath, hfToken, (progress, downloaded, total) => {
             const downloadedMB = (downloaded / 1024 / 1024).toFixed(2);
             const totalMB = (total / 1024 / 1024).toFixed(2);
             log(`   下载进度: ${progress}% (${downloadedMB}/${totalMB} MB)`, 'progress');
