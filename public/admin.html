@@ -93,8 +93,38 @@
                 
                 <!-- 站点设置 -->
                 <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🌐 网站设置</h3>
-                    <div id="siteSettingsMessage" class="message" style="margin-bottom: 15px; display: none;"></div>
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🌎 网站设置</h3>
+                    <div id="siteSettingsMessage" class="message" style="margin-bottom: 15px; display: block; padding: 10px;"></div>
+                    
+                    <!-- 添加动画样式 -->
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                        
+                        #saveSiteSettings:disabled {
+                            cursor: wait;
+                        }
+                        
+                        .message.success {
+                            background-color: #dcfce7;
+                            color: #15803d;
+                            border: 1px solid #86efac;
+                        }
+                        
+                        .message.error {
+                            background-color: #fee2e2;
+                            color: #b91c1c;
+                            border: 1px solid #f87171;
+                        }
+                        
+                        .message.info {
+                            background-color: #e0f2fe;
+                            color: #0369a1;
+                            border: 1px solid #7dd3fc;
+                        }
+                    </style>
                     <div style="display: grid; gap: 15px;">
                         <div>
                             <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
@@ -145,7 +175,7 @@
                         </div>
                         
                         <div style="display: flex; gap: 10px;">
-                            <button id="saveSiteSettings" type="button" class="btn btn-primary" onclick="saveSiteSettings()">保存网站设置</button>
+                            <button id="saveSiteSettings" type="button" class="btn btn-primary">保存网站设置</button>
                         </div>
                     </div>
                 </div>

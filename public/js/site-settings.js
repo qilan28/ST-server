@@ -33,19 +33,43 @@ async function loadSiteSettings() {
 
 // 保存站点设置（项目名和网站名）
 async function saveSiteSettings() {
-    // 直接在点击时显示消息，用于调试
-    console.log('点击了保存网站设置按钮');
+    // 获取按钮并添加加载状态
+    const saveButton = document.getElementById('saveSiteSettings');
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<span style="display:inline-block;animation:spin 1s infinite linear;margin-right:5px;">⟳</span> 保存中...';
+        saveButton.style.opacity = '0.7';
+    }
+    
+    // 显示正在保存的提示
+    console.log('点击了保存网站设置按钮', new Date().toISOString());
     showSiteSettingsMessage('正在保存设置...', 'info');
     
     try {
-        const projectName = document.getElementById('projectName').value.trim();
-        const siteName = document.getElementById('siteName').value.trim();
+        // 获取表单数据
+        const projectNameInput = document.getElementById('projectName');
+        const siteNameInput = document.getElementById('siteName');
+        
+        if (!projectNameInput || !siteNameInput) {
+            throw new Error('无法找到表单字段');
+        }
+        
+        const projectName = projectNameInput.value.trim();
+        const siteName = siteNameInput.value.trim();
+        
+        if (!projectName || !siteName) {
+            throw new Error('项目名称和网站名称不能为空');
+        }
         
         console.log('要保存的数据:', { projectName, siteName });
         
+        // 获取认证Token
         const token = localStorage.getItem('token');
-        console.log('Token存在:', !!token);
+        if (!token) {
+            throw new Error('未找到认证令牌，请重新登录');
+        }
         
+        // 发送API请求
         const response = await fetch(`${API_BASE}/site-settings`, {
             method: 'PUT',
             headers: {
@@ -55,20 +79,46 @@ async function saveSiteSettings() {
             body: JSON.stringify({
                 project_name: projectName,
                 site_name: siteName
-            })
+            }),
+            // 添加请求超时
+            signal: AbortSignal.timeout(10000) // 10秒超时
         });
+        
+        // 检查响应状态
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`服务器响应错误 (${response.status}): ${errorText || '未知错误'}`);
+        }
         
         const data = await response.json();
         
+        // 处理响应
         if (data.success) {
-            showSiteSettingsMessage('站点设置保存成功', 'success');
+            showSiteSettingsMessage('✅ 站点设置保存成功\n新设置将在页面刷新后生效', 'success');
             updatePageTitle(siteName);
+            
+            // 添加动画效果等更多的反馈
+            if (projectNameInput) projectNameInput.style.backgroundColor = '#dcfce7';
+            if (siteNameInput) siteNameInput.style.backgroundColor = '#dcfce7';
+            
+            // 3秒后恢复正常背景色
+            setTimeout(() => {
+                if (projectNameInput) projectNameInput.style.backgroundColor = '';
+                if (siteNameInput) siteNameInput.style.backgroundColor = '';
+            }, 3000);
         } else {
-            showSiteSettingsMessage(data.error || '保存失败', 'error');
+            throw new Error(data.error || '保存失败，服务器没有提供错误详情');
         }
     } catch (error) {
         console.error('保存站点设置失败:', error);
-        showSiteSettingsMessage('保存失败: ' + error.message, 'error');
+        showSiteSettingsMessage('⚠️ 保存失败: ' + error.message, 'error');
+    } finally {
+        // 恢复按钮状态
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.innerHTML = '保存网站设置';
+            saveButton.style.opacity = '1';
+        }
     }
 }
 
@@ -204,8 +254,47 @@ function showSiteSettingsMessage(message, type = 'info') {
     
     const messageEl = document.getElementById('siteSettingsMessage');
     if (!messageEl) {
-        console.error('未找到消息元素!');
-        alert(message); // 如果消息元素不存在，则使用alert显示
+        console.error('未找到消息元素 ID: siteSettingsMessage!');
+        console.log('尝试创建新的消息元素');
+        
+        // 尝试创建新的消息元素
+        try {
+            const container = document.querySelector('.stats-card') || document.body;
+            const newMessageEl = document.createElement('div');
+            newMessageEl.id = 'siteSettingsMessage';
+            newMessageEl.style.padding = '10px';
+            newMessageEl.style.margin = '10px 0';
+            newMessageEl.style.borderRadius = '4px';
+            newMessageEl.style.border = '1px solid #ccc';
+            newMessageEl.textContent = message;
+            
+            if (container) {
+                container.insertBefore(newMessageEl, container.firstChild);
+                console.log('成功创建了新的消息元素');
+                
+                // 显示消息
+                newMessageEl.className = `message show ${type}`;
+                switch(type) {
+                    case 'error':
+                        newMessageEl.style.backgroundColor = '#fee2e2';
+                        newMessageEl.style.color = '#b91c1c';
+                        break;
+                    case 'success':
+                        newMessageEl.style.backgroundColor = '#dcfce7';
+                        newMessageEl.style.color = '#15803d';
+                        break;
+                    default:
+                        newMessageEl.style.backgroundColor = '#e0f2fe';
+                        newMessageEl.style.color = '#0369a1';
+                }
+                return;
+            }
+        } catch (e) {
+            console.error('创建消息元素失败:', e);
+        }
+        
+        // 如果所有尝试都失败，使用警告框
+        alert(message);
         return;
     }
     
@@ -214,6 +303,11 @@ function showSiteSettingsMessage(message, type = 'info') {
     messageEl.style.padding = '10px';
     messageEl.style.margin = '10px 0';
     messageEl.style.borderRadius = '4px';
+    messageEl.style.opacity = '0';
+    
+    // 先设置消息内容
+    messageEl.textContent = message;
+    messageEl.className = `message show ${type}`;
     
     switch(type) {
         case 'error':
@@ -232,21 +326,31 @@ function showSiteSettingsMessage(message, type = 'info') {
             messageEl.style.border = '1px solid #7dd3fc';
     }
     
-    messageEl.textContent = message;
-    messageEl.className = `message show ${type}`;
+    // 添加渐变动画效果
+    setTimeout(() => {
+        messageEl.style.transition = 'opacity 0.5s ease';
+        messageEl.style.opacity = '1';
+    }, 10);
     
     // 滚动到消息区域，确保用户看到
-    messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    try {
+        messageEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (e) {
+        console.warn('滚动到消息区域失败:', e);
+    }
     
     // 清除之前的定时器
     if (messageEl._hideTimer) {
         clearTimeout(messageEl._hideTimer);
     }
     
-    // 8秒后隐藏消息
+    // 10秒后渐隐消息
     messageEl._hideTimer = setTimeout(() => {
-        messageEl.style.display = 'none';
-    }, 8000);
+        messageEl.style.opacity = '0';
+        setTimeout(() => {
+            messageEl.textContent = '';
+        }, 500);
+    }, 10000);
 }
 
 // 更新页面标题
@@ -257,31 +361,99 @@ function updatePageTitle(siteName) {
 }
 
 // 初始化站点设置
-document.addEventListener('DOMContentLoaded', function() {
-    // 加载设置
-    loadSiteSettings();
+function initSiteSettings() {
+    console.log('初始化站点设置...');
     
-    // 保存按钮事件
-    const saveButton = document.getElementById('saveSiteSettings');
-    if (saveButton) {
-        saveButton.addEventListener('click', saveSiteSettings);
+    try {
+        // 加载设置
+        loadSiteSettings();
+        
+        // 保存按钮事件
+        const saveButton = document.getElementById('saveSiteSettings');
+        if (saveButton) {
+            console.log('找到保存按钮，绑定事件');
+            // 移除可能的旧事件监听器
+            saveButton.removeEventListener('click', saveSiteSettings);
+            // 添加新的事件监听器
+            saveButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('保存按钮被点击');
+                saveSiteSettings();
+            });
+            
+            // 添加额外的视觉反馈
+            saveButton.addEventListener('mousedown', function() {
+                this.style.transform = 'scale(0.97)';
+            });
+            saveButton.addEventListener('mouseup', function() {
+                this.style.transform = 'scale(1)';
+            });
+        } else {
+            console.error('未找到保存按钮 ID: saveSiteSettings');
+        }
+        
+        // 上传图标按钮事件
+        const uploadButton = document.getElementById('uploadFavicon');
+        if (uploadButton) {
+            uploadButton.addEventListener('click', uploadFavicon);
+        } else {
+            console.warn('未找到上传图标按钮');
+        }
+        
+        // URL图标设置按钮事件
+        const setUrlButton = document.getElementById('setFaviconUrl');
+        if (setUrlButton) {
+            setUrlButton.addEventListener('click', setFaviconUrl);
+        } else {
+            console.warn('未找到图标URL按钮');
+        }
+        
+        // 增强消息区域显示
+        const messageEl = document.getElementById('siteSettingsMessage');
+        if (messageEl) {
+            messageEl.style.transition = 'opacity 0.3s ease';
+            // 确保消息区域默认可见
+            messageEl.style.display = 'block';
+        } else {
+            console.error('未找到消息元素 ID: siteSettingsMessage');
+            // 如果消息元素不存在，创建一个
+            createMessageElement();
+        }
+        
+        console.log('站点设置初始化完成');
+    } catch (error) {
+        console.error('初始化站点设置时出错:', error);
+        alert('初始化站点设置失败: ' + error.message);
     }
-    
-    // 上传图标按钮事件
-    const uploadButton = document.getElementById('uploadFavicon');
-    if (uploadButton) {
-        uploadButton.addEventListener('click', uploadFavicon);
+}
+
+// 创建消息元素（如果不存在）
+function createMessageElement() {
+    if (!document.getElementById('siteSettingsMessage')) {
+        const containerDiv = document.querySelector('.form-group') || 
+                            document.getElementById('saveSiteSettings').parentElement;
+        
+        if (containerDiv) {
+            const messageEl = document.createElement('div');
+            messageEl.id = 'siteSettingsMessage';
+            messageEl.className = 'message';
+            messageEl.style.display = 'none';
+            messageEl.style.margin = '15px 0';
+            messageEl.style.padding = '10px';
+            messageEl.style.borderRadius = '4px';
+            messageEl.style.transition = 'opacity 0.3s ease';
+            
+            containerDiv.parentNode.insertBefore(messageEl, containerDiv);
+            console.log('已创建消息元素');
+        }
     }
-    
-    // URL图标设置按钮事件
-    const setUrlButton = document.getElementById('setFaviconUrl');
-    if (setUrlButton) {
-        setUrlButton.addEventListener('click', setFaviconUrl);
-    }
-    
-    // 增强消息区域显示
-    const messageEl = document.getElementById('siteSettingsMessage');
-    if (messageEl) {
-        messageEl.style.transition = 'opacity 0.3s ease';
-    }
-});
+}
+
+// 当页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', initSiteSettings);
+
+// 如果页面已经加载完成，立即初始化
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    console.log('页面已加载，立即初始化站点设置');
+    initSiteSettings();
+}
