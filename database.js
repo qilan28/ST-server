@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { createSiteSettingsTable } from './database-site-settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -160,15 +161,14 @@ const migrateAddAutoBackupPreference = () => {
     }
 };
 
-// 导入站点设置相关函数
-import { createSiteSettingsTable } from './database-site-settings.js';
+// 站点设置相关函数已在文件顶部导入
 
 // 初始化数据库
 export const initDatabase = () => {
     createUsersTable();
     createAnnouncementsTable();
     createAutoBackupConfigTable();
-    createSiteSettingsTable(); // 添加站点设置表
+    createSiteSettingsTable(db); // 添加站点设置表
     migrateAddRoleField();
     migrateAddLoginFields();
     migrateAddHFFields();
@@ -525,8 +525,7 @@ export const getUserAutoBackupPreference = (username) => {
     return result ? Boolean(result.auto_backup_enabled) : false;
 };
 
-// 导出数据库实例（用于事务等高级操作）
-export { db };
+// 数据库实例已在文件头部导出
 
 // 初始化数据库
 initDatabase();

@@ -1,8 +1,7 @@
 // 为数据库添加站点设置表和相关函数
-import { db } from './database.js';
 
 // 创建站点设置表
-export const createSiteSettingsTable = () => {
+export const createSiteSettingsTable = (db) => {
     db.exec(`
         CREATE TABLE IF NOT EXISTS site_settings (
             id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -29,7 +28,7 @@ export const createSiteSettingsTable = () => {
 };
 
 // 获取站点设置
-export const getSiteSettings = () => {
+export const getSiteSettings = (db) => {
     try {
         const stmt = db.prepare('SELECT * FROM site_settings WHERE id = 1');
         const settings = stmt.get();
@@ -49,7 +48,7 @@ export const getSiteSettings = () => {
 };
 
 // 更新站点设置
-export const updateSiteSettings = (projectName, siteName, faviconPath) => {
+export const updateSiteSettings = (db, projectName, siteName, faviconPath) => {
     try {
         const stmt = db.prepare(`
             UPDATE site_settings 

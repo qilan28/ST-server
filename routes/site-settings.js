@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { authenticateToken, authorizeAdmin } from '../middleware/auth.js';
 import { getSiteSettings, updateSiteSettings } from '../database-site-settings.js';
+import { db } from '../database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,7 +50,7 @@ const upload = multer({
 // 获取网站设置 - 公开API，无需验证
 router.get('/', (req, res) => {
     try {
-        const settings = getSiteSettings();
+        const settings = getSiteSettings(db);
         res.json({
             success: true,
             settings
@@ -69,7 +70,7 @@ router.put('/', authenticateToken, authorizeAdmin, (req, res) => {
         const { project_name, site_name } = req.body;
         
         // 更新文本设置
-        const result = updateSiteSettings(project_name, site_name, null);
+        const result = updateSiteSettings(db, project_name, site_name, null);
         
         if (result) {
             res.json({
@@ -103,7 +104,7 @@ router.post('/favicon', authenticateToken, authorizeAdmin, upload.single('favico
         
         // 文件上传成功，更新数据库中的图标路径
         const faviconPath = '/uploads/favicon/' + req.file.filename;
-        const result = updateSiteSettings(null, null, faviconPath);
+        const result = updateSiteSettings(db, null, null, faviconPath);
         
         if (result) {
             res.json({
