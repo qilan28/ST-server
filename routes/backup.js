@@ -8,7 +8,8 @@ import {
     updateUserHFConfig, 
     getUserHFConfig,
     updateUserAutoBackupPreference,
-    getUserAutoBackupPreference
+    getUserAutoBackupPreference,
+    getAutoBackupConfig
 } from '../database.js';
 import { 
     backupToHuggingFace, 
