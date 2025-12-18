@@ -3,8 +3,11 @@
  * 管理员可以设置实例的最大运行时长，超时自动停止
  */
 
-// API基地址
-const API_BASE = '/api';
+// 使用已存在的API_BASE或创建新变量
+// 避免重复声明错误
+if (typeof API_BASE === 'undefined') {
+    window.API_BASE = '/api';
+}
 
 // 适配管理员页面的API请求函数
 if (typeof apiRequest !== 'function') {
