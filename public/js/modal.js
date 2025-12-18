@@ -196,6 +196,10 @@ function showAlert(message, title = '提示', type = 'info') {
     });
 }
 
+// 先保存原始函数的引用，以避免循环调用
+window.originalModalConfirm = showConfirm;
+window.originalModalAlert = showAlert;
+
 // 导出为全局函数（兼容性）
 window.showConfirm = showConfirm;
 window.showAlert = showAlert;

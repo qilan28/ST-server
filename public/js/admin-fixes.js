@@ -838,32 +838,56 @@ function initRefreshIntervalSelect() {
 // 确认对话框
 async function showConfirm(message, title = '确认', options = {}) {
     return new Promise((resolve) => {
-        // 检查模态框函数是否存在
-        if (typeof showModal !== 'function') {
+        // 检查是否可以安全使用模态框
+        const canUseModal = typeof showModal === 'function' && 
+                        // 确保不是在admin-fixes.js这里定义的自身函数
+                        (window.showModal !== undefined && window.showModal !== showConfirm);
+        
+        if (!canUseModal) {
             // 回退到原生确认
+            console.log('使用原生确认对话框');
             const confirmed = confirm(message);
             resolve(confirmed);
             return;
         }
         
-        // 使用模态框
-        showModal({
-            title: title,
-            content: message,
-            type: options.type || 'warning',
-            buttons: [
-                {
-                    text: '取消',
-                    type: 'secondary',
-                    onClick: () => resolve(false)
-                },
-                {
-                    text: '确认',
-                    type: options.type || 'warning',
-                    onClick: () => resolve(true)
-                }
-            ]
-        });
+        // 使用原生modal.js中的确认对话框函数
+        if (window.originalModalConfirm) {
+            window.originalModalConfirm(message, title, options)
+                .then(result => resolve(result))
+                .catch(err => {
+                    console.error('模态框错误，回退到原生:', err);
+                    const confirmed = confirm(message);
+                    resolve(confirmed);
+                });
+            return;
+        }
+        
+        // 如果上面都不可用，尝试使用showModal
+        try {
+            showModal({
+                title: title,
+                content: message,
+                type: options.type || 'warning',
+                buttons: [
+                    {
+                        text: options.cancelText || '取消',
+                        type: 'secondary',
+                        onClick: () => resolve(false)
+                    },
+                    {
+                        text: options.confirmText || '确认',
+                        type: options.type || 'warning',
+                        onClick: () => resolve(true)
+                    }
+                ]
+            });
+        } catch (error) {
+            // 发生错误，回退到原生确认
+            console.error('模态框异常，回退到原生:', error);
+            const confirmed = confirm(message);
+            resolve(confirmed);
+        }
     });
 }
 
