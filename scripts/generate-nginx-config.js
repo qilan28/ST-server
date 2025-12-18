@@ -10,29 +10,36 @@ const __dirname = path.dirname(__filename);
 function generateNginxConfig() {
     console.log('正在生成 Nginx 配置文件...');
     
-    // 读取配置
-    const nginxConfig = getNginxConfig();
-    const MAIN_DOMAIN = nginxConfig.domain || 'localhost';
-    const NGINX_PORT = nginxConfig.port || 80;
-    const MANAGER_PORT = process.env.PORT || 3000;
-    const ENABLE_ACCESS_CONTROL = nginxConfig.enableAccessControl !== false; // 默认启用
+    // 检测当前操作系统
+    const isWindows = process.platform === 'win32';
+    console.log(`当前操作系统: ${isWindows ? 'Windows' : 'Linux/Unix'}`);
     
-    // 读取所有用户（排除管理员和没有端口的用户）
-    const allUsers = getAllUsers();
-    const users = allUsers.filter(user => {
-        // 排除管理员
-        if (user.role === 'admin') return false;
-        // 排除没有分配端口的用户
-        if (!user.port || user.port === 0) return false;
-        return true;
-    });
-    
-    console.log(`找到 ${users.length} 个普通用户需要配置`);
-    
-    // 生成 upstream 块
-    let upstreamServers = '';
-    users.forEach(user => {
-        upstreamServers += `
+    try {
+        // 读取配置
+        const nginxConfig = getNginxConfig();
+        const MAIN_DOMAIN = nginxConfig.domain || 'localhost';
+        const NGINX_PORT = nginxConfig.port || 80;
+        const MANAGER_PORT = process.env.PORT || 3000;
+        const ENABLE_ACCESS_CONTROL = nginxConfig.enableAccessControl !== false; // 默认启用
+        
+        console.log(`域名: ${MAIN_DOMAIN}, 端口: ${NGINX_PORT}`);
+        
+        // 读取所有用户（排除管理员和没有端口的用户）
+        const allUsers = getAllUsers();
+        const users = allUsers.filter(user => {
+            // 排除管理员
+            if (user.role === 'admin') return false;
+            // 排除没有分配端口的用户
+            if (!user.port || user.port === 0) return false;
+            return true;
+        });
+        
+        console.log(`找到 ${users.length} 个普通用户需要配置`);
+        
+        // 生成 upstream 块
+        let upstreamServers = '';
+        users.forEach(user => {
+            upstreamServers += `
 # ${user.username} 的 SillyTavern 实例
 upstream st_${user.username} {
     server 127.0.0.1:${user.port};
@@ -275,6 +282,15 @@ upstream st_${user.username} {
         console.log(`   ${exampleUser.username} 的 ST: http://${MAIN_DOMAIN}:${NGINX_PORT}/${exampleUser.username}/st/`);
     }
     console.log();
+    
+    // 返回输出路径
+    return outputPath;
+    
+    } catch (error) {
+        // 处理错误
+        console.error('❗ 生成Nginx配置文件时出错:', error.message);
+        throw error; // 向上抛出错误
+    }
 }
 
 // 如果直接运行此脚本

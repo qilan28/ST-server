@@ -78,30 +78,76 @@ router.put('/nginx', (req, res) => {
 // 生成 Nginx 配置文件
 router.post('/nginx/generate', async (req, res) => {
     try {
+        // 获取当前操作系统
+        const isWindows = process.platform === 'win32';
+        console.log(`[Config] 检测到操作系统: ${isWindows ? 'Windows' : 'Linux/Unix'}`);
+        
         // 生成配置文件
-        generateNginxConfig();
-        console.log('[Config] Nginx 配置文件已生成');
-        
-        // 自动重载 Nginx
-        const reloadResult = await reloadNginx();
-        
-        if (reloadResult.success) {
-            console.log(`[Config] ✅ Nginx 配置已自动重载 (方式: ${reloadResult.method || 'unknown'})`);
-            res.json({ 
-                message: 'Nginx configuration file generated and reloaded successfully',
-                reloadMethod: reloadResult.method
+        try {
+            generateNginxConfig();
+            console.log('[Config] Nginx 配置文件已生成');
+        } catch (genError) {
+            console.error('[Config] 生成Nginx配置文件失败:', genError.message);
+            return res.status(500).json({
+                error: `生成配置文件失败: ${genError.message}`,
+                details: genError.stack
             });
-        } else {
-            console.error('[Config] ⚠️ Nginx 配置重载失败:', reloadResult.error);
-            res.json({ 
-                message: 'Nginx configuration file generated, but reload failed',
-                warning: reloadResult.error,
-                needManualReload: true
+        }
+        
+        // 获取配置文件路径
+        const configPath = getNginxConfigPath();
+        
+        // Windows环境下仅生成文件，不尝试重载
+        if (isWindows) {
+            console.log('[Config] Windows环境下仅生成配置文件，不尝试重载');
+            return res.json({
+                success: true,
+                message: 'Nginx configuration file generated successfully on Windows',
+                path: configPath,
+                method: 'windows_simulation',
+                info: '在Windows环境下，配置文件只会被生成，但不会尝试重载Nginx'
+            });
+        }
+        
+        // Linux环境下进行重载尝试
+        try {
+            // 自动重载 Nginx
+            const reloadResult = await reloadNginx();
+            
+            if (reloadResult.success) {
+                console.log(`[Config] ✅ Nginx 配置已自动重载 (方式: ${reloadResult.method || 'unknown'})`);
+                res.json({ 
+                    success: true,
+                    message: 'Nginx configuration file generated and reloaded successfully',
+                    reloadMethod: reloadResult.method,
+                    path: configPath
+                });
+            } else {
+                console.warn('[Config] ⚠️ Nginx 配置重载失败:', reloadResult.error);
+                res.json({ 
+                    success: true, // 说明文件生成成功了
+                    message: 'Nginx configuration file generated, but reload failed',
+                    warning: reloadResult.error,
+                    needManualReload: true,
+                    path: configPath
+                });
+            }
+        } catch (reloadError) {
+            console.error('[Config] 重载过程出错:', reloadError.message);
+            res.json({
+                success: true, // 文件生成成功，尽管重载失败
+                message: 'Nginx configuration file generated, but reload process errored',
+                error: reloadError.message,
+                needManualReload: true,
+                path: configPath
             });
         }
     } catch (error) {
         console.error('Generate nginx config error:', error);
-        res.status(500).json({ error: 'Failed to generate nginx config file' });
+        res.status(500).json({
+            error: 'Failed to generate nginx config file',
+            message: error.message
+        });
     }
 });
 

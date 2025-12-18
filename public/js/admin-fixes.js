@@ -235,24 +235,32 @@ async function loadNginxConfig() {
 // 保存Nginx配置
 async function saveNginxConfig() {
     try {
+        // 显示加载指示器
+        const saveButton = document.querySelector('button.btn.btn-primary');
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.textContent = '保存中...';
+        }
+
         const enabled = document.getElementById('nginxEnabled').checked;
-        const domain = document.getElementById('nginxDomain').value.trim();
-        const port = parseInt(document.getElementById('nginxPort').value);
+        const domain = document.getElementById('nginxDomain').value.trim() || 'localhost'; // 提供默认值
+        const port = parseInt(document.getElementById('nginxPort').value) || 80;
         
         // 验证输入
-        if (enabled && !domain) {
-            showMessage('启用Nginx模式时必须提供域名', 'error');
-            return;
-        }
-        
         if (port < 1 || port > 65535) {
             showMessage('端口必须在1-65535之间', 'error');
             return;
         }
         
+        console.log('发送Nginx配置:', { enabled, domain, port });
+        
         // 发送保存请求
-        const response = await apiRequest(`${API_BASE}/config/nginx`, {
+        const response = await fetch(`${API_BASE}/config/nginx`, {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
             body: JSON.stringify({
                 enabled,
                 domain,
@@ -260,54 +268,125 @@ async function saveNginxConfig() {
             })
         });
         
-        if (!response) return;
+        // 处理非200响应
+        if (!response.ok) {
+            console.error(`保存失败: HTTP ${response.status} ${response.statusText}`);
+            showMessage(`保存失败: HTTP ${response.status} ${response.statusText}`, 'error');
+            return;
+        }
         
         const data = await response.json();
+        console.log('服务器响应:', data);
         
-        if (data.success) {
-            showMessage('Nginx配置保存成功', 'success', 'configMessage');
+        // 判断成功条件 - 没有error且有message或nginx
+        if (!data.error && (data.message || data.nginx)) {
+            console.log('保存成功');
+            showMessage('Nginx配置保存成功', 'success');
+            
+            // 重新加载数据
+            setTimeout(() => loadNginxConfig(), 500);
         } else {
-            showMessage(data.error || '保存失败', 'error', 'configMessage');
+            console.error('保存失败:', data.error || '未知错误');
+            showMessage(data.error || '保存失败', 'error');
         }
     } catch (error) {
         console.error('保存Nginx配置失败:', error);
-        showMessage('保存失败，请重试', 'error', 'configMessage');
+        showMessage(`保存失败: ${error.message || '未知错误'}`, 'error');
+    } finally {
+        // 恢复按钮状态
+        const saveButton = document.querySelector('button.btn.btn-primary');
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent = '保存配置';
+        }
     }
 }
 
 // 生成Nginx配置文件
 async function generateNginxConfig() {
     try {
+        // 显示加载状态
+        const generateButton = document.querySelector('button.btn.btn-secondary');
+        if (generateButton) {
+            generateButton.disabled = true;
+            generateButton.textContent = '生成中...';
+        }
+
         // 先检查是否已启用
         const enabled = document.getElementById('nginxEnabled').checked;
         
         if (!enabled) {
-            if (!await showConfirm('Nginx模式未启用，确定要生成配置文件吗？', '生成配置文件')) {
+            const confirmResult = confirm('Nginx模式未启用，确定要生成配置文件吗？');
+            if (!confirmResult) {
+                if (generateButton) {
+                    generateButton.disabled = false;
+                    generateButton.textContent = '生成 Nginx 配置文件';
+                }
                 return;
             }
         }
         
-        const response = await apiRequest(`${API_BASE}/config/nginx/generate`, {
-            method: 'POST'
+        console.log('发送生成Nginx配置文件请求');
+        
+        const response = await fetch(`${API_BASE}/config/nginx/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
         });
         
-        if (!response) return;
+        // 处理非200响应
+        if (!response.ok) {
+            console.error(`生成配置文件失败: HTTP ${response.status} ${response.statusText}`);
+            showMessage(`生成失败: HTTP ${response.status} ${response.statusText}`, 'error');
+            return;
+        }
         
         const data = await response.json();
+        console.log('服务器响应:', data);
         
-        if (data.success) {
-            showMessage('Nginx配置文件生成成功，请在服务器上查看', 'success', 'configMessage');
+        // Windows环境下有特殊处理
+        if (data.method === 'windows_simulation') {
+            showMessage('配置文件已生成（Windows环境下不自动重载）', 'success');
+            if (data.message) {
+                showMessage(data.message, 'info');
+            }
+            return;
+        }
+        
+        // 判断成功条件 - 没有error就认为成功
+        if (!data.error) {
+            showMessage('Nginx配置文件生成成功', 'success');
             
-            // 可以提示配置文件位置
+            // 如果有路径信息
             if (data.path) {
-                showMessage(`配置文件路径: ${data.path}`, 'info', 'configMessage');
+                showMessage(`配置文件路径: ${data.path}`, 'info');
+            }
+            
+            // 如果有警告信息
+            if (data.warning) {
+                showMessage(`警告: ${data.warning}`, 'warning');
+            }
+            
+            // 如果需要手动重载
+            if (data.needManualReload) {
+                showMessage('配置文件已生成，但需要手动重载Nginx', 'warning');
             }
         } else {
-            showMessage(data.error || '生成配置文件失败', 'error', 'configMessage');
+            console.error('生成失败:', data.error);
+            showMessage(data.error || '生成配置文件失败', 'error');
         }
     } catch (error) {
         console.error('生成Nginx配置文件失败:', error);
-        showMessage('生成配置文件失败，请重试', 'error', 'configMessage');
+        showMessage(`生成失败: ${error.message || '未知错误'}`, 'error');
+    } finally {
+        // 恢复按钮状态
+        const generateButton = document.querySelector('button.btn.btn-secondary');
+        if (generateButton) {
+            generateButton.disabled = false;
+            generateButton.textContent = '生成 Nginx 配置文件';
+        }
     }
 }
 

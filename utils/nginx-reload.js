@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import os from 'os';
 
 const execPromise = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -21,6 +22,28 @@ export function getNginxConfigPath() {
  * @param {string} configPath - Nginx 配置文件路径
  */
 export async function testNginxConfig(configPath) {
+    // 检测操作系统
+    const isWindows = os.platform() === 'win32';
+    
+    if (isWindows) {
+        console.log('[Nginx] Windows环境下模拟配置测试');
+        // Windows环境下只检查文件是否存在和可读
+        if (fs.existsSync(configPath)) {
+            try {
+                // 检查是否可读
+                fs.accessSync(configPath, fs.constants.R_OK);
+                console.log('[Nginx] 配置文件存在且可读');
+                return { success: true, output: '配置文件检查完成', simulated: true };
+            } catch (error) {
+                console.error('[Nginx] 配置文件无法访问:', error.message);
+                return { success: false, error: '无法访问配置文件: ' + error.message, simulated: true };
+            }
+        } else {
+            return { success: false, error: '配置文件不存在: ' + configPath, simulated: true };
+        }
+    }
+    
+    // Linux环境下执行实际的测试
     try {
         const { stdout, stderr } = await execPromise(`nginx -t -c "${configPath}"`);
         console.log('[Nginx] 配置测试通过');
@@ -49,13 +72,33 @@ export async function reloadNginx(configPath = null) {
             };
         }
         
-        // 先测试配置
-        const testResult = await testNginxConfig(confPath);
-        if (!testResult.success) {
-            return { 
-                success: false, 
-                error: '配置测试失败: ' + testResult.error 
+        // 检测操作系统
+        const isWindows = os.platform() === 'win32';
+        
+        // Windows环境下模拟重载
+        if (isWindows) {
+            console.log('[Nginx] Windows环境下模拟重载操作');
+            console.log('[Nginx] 配置文件已生成: ' + confPath);
+            
+            // Windows下仅生成配置文件，不进行实际重载
+            return {
+                success: true,
+                method: 'windows_simulation',
+                message: '在Windows环境下生成了Nginx配置文件，但没有进行实际重载操作'
             };
+        }
+        
+        // Linux环境下继续尝试测试配置
+        try {
+            const testResult = await testNginxConfig(confPath);
+            if (!testResult.success) {
+                return { 
+                    success: false, 
+                    error: '配置测试失败: ' + testResult.error 
+                };
+            }
+        } catch (testError) {
+            console.log('[Nginx] 配置测试跳过: ' + testError.message);
         }
         
         console.log('[Nginx] 正在重载配置...');
@@ -90,7 +133,8 @@ export async function reloadNginx(configPath = null) {
                     console.error('[Nginx] 重启失败:', restartError.message);
                     return { 
                         success: false, 
-                        error: '重载和重启都失败: ' + restartError.message 
+                        error: '重载和重启都失败: ' + restartError.message,
+                        message: '配置文件已生成，但需要手动重启nginx'
                     };
                 }
             }
