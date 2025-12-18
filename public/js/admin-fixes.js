@@ -167,7 +167,7 @@ async function loadNginxConfig() {
         const data = await response.json();
         console.log('收到 Nginx 配置数据:', data);
         
-        const config = data.config || {};
+        const config = data.nginx || {};
         
         // 检查UI元素
         const enabledCheckbox = document.getElementById('nginxEnabled');

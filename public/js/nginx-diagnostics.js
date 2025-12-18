@@ -53,11 +53,11 @@ async function diagnoseNginxConfig() {
         const data = await response.json();
         console.log('✅ 收到 API 响应:', data);
         
-        if (!data.config) {
-            console.warn('⚠️ 响应中没有配置数据');
+        if (!data.nginx) {
+            console.warn('⚠️ 响应中没有Nginx配置数据');
             return {
                 success: true,
-                message: 'API 响应成功，但没有配置数据',
+                message: 'API 响应成功，但没有Nginx配置数据',
                 data: data,
                 needsCreate: true
             };
@@ -91,6 +91,15 @@ async function fixNginxConfig() {
             console.log('📝 需要创建初始 Nginx 配置...');
             
             try {
+                // 构造默认配置
+                const nginxConfig = {
+                    enabled: false,
+                    domain: 'localhost',  // 提供一个默认域名而不是空字符串
+                    port: 80
+                };
+                
+                console.log('将发送的Nginx配置:', nginxConfig);
+                
                 // 创建默认配置
                 const response = await fetch('/api/config/nginx', {
                     method: 'PUT',
@@ -98,18 +107,28 @@ async function fixNginxConfig() {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     },
-                    body: JSON.stringify({
-                        enabled: false,
-                        domain: '',
-                        port: 80
-                    })
+                    body: JSON.stringify(nginxConfig)
                 });
                 
+                // 检查响应状态
                 if (!response.ok) {
-                    console.error(`❌ 创建配置失败: ${response.status} ${response.statusText}`);
+                    console.error(`✖ 创建配置失败: ${response.status} ${response.statusText}`);
+                    
+                    // 尝试获取错误详情
+                    let errorDetail = '';
+                    try {
+                        const errorData = await response.json();
+                        errorDetail = errorData.error || '';
+                    } catch (e) {
+                        // 无法解析错误响应
+                    }
+                    
                     return {
                         success: false,
-                        message: `创建配置失败: ${response.status} ${response.statusText}`
+                        message: `创建配置失败: ${response.status} ${response.statusText}${errorDetail ? ': ' + errorDetail : ''}`,
+                        status: response.status,
+                        statusText: response.statusText,
+                        errorDetail
                     };
                 }
                 
