@@ -7,11 +7,20 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('站点设置修复工具已加载');
     
-    // 等待页面完全加载后执行
+    // 注意：如果页面已经加载完成，不再强制刷新
+    // 为确保在一些情况下站点设置正确加载，我们仍进行递延检查
     setTimeout(() => {
-        // 刷新站点设置
+        // 如果内容已显示(加载完成)，且网站设置已应用，则不再强制刷新
+        if (document.body.classList.contains('content-loaded') && 
+            window.siteSettings && 
+            window.siteSettings.loaded) {
+            console.log('页面已加载完成，无需强制刷新站点设置');
+            return;
+        }
+        
+        // 如果内容还未加载完成或设置未应用，则强制刷新
         forceRefreshSiteSettings();
-    }, 1000);
+    }, 1500); // 增加延迟，确保主脚本有足够时间先运行
 });
 
 // 强制刷新站点设置
@@ -54,6 +63,26 @@ async function forceRefreshSiteSettings() {
             }
             
             console.log('站点设置已强制刷新');
+            
+            // 将数据存入全局设置
+            window.siteSettings = {
+                loaded: true,
+                data: data
+            };
+            
+            // 如果页面内容还未显示，显示内容
+            if (!document.body.classList.contains('content-loaded')) {
+                document.body.classList.add('content-loaded');
+                console.log('页面内容已显示');
+                
+                // 移除加载层
+                setTimeout(() => {
+                    const loadingOverlay = document.querySelector('.loading-overlay');
+                    if (loadingOverlay) {
+                        loadingOverlay.style.display = 'none';
+                    }
+                }, 500);
+            }
         }
     } catch (error) {
         console.error('强制刷新站点设置时出错:', error);
