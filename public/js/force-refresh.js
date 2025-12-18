@@ -40,7 +40,7 @@ function addForceRefreshButton() {
     
     // 点击事件 - 强制刷新页面
     refreshButton.addEventListener('click', () => {
-        console.log('执行强制刷新...');
+        // 执行强制刷新
         
         // 清除缓存参数
         const cacheBuster = new Date().getTime();
@@ -62,19 +62,19 @@ function addForceRefreshButton() {
         }
         
         // 重新加载页面
-        console.log(`刷新到新URL: ${newUrl}`);
+        // 刷新到新URL
         window.location.href = newUrl;
     });
     
     // 添加到页面
     document.body.appendChild(refreshButton);
-    console.log('强制刷新按钮已添加到页面');
+    // 强制刷新按钮已添加到页面
 }
 
 // 监听错误事件
 function setupErrorListener() {
     window.addEventListener('error', (event) => {
-        console.error('捕获到页面错误:', event.message);
+        // 捕获到页面错误
         // 在发生错误时显示强制刷新按钮
         addForceRefreshButton();
     });
@@ -84,7 +84,7 @@ function setupErrorListener() {
 window.debugTools = {
     // 强制重新加载站点设置
     reloadSiteSettings: function() {
-        console.log('手动重新加载站点设置...');
+        // 手动重新加载站点设置
         if (typeof loadSiteSettings === 'function') {
             loadSiteSettings();
             return '站点设置重新加载请求已发送';
@@ -98,10 +98,7 @@ window.debugTools = {
         const projectName = document.getElementById('projectName')?.value || '未找到';
         const siteName = document.getElementById('siteName')?.value || '未找到';
         
-        console.log('当前表单值:', {
-            projectName,
-            siteName
-        });
+        // 输出当前表单值
         
         return { projectName, siteName };
     }
@@ -109,7 +106,7 @@ window.debugTools = {
 
 // 当DOM加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('强制刷新工具已加载');
+    // 强制刷新工具已加载
     // 预先设置错误监听
     setupErrorListener();
     

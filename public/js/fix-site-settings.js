@@ -5,7 +5,7 @@
 
 // 确保先加载脚本依赖
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('站点设置修复工具已加载');
+    // 站点设置修复工具已加载
     
     // 注意：如果页面已经加载完成，不再强制刷新
     // 为确保在一些情况下站点设置正确加载，我们仍进行递延检查
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.body.classList.contains('content-loaded') && 
             window.siteSettings && 
             window.siteSettings.loaded) {
-            console.log('页面已加载完成，无需强制刷新站点设置');
+            // 页面已加载完成，无需强制刷新站点设置
             return;
         }
         
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // 强制刷新站点设置
 async function forceRefreshSiteSettings() {
     try {
-        console.log('正在强制刷新站点设置...');
+        // 正在强制刷新站点设置
         
         // 防缓存时间戳
         const timestamp = new Date().getTime();
@@ -39,12 +39,12 @@ async function forceRefreshSiteSettings() {
         });
         
         if (!response.ok) {
-            console.error('获取站点设置失败:', response.status);
+            // 获取站点设置失败
             return;
         }
         
         const data = await response.json();
-        console.log('已获取最新站点设置:', data);
+        // 已获取最新站点设置
         
         if (data.success && data.settings) {
             const { project_name, site_name } = data.settings;
@@ -52,17 +52,17 @@ async function forceRefreshSiteSettings() {
             // 更新项目名称
             if (project_name) {
                 updateElements('.subtitle', project_name);
-                console.log('项目名称已更新:', project_name);
+                // 项目名称已更新
             }
             
             // 更新网站名称
             if (site_name) {
                 updateElements('.site-name', site_name);
                 updatePageTitle(site_name);
-                console.log('网站名称已更新:', site_name);
+                // 网站名称已更新
             }
             
-            console.log('站点设置已强制刷新');
+            // 站点设置已强制刷新
             
             // 将数据存入全局设置
             window.siteSettings = {
@@ -73,7 +73,7 @@ async function forceRefreshSiteSettings() {
             // 如果页面内容还未显示，显示内容
             if (!document.body.classList.contains('content-loaded')) {
                 document.body.classList.add('content-loaded');
-                console.log('页面内容已显示');
+                // 页面内容已显示
                 
                 // 移除加载层
                 setTimeout(() => {
@@ -85,7 +85,7 @@ async function forceRefreshSiteSettings() {
             }
         }
     } catch (error) {
-        console.error('强制刷新站点设置时出错:', error);
+        // 强制刷新站点设置时出错
     }
 }
 
@@ -97,7 +97,7 @@ function updateElements(selector, content) {
             el.textContent = content;
         });
     } else {
-        console.warn(`未找到元素: ${selector}`);
+        // 未找到元素
     }
 }
 

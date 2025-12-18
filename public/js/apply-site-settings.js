@@ -26,11 +26,11 @@
     // 加载并应用站点设置
     async function applySiteSettings() {
         try {
-            console.log('正在加载站点设置...');
+            // 正在加载站点设置
             
             // 检查是否已经有预加载的设置
             if (window.siteSettings && window.siteSettings.loaded && window.siteSettings.data) {
-                console.log('使用预加载的站点设置');
+                // 使用预加载的站点设置
                 applySettings(window.siteSettings.data);
                 showContent();
                 return;
@@ -47,14 +47,14 @@
             });
             
             if (!response.ok) {
-                console.error('获取站点设置失败:', response.status);
+                // 获取站点设置失败
                 // 即使失败也显示页面
                 showContent();
                 return;
             }
             
             const data = await response.json();
-            console.log('获取到站点设置:', data);
+            // 获取到站点设置
             
             // 成功应用设置
             if (data.success && data.settings) {
@@ -72,7 +72,7 @@
             showContent();
             
         } catch (error) {
-            console.error('应用站点设置失败:', error);
+            // 应用站点设置失败
             // 出错时仍然显示页面
             showContent();
         }
@@ -86,7 +86,7 @@
         
         // 应用项目名称到特定元素
         if (project_name) {
-            console.log('应用项目名称:', project_name);
+            // 应用项目名称
             // 更新登录页面的多开管理平台文本
             const subtitleElements = document.querySelectorAll('.logo p, .subtitle');
             subtitleElements.forEach(el => {
@@ -96,7 +96,7 @@
         
         // 应用网站标题
         if (site_name) {
-            console.log('应用网站标题:', site_name);
+            // 应用网站标题
             // 更新所有带有网站名称的元素，但排除包含log的元素
             const siteNameElements = document.querySelectorAll('.site-name');
             siteNameElements.forEach(el => {
