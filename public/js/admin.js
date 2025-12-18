@@ -648,6 +648,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     loadNginxConfig();
                     setTimeout(() => {
                         loadAutoBackupConfig();
+                        setTimeout(() => {
+                            // 加载运行时长限制配置
+                            if (typeof loadRuntimeLimitConfig === 'function') {
+                                loadRuntimeLimitConfig();
+                            }
+                        }, 300);
                     }, 300);
                 }, 300);
             }, 300);

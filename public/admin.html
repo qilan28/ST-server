@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/table-fix.css">
     <link rel="stylesheet" href="/css/loading.css">
+    <link rel="stylesheet" href="/css/admin-runtime-limit.css">
     <!-- 权限验证脚本 (必须放在最前面) -->
     <script src="/js/auth-check.js"></script>
     
@@ -509,6 +510,14 @@
                 </div>
             </div>
 
+            <!-- 运行时长限制配置 -->
+            <div class="users-card">
+                <h2>⏱ 运行时长限制</h2>
+                <div id="runtimeLimitConfig">
+                    <div class="loading-indicator">加载中...</div>
+                </div>
+            </div>
+
             <!-- 自动备份配置 -->
             <div class="users-card">
                 <h2>⏰ 自动备份配置</h2>
@@ -665,6 +674,8 @@
     <script src="/js/admin-nginx.js"></script>
     <!-- 新增修复脚本 -->
     <script src="/js/admin-fixes.js"></script>
+    <!-- 运行时长限制脚本 -->
+    <script src="/js/admin-runtime-limit.js"></script>
     
     <!-- 调试与诊断工具脚本已移除 -->
 </body>

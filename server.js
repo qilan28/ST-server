@@ -17,11 +17,13 @@ import backupRoutes from './routes/backup.js';
 import proxyRoutes from './routes/proxy.js';
 import siteSettingsRoutes from './routes/site-settings.js';
 import friendsRoutes from './routes/friends.js';
+import runtimeLimiterRoutes from './routes/runtime-limiter.js';
 import { protectPage } from './middleware/page-auth.js';
 import './database.js';
 import { findUserByUsername, createAdminUser } from './database.js';
 import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
 import { startAutoBackupScheduler, stopAutoBackupScheduler } from './services/auto-backup.js';
+import { initRuntimeLimiter, stopRuntimeLimitCheck } from './runtime-limiter.js';
 
 // 加载环境变量
 dotenv.config();
@@ -140,6 +142,7 @@ app.use('/api/announcements', announcementsRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/proxy', proxyRoutes);
 app.use('/api/site-settings', siteSettingsRoutes);
+app.use('/api/runtime-limit', runtimeLimiterRoutes);
 app.use('/', friendsRoutes); // 友情链接路由（包含公开和管理员路由）
 
 // 健康检查
@@ -178,17 +181,27 @@ app.listen(PORT, () => {
     } catch (error) {
         console.error('[自动备份] ❗ 启动失败:', error.message);
     }
+    
+    // 初始化运行时长限制
+    try {
+        initRuntimeLimiter();
+        console.log('[运行时长限制] ✅ 初始化成功');
+    } catch (error) {
+        console.error('[运行时长限制] ❗ 初始化失败:', error.message);
+    }
 });
 
 // 优雅关闭
 process.on('SIGTERM', () => {
     console.log('SIGTERM signal received: closing HTTP server');
     stopAutoBackupScheduler();
+    stopRuntimeLimitCheck();
     process.exit(0);
 });
 
 process.on('SIGINT', () => {
     console.log('SIGINT signal received: closing HTTP server');
     stopAutoBackupScheduler();
+    stopRuntimeLimitCheck();
     process.exit(0);
 });

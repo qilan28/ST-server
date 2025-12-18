@@ -4,6 +4,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { updateUserStatus, updateUserPort } from './database.js';
 import { getSafeRandomPort } from './utils/port-helper.js';
+import { recordInstanceStart, removeInstanceStartTime } from './runtime-limiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -89,7 +90,10 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
                     console.error(`Failed to start instance for ${username}:`, err);
                     reject(err);
                 } else {
+                    // 更新状态并记录启动时间
                     updateUserStatus(username, 'running');
+                    recordInstanceStart(username);
+                    console.log(`[Instance] 已记录用户 ${username} 的实例启动时间`);
                     resolve({ apps, port });  // 返回应用和使用的端口
                 }
             });
@@ -116,6 +120,8 @@ export const stopInstance = async (username) => {
                 reject(err);
             } else {
                 updateUserStatus(username, 'stopped');
+                removeInstanceStartTime(username);
+                console.log(`[Instance] 已移除用户 ${username} 的实例启动时间记录`);
                 resolve(proc);
             }
         });
