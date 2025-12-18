@@ -302,6 +302,29 @@ async function handleRegister(event) {
     }
 }
 
+// 密码显示与隐藏切换函数
+function togglePasswordVisibility(inputId, toggleElement) {
+    const passwordInput = document.getElementById(inputId);
+    const eyeIcon = toggleElement.querySelector('svg');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        // 添加关闭的眼睛图标（斜线）
+        eyeIcon.innerHTML = `
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+            <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"></line>
+        `;
+    } else {
+        passwordInput.type = 'password';
+        // 恢复正常的眼睛图标
+        eyeIcon.innerHTML = `
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+        `;
+    }
+}
+
 // 检查是否已登录
 function checkAuth() {
     const token = localStorage.getItem('token');

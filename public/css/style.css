@@ -1106,7 +1106,65 @@ body {
     margin: 0 auto;
 }
 
-/* 表单输入框 */
+/* 现代输入框样式 - 对应图片中的样式 */
+.modern-input {
+    position: relative;
+}
+
+.modern-input label {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}
+
+.input-container {
+    position: relative;
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.3s;
+}
+
+.modern-input input {
+    width: 100%;
+    padding: 10px 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 1rem;
+    color: #333;
+}
+
+.modern-input input::placeholder {
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.input-container:focus-within {
+    border-bottom: 1px solid var(--primary-color);
+}
+
+/* 密码输入框特殊样式 */
+.password-container {
+    display: flex;
+    align-items: center;
+}
+
+.password-toggle {
+    cursor: pointer;
+    color: #999;
+    padding: 0 5px;
+    transition: color 0.3s;
+}
+
+.password-toggle:hover {
+    color: var(--primary-color);
+}
+
+.password-toggle svg {
+    vertical-align: middle;
+}
+
+/* 表单输入框 - 原来的样式，保留作兼容 */
 .form-input {
     width: 100%;
     padding: 10px 12px;
