@@ -97,10 +97,17 @@
         // 应用网站标题
         if (site_name) {
             console.log('应用网站标题:', site_name);
-            // 更新所有带有网站名称的元素
-            const siteNameElements = document.querySelectorAll('.logo h1, .site-name');
+            // 更新所有带有网站名称的元素，但排除包含log的元素
+            const siteNameElements = document.querySelectorAll('.site-name');
             siteNameElements.forEach(el => {
-                el.textContent = site_name;
+                // 保留页面特殊文本，如控制台或管理员面板
+                if (el.textContent.includes('控制台')) {
+                    el.textContent = `${site_name} 控制台`;
+                } else if (el.textContent.includes('面板')) {
+                    // 管理员面板由h2处理，不修改
+                } else {
+                    el.textContent = site_name;
+                }
             });
             
             // 保留页面特定的前缀，如“管理员面板 -”

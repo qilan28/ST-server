@@ -49,6 +49,18 @@ body {
     margin-bottom: 30px;
 }
 
+.site-logo {
+    max-width: 180px;
+    height: auto;
+    display: block;
+    margin: 0 auto 10px;
+    transition: transform 0.3s ease;
+}
+
+.site-logo:hover {
+    transform: scale(1.05);
+}
+
 .logo h1 {
     font-size: 2.5rem;
     color: var(--primary-color);
@@ -1051,10 +1063,35 @@ body {
 .admin-header-buttons {
     position: fixed;
     top: 20px;
+    left: 20px;
     right: 20px;
     z-index: 1000;
     display: flex;
-    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Header logo样式 */
+.header-logo-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-logo-container img.site-logo {
+    height: 40px;
+    width: auto;
+    margin: 0;
+}
+
+.header-logo-container h1,
+.header-logo-container h2 {
+    margin: 0;
+    font-size: 1.5rem;
 }
 
 /* 管理员面板主内容区 */
@@ -1128,6 +1165,20 @@ input:checked + .slider:before {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+    /* Logo移动端优化 */
+    .header-logo-container {
+        gap: 10px;
+    }
+    
+    .header-logo-container img.site-logo {
+        height: 32px;
+    }
+    
+    .header-logo-container h1,
+    .header-logo-container h2 {
+        font-size: 1.2rem;
+    }
+    
     /* 通用移动端优化 */
     body {
         font-size: 14px;
@@ -1391,8 +1442,11 @@ input:checked + .slider:before {
     .admin-header-buttons {
         top: 10px !important;
         right: 10px !important;
+        left: 10px !important;
+    }
+    
+    .admin-header-buttons > div {
         flex-direction: column;
-        gap: 5px !important;
     }
     
     .admin-header-buttons .btn {
@@ -1508,6 +1562,25 @@ input:checked + .slider:before {
 
 /* 小屏幕手机优化 (竖屏) */
 @media (max-width: 480px) {
+    /* Logo更小屏幕优化 */
+    .header-logo-container {
+        gap: 8px;
+    }
+    
+    .header-logo-container img.site-logo {
+        height: 28px;
+    }
+    
+    .header-logo-container h1,
+    .header-logo-container h2 {
+        font-size: 1rem;
+    }
+    
+    /* 管理员面板头部调整 */
+    .admin-header-buttons {
+        padding: 8px 5px;
+    }
+    
     /* 统计网格改为单列 */
     .stats-grid {
         grid-template-columns: 1fr;

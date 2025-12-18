@@ -31,13 +31,22 @@
     <div class="container">
         <!-- 顶部导航区 -->
         <div class="admin-header-buttons">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <img id="adminUserAvatar" src="" alt="头像" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
-                    <span id="adminUsername" style="color: #4a5568; font-weight: 600;"></span>
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <!-- 添加Logo -->
+                <div class="header-logo-container">
+                    <img src="/logo.png" alt="Logo" class="site-logo">
+                    <h2 style="color: #4a5568;">管理员面板</h2>
                 </div>
-                <a href="/dashboard.html" id="backToDashboard" class="btn btn-secondary" style="display: none;">返回用户面板</a>
-                <button onclick="logout()" class="btn btn-danger">退出登录</button>
+                
+                <!-- 用户信息和操作按钮 -->
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img id="adminUserAvatar" src="" alt="头像" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                        <span id="adminUsername" style="color: #4a5568; font-weight: 600;"></span>
+                    </div>
+                    <a href="/dashboard.html" id="backToDashboard" class="btn btn-secondary" style="display: none;">返回用户面板</a>
+                    <button onclick="logout()" class="btn btn-danger">退出登录</button>
+                </div>
             </div>
         </div>
         
