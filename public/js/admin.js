@@ -248,57 +248,27 @@ async function loadUsers() {
             return;
         }
         
-        // 使用全局的 getAvatarUrl 函数
+        // 不在这个文件中生成用户列表HTML，改为由admin-helpers-extended.js负责
+        // 仅通知用户有关错误
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">加载中，请稍候...</td></tr>';
+        }
         
-        tbody.innerHTML = users.map(user => `
-            <tr>
-                <td style="padding: 0;">
-                    <div class="user-cell-content">
-                        <img src="/images/default-avatar.png" data-username="${user.username}" alt="头像" class="user-avatar">
-                        <span>${user.username}</span>
-                    </div>
-                </td>
-                <td>${user.email}</td>
-                <td>
-                    <span class="role-badge ${user.role === 'admin' ? 'role-admin' : 'role-user'}">
-                        ${user.role === 'admin' ? '管理员' : '用户'}
-                    </span>
-                </td>
-                <td>${user.port}</td>
-                <td>${user.lastLoginAt ? formatDate(user.lastLoginAt) : '从未登录'}</td>
-                <td>
-                    <span class="status-badge ${user.status === 'running' ? 'status-running' : 'status-stopped'}">
-                        ${user.status === 'running' ? '运行中' : '已停止'}
-                    </span>
-                </td>
-                <td>${user.stVersion || '未安装'}</td>
-                <td>
-                    <span class="status-badge ${getSetupStatusClass(user.stSetupStatus)}">
-                        ${getSetupStatusText(user.stSetupStatus)}
-                    </span>
-                </td>
-                <td>${formatDate(user.createdAt)}</td>
-                <td>
-                    <div class="action-buttons">
-                        ${user.role !== 'admin' ? `
-                            ${user.status === 'stopped' ? 
-                                `<button onclick="startUserInstance('${user.username}')" class="btn-action btn-start" title="启动">▶️</button>` : 
-                                `<button onclick="stopUserInstance('${user.username}')" class="btn-action btn-stop" title="停止">⏸️</button>`
-                            }
-                            <button onclick="restartUserInstance('${user.username}')" class="btn-action btn-restart" title="重启">🔄</button>
-                        ` : ''}
-                        <button onclick="toggleUserRole('${user.username}', '${user.role}')" class="btn-action btn-role" title="切换角色">
-                            ${user.role === 'admin' ? '👤' : '👑'}
-                        </button>
-                        <button onclick="deleteUserAccount('${user.username}')" class="btn-action btn-delete" title="删除">🗑️</button>
-        
-        if (response) {
-            showMessage('状态切换成功', 'success');
-            loadAnnouncements();
+        // 调用扩展助手中的loadUsers函数
+        if (typeof window.loadUsers === 'function') {
+            setTimeout(() => window.loadUsers(), 100);
+        } else {
+            console.error('未找到loadUsers函数，请确保已加载admin-helpers-extended.js');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px; color: #e53e3e;">加载失败: 未找到所需函数</td></tr>';
+            }
         }
     } catch (error) {
-        console.error('Toggle announcement status error:', error);
-        showMessage('操作失败', 'error');
+        console.error('加载用户列表错误:', error);
+        const tbody = document.getElementById('usersTableBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 30px; color: #e53e3e;">加载失败: ${error.message}</td></tr>`;
+        }
     }
 }
 
