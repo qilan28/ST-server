@@ -184,35 +184,84 @@ function applyDashboardLogo(logoPath) {
     }
 }
 
-// 应用到管理页面
+// 应用到管理面板
 function applyAdminLogo(logoPath) {
     try {
-        // 管理页面顶部添加Logo
+        // 管理面板顶部添加Logo
         const headerButtons = document.querySelector('.admin-header-buttons');
         if (headerButtons) {
-            const firstDiv = headerButtons.querySelector('div');
+            const topDiv = headerButtons.querySelector('div');
             
-            if (firstDiv) {
+            if (topDiv) {
+                // 创建布局容器 - 一个新的div用于放置Logo和标题
+                const leftSection = document.createElement('div');
+                leftSection.className = 'header-left-section';
+                leftSection.style.display = 'flex';
+                leftSection.style.alignItems = 'center';
+                leftSection.style.gap = '15px';
+                
                 // 创建Logo容器
                 const logoContainer = document.createElement('div');
                 logoContainer.className = 'header-logo-container';
-                logoContainer.style.marginRight = '15px';
                 
                 // 添加Logo图片
                 const logoImg = document.createElement('img');
                 logoImg.src = logoPath;
                 logoImg.alt = '网站Logo';
                 logoImg.className = 'header-logo-image';
-                
-                // 添加到页面
+                logoImg.style.height = '32px';
+                logoImg.style.width = 'auto';
                 logoContainer.appendChild(logoImg);
-                firstDiv.insertBefore(logoContainer, firstDiv.firstChild);
                 
-                console.log('管理页面Logo已更新');
+                // 创建网站标题
+                const titleEl = document.createElement('h3');
+                titleEl.className = 'site-name admin-site-title';
+                titleEl.style.margin = '0';
+                titleEl.style.color = '#4a5568';
+                titleEl.style.fontWeight = '600';
+                titleEl.textContent = 'SillyTavern 管理平台';
+                
+                // 添加到左侧容器
+                leftSection.appendChild(logoContainer);
+                leftSection.appendChild(titleEl);
+                
+                // 创建右侧用户信息容器
+                const rightSection = document.createElement('div');
+                rightSection.className = 'header-right-section';
+                
+                // 结构重组
+                const userInfoDiv = topDiv.querySelector('div:first-child');
+                const navigationLinks = Array.from(topDiv.children).filter(
+                    el => el.tagName === 'A' || el.tagName === 'BUTTON'
+                );
+                
+                // 清除原有内容
+                while (topDiv.firstChild) {
+                    if (userInfoDiv && userInfoDiv.contains(topDiv.firstChild)) {
+                        rightSection.appendChild(topDiv.firstChild);
+                    } else if (navigationLinks.includes(topDiv.firstChild)) {
+                        rightSection.appendChild(topDiv.firstChild);
+                    } else {
+                        const temp = topDiv.firstChild;
+                        topDiv.removeChild(temp);
+                    }
+                }
+                
+                // 添加新布局
+                topDiv.appendChild(leftSection);
+                topDiv.appendChild(rightSection);
+                
+                // 设置布局样式
+                topDiv.style.display = 'flex';
+                topDiv.style.justifyContent = 'space-between';
+                topDiv.style.width = '100%';
+                topDiv.style.alignItems = 'center';
+                
+                console.log('管理面板Logo已更新，布局已修复');
             }
         }
     } catch (error) {
-        console.error('更新管理页面Logo失败:', error);
+        console.error('更新管理面板Logo失败:', error);
     }
 }
 
