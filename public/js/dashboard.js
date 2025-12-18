@@ -465,14 +465,37 @@ async function handleStart() {
     const startBtn = document.getElementById('startBtn');
     startBtn.disabled = true;
     startBtn.textContent = '启动中...';
+    console.log('[Instance] 开始调用启动实例 API');
     
     try {
-        const response = await apiRequest(`${API_BASE}/instance/start`, {
-            method: 'POST'
+        // 使用测试请求验证服务器连接
+        const pingResponse = await fetch('/api/health');
+        if (!pingResponse.ok) {
+            throw new Error('服务器响应异常，请检查网络或刷新页面');
+        }
+        
+        const token = getToken();
+        if (!token) {
+            throw new Error('认证失效，请重新登录');
+        }
+
+        console.log('[Instance] 发送启动实例请求...');
+        // 直接使用 fetch 而不是 apiRequest 以获得更低级的错误控制
+        const response = await fetch(`${API_BASE}/instance/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            // 设置超时
+            signal: AbortSignal.timeout(10000)
         });
         
-        if (!response) return;
+        if (!response) {
+            throw new Error('服务器没有响应');
+        }
         
+        console.log('[Instance] 启动API响应状态:', response.status);
         const data = await response.json();
         
         if (response.ok) {
@@ -482,13 +505,16 @@ async function handleStart() {
             } else {
                 showMessage('实例启动成功！', 'success');
             }
+            console.log('[Instance] 启动成功，刷新用户信息和状态');
             await loadUserInfo();
             await loadInstanceStatus();
         } else {
-            showMessage(data.error || '启动失败');
+            console.error('[Instance] 启动失败:', data);
+            showMessage(data.error || '启动失败，服务器返回错误');
         }
     } catch (error) {
-        showMessage('启动失败，请重试');
+        console.error('[Instance] 启动实例异常:', error);
+        showMessage('启动失败: ' + error.message);
     } finally {
         startBtn.disabled = false;
         startBtn.textContent = '▶️ 启动实例';
@@ -502,25 +528,51 @@ async function handleStop() {
     const stopBtn = document.getElementById('stopBtn');
     stopBtn.disabled = true;
     stopBtn.textContent = '停止中...';
+    console.log('[Instance] 开始调用停止实例 API');
     
     try {
-        const response = await apiRequest(`${API_BASE}/instance/stop`, {
-            method: 'POST'
+        // 使用测试请求验证服务器连接
+        const pingResponse = await fetch('/api/health');
+        if (!pingResponse.ok) {
+            throw new Error('服务器响应异常，请检查网络或刷新页面');
+        }
+        
+        const token = getToken();
+        if (!token) {
+            throw new Error('认证失效，请重新登录');
+        }
+
+        console.log('[Instance] 发送停止实例请求...');
+        // 直接使用 fetch 而不是 apiRequest
+        const response = await fetch(`${API_BASE}/instance/stop`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            // 设置超时
+            signal: AbortSignal.timeout(10000)
         });
         
-        if (!response) return;
+        console.log('[Instance] 停止API响应状态:', response.status);
+        if (!response) {
+            throw new Error('服务器没有响应');
+        }
         
         const data = await response.json();
         
         if (response.ok) {
             showMessage('实例已停止', 'success');
+            console.log('[Instance] 停止成功，刷新用户信息和状态');
             await loadUserInfo();
             await loadInstanceStatus();
         } else {
-            showMessage(data.error || '停止失败');
+            console.error('[Instance] 停止失败:', data);
+            showMessage(data.error || '停止失败，服务器返回错误');
         }
     } catch (error) {
-        showMessage('停止失败，请重试');
+        console.error('[Instance] 停止实例异常:', error);
+        showMessage('停止失败: ' + error.message);
     } finally {
         stopBtn.disabled = false;
         stopBtn.textContent = '⏹️ 停止实例';
@@ -534,13 +586,36 @@ async function handleRestart() {
     const restartBtn = document.getElementById('restartBtn');
     restartBtn.disabled = true;
     restartBtn.textContent = '重启中...';
+    console.log('[Instance] 开始调用重启实例 API');
     
     try {
-        const response = await apiRequest(`${API_BASE}/instance/restart`, {
-            method: 'POST'
+        // 使用测试请求验证服务器连接
+        const pingResponse = await fetch('/api/health');
+        if (!pingResponse.ok) {
+            throw new Error('服务器响应异常，请检查网络或刷新页面');
+        }
+        
+        const token = getToken();
+        if (!token) {
+            throw new Error('认证失效，请重新登录');
+        }
+
+        console.log('[Instance] 发送重启实例请求...');
+        // 直接使用 fetch 而不是 apiRequest
+        const response = await fetch(`${API_BASE}/instance/restart`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            // 设置更长的超时，因为重启需要更长时间
+            signal: AbortSignal.timeout(15000)
         });
         
-        if (!response) return;
+        console.log('[Instance] 重启API响应状态:', response.status);
+        if (!response) {
+            throw new Error('服务器没有响应');
+        }
         
         const data = await response.json();
         
@@ -551,13 +626,16 @@ async function handleRestart() {
             } else {
                 showMessage('实例重启成功！', 'success');
             }
+            console.log('[Instance] 重启成功，刷新用户信息和状态');
             await loadUserInfo();
             await loadInstanceStatus();
         } else {
-            showMessage(data.error || '重启失败');
+            console.error('[Instance] 重启失败:', data);
+            showMessage(data.error || '重启失败，服务器返回错误');
         }
     } catch (error) {
-        showMessage('重启失败，请重试');
+        console.error('[Instance] 重启实例异常:', error);
+        showMessage('重启失败: ' + error.message);
     } finally {
         restartBtn.disabled = false;
         restartBtn.textContent = '🔄 重启实例';

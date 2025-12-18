@@ -15,48 +15,103 @@ let pm2Connected = false;
 // 连接到PM2
 const connectPM2 = () => {
     return new Promise((resolve, reject) => {
-        // 如果已经连接，直接返回
-        if (pm2Connected) {
-            resolve();
-            return;
-        }
-        
-        pm2.connect((err) => {
-            if (err) {
-                console.error('PM2 connect error:', err);
-                pm2Connected = false;
-                reject(err);
-            } else {
-                pm2Connected = true;
+        try {
+            // 如果已经连接，直接返回
+            if (pm2Connected && pm2.Client && pm2.Client.isClientConnected()) {
+                console.log('[PM2] 已存在连接，直接使用');
                 resolve();
+                return;
             }
-        });
+            
+            // 如果之前断开连接但标志未重置，强制重设
+            pm2Connected = false;
+            
+            // 使用超时保护
+            const timeoutId = setTimeout(() => {
+                console.error('[PM2] 连接超时');
+                reject(new Error('PM2 connection timeout'));
+            }, 5000);
+            
+            console.log('[PM2] 尝试连接到 PM2...');
+            pm2.connect((err) => {
+                clearTimeout(timeoutId);
+                
+                if (err) {
+                    console.error('[PM2] 连接错误:', err);
+                    pm2Connected = false;
+                    reject(err);
+                } else {
+                    console.log('[PM2] 连接成功');
+                    pm2Connected = true;
+                    resolve();
+                }
+            });
+        } catch (error) {
+            console.error('[PM2] 连接异常:', error);
+            pm2Connected = false;
+            reject(error);
+        }
     });
 };
 
 // 断开PM2连接
 const disconnectPM2 = () => {
     try {
-        if (pm2Connected && pm2.client) {
+        if (pm2Connected) {
+            console.log('[PM2] 断开连接');
             pm2.disconnect();
             pm2Connected = false;
+            return true;
         }
+        return false;
     } catch (error) {
-        console.error('PM2 disconnect error:', error);
+        console.error('[PM2] 断开连接错误:', error);
+        // 即使出错，也将连接状态标记为断开
         pm2Connected = false;
+        return false;
     }
 };
 
 // 启动SillyTavern实例
 export const startInstance = async (username, originalPort, stDir, dataDir) => {
-    try {
-        await connectPM2();
-    } catch (error) {
-        throw new Error(`Failed to connect to PM2: ${error.message}`);
+    console.log(`[Instance] 开始启动用户 ${username} 的实例...`);
+    
+    // 检查目录是否存在
+    if (!fs.existsSync(stDir)) {
+        throw new Error(`SillyTavern directory does not exist: ${stDir}`);
     }
     
-    // 获取随机可用端口
+    // 检查server.js是否存在
+    const stServerPath = path.join(stDir, 'server.js');
+    if (!fs.existsSync(stServerPath)) {
+        throw new Error(`SillyTavern server script not found: ${stServerPath}`);
+    }
+    
+    // 先检查实例是否已存在，如果存在则先停止
     try {
+        const status = await getInstanceStatus(username);
+        if (status && status.status === 'online') {
+            console.log(`[Instance] 实例 ${username} 已经在运行，先停止再重启`);
+            await stopInstance(username);
+            // 等待一秒确保进程完全停止
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } catch (error) {
+        console.log(`[Instance] 检查实例状态时出错，忽略并继续:`, error);
+    }
+    
+    try {
+        // 连接PM2
+        try {
+            console.log(`[Instance] 连接PM2...`);
+            await connectPM2();
+            console.log(`[Instance] PM2连接成功`);
+        } catch (error) {
+            console.error(`[Instance] PM2连接失败:`, error);
+            throw new Error(`Failed to connect to PM2: ${error.message}`);
+        }
+        
+        // 获取随机可用端口
         console.log(`[Instance] 为用户 ${username} 分配随机端口...`);
         const port = await getSafeRandomPort(originalPort, 3001, 9000);
         console.log(`[Instance] 用户 ${username} 分配到端口: ${port} (原端口: ${originalPort})`);
@@ -67,8 +122,20 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
             console.log(`[Instance] 已更新用户 ${username} 的端口为 ${port}`);
         }
         
+        // 创建数据目录（如果不存在）
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+            console.log(`[Instance] 创建数据目录: ${dataDir}`);
+        }
+        
         return new Promise((resolve, reject) => {
-            const stServerPath = path.join(stDir, 'server.js');
+            console.log(`[Instance] 准备启动 SillyTavern 实例，端口 ${port}`);
+            
+            // 使用超时保护
+            const timeoutId = setTimeout(() => {
+                disconnectPM2();
+                reject(new Error('PM2 start operation timed out'));
+            }, 10000); // 10秒超时
             
             pm2.start({
                 name: `st-${username}`,
@@ -84,12 +151,14 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
                 out_file: path.join(__dirname, 'logs', `${username}-out.log`),
                 time: true
             }, (err, apps) => {
+                clearTimeout(timeoutId);
                 disconnectPM2();
                 
                 if (err) {
-                    console.error(`Failed to start instance for ${username}:`, err);
+                    console.error(`[Instance] 启动实例 ${username} 失败:`, err);
                     reject(err);
                 } else {
+                    console.log(`[Instance] 成功启动实例 ${username}`);
                     // 更新状态并记录启动时间
                     updateUserStatus(username, 'running');
                     recordInstanceStart(username);
@@ -99,56 +168,135 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
             });
         });
     } catch (error) {
+        console.error(`[Instance] 启动实例 ${username} 时出错:`, error);
         disconnectPM2();
-        throw new Error(`Failed to allocate port or start instance: ${error.message}`);
+        throw new Error(`Failed to start instance: ${error.message}`);
     }
 };
 
 // 停止实例
 export const stopInstance = async (username) => {
-    try {
-        await connectPM2();
-    } catch (error) {
-        throw new Error(`Failed to connect to PM2: ${error.message}`);
+    if (!username) {
+        throw new Error('Username is required');
     }
     
-    return new Promise((resolve, reject) => {
-        pm2.stop(`st-${username}`, (err, proc) => {
-            disconnectPM2();
+    console.log(`[Instance] 开始停止用户 ${username} 的实例...`);
+    
+    try {
+        try {
+            console.log(`[Instance] 连接PM2...`);
+            await connectPM2();
+            console.log(`[Instance] PM2连接成功`);
+        } catch (error) {
+            console.error(`[Instance] PM2连接失败:`, error);
+            throw new Error(`Failed to connect to PM2: ${error.message}`);
+        }
+        
+        return new Promise((resolve, reject) => {
+            // 使用超时保护
+            const timeoutId = setTimeout(() => {
+                disconnectPM2();
+                reject(new Error('PM2 stop operation timed out'));
+            }, 8000); // 8秒超时
             
-            if (err) {
-                reject(err);
-            } else {
-                updateUserStatus(username, 'stopped');
-                removeInstanceStartTime(username);
-                console.log(`[Instance] 已移除用户 ${username} 的实例启动时间记录`);
-                resolve(proc);
-            }
+            console.log(`[Instance] 发送停止命令: st-${username}`);
+            
+            // 先检查实例是否存在
+            pm2.describe(`st-${username}`, (descErr, processDescription) => {
+                if (descErr || !processDescription || processDescription.length === 0) {
+                    clearTimeout(timeoutId);
+                    disconnectPM2();
+                    console.log(`[Instance] 实例 ${username} 不存在，更新状态为停止`);
+                    updateUserStatus(username, 'stopped');
+                    removeInstanceStartTime(username);
+                    console.log(`[Instance] 已移除用户 ${username} 的实例启动时间记录`);
+                    resolve({message: 'Instance was not running'});
+                    return;
+                }
+                
+                // 如果实例存在，停止它
+                pm2.stop(`st-${username}`, (err, proc) => {
+                    clearTimeout(timeoutId);
+                    disconnectPM2();
+                    
+                    if (err) {
+                        console.error(`[Instance] 停止实例 ${username} 失败:`, err);
+                        reject(err);
+                    } else {
+                        console.log(`[Instance] 成功停止实例 ${username}`);
+                        updateUserStatus(username, 'stopped');
+                        removeInstanceStartTime(username);
+                        console.log(`[Instance] 已移除用户 ${username} 的实例启动时间记录`);
+                        resolve(proc);
+                    }
+                });
+            });
         });
-    });
+    } catch (error) {
+        console.error(`[Instance] 停止实例 ${username} 时出错:`, error);
+        disconnectPM2(); // 确保断开连接
+        throw new Error(`Failed to stop instance: ${error.message}`);
+    }
 };
 
 // 重启实例
 export const restartInstance = async (username) => {
+    if (!username) {
+        throw new Error('Username is required');
+    }
+    
+    console.log(`[Instance] 开始重启用户 ${username} 的实例...`);
+    
     try {
         // 获取用户信息，用于后续启动实例
         const { findUserByUsername } = await import('./database.js');
         const user = findUserByUsername(username);
         
-        if (!user || !user.st_dir) {
-            throw new Error(`User not found or ST directory not set`);
+        if (!user) {
+            throw new Error(`User not found: ${username}`);
         }
         
-        // 先停止实例
-        await stopInstance(username);
+        if (!user.st_dir || !fs.existsSync(user.st_dir)) {
+            throw new Error(`SillyTavern directory not found for user: ${username}`);
+        }
+        
+        // 记录当前的状态
+        console.log(`[Instance] 获取当前实例状态...`);
+        let currentStatus;
+        try {
+            currentStatus = await getInstanceStatus(username);
+            console.log(`[Instance] 当前状态:`, currentStatus ? currentStatus.status : 'not running');
+        } catch (statusError) {
+            console.log(`[Instance] 获取状态失败:`, statusError);
+            // 继续执行，即使状态检查失败
+        }
+        
+        // 先停止实例，即使它可能没有运行
+        console.log(`[Instance] 停止实例 ${username}...`);
+        try {
+            await stopInstance(username);
+            console.log(`[Instance] 实例 ${username} 停止成功`);
+        } catch (stopError) {
+            // 即使停止失败，也尝试继续启动
+            console.log(`[Instance] 停止实例失败，但仍将继续:`, stopError);
+        }
+        
+        // 等待短暂停确保实例完全停止
+        console.log(`[Instance] 等待短暂停确保实例完全停止...`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         // 获取数据目录
         const dataDir = path.join(user.data_dir, 'st-data');
+        console.log(`[Instance] 数据目录: ${dataDir}`);
         
         // 使用原始端口重新启动实例
-        // 注意：实例会在startInstance函数中随机分配新端口
-        return await startInstance(username, user.port, user.st_dir, dataDir);
+        console.log(`[Instance] 开始启动实例 ${username}, 原端口: ${user.port}...`);
+        const result = await startInstance(username, user.port, user.st_dir, dataDir);
+        console.log(`[Instance] 实例 ${username} 启动成功，端口: ${result.port}`);
+        
+        return result;
     } catch (error) {
+        console.error(`[Instance] 重启实例 ${username} 失败:`, error);
         throw new Error(`Failed to restart instance: ${error.message}`);
     }
 };

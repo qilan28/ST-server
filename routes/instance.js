@@ -48,15 +48,26 @@ router.get('/info', (req, res) => {
 
 // 启动实例
 router.post('/start', async (req, res) => {
+    console.log('[API] 接收到启动实例请求，用户:', req.user?.username);
+    
     try {
-        const user = findUserByUsername(req.user.username);
+        if (!req.user || !req.user.username) {
+            console.log('[API] 用户身份验证失败');
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        
+        const username = req.user.username;
+        console.log(`[API] 查找用户 ${username} 信息...`);
+        const user = findUserByUsername(username);
         
         if (!user) {
+            console.log(`[API] 用户 ${username} 不存在`);
             return res.status(404).json({ error: 'User not found' });
         }
         
         // 检查 ST 是否已设置
         if (user.st_setup_status !== 'completed') {
+            console.log(`[API] 用户 ${username} 的 SillyTavern 尚未安装完成, 当前状态: ${user.st_setup_status}`);
             return res.status(400).json({ 
                 error: 'SillyTavern not set up yet. Please select and install a version first.',
                 setup_status: user.st_setup_status
@@ -64,26 +75,55 @@ router.post('/start', async (req, res) => {
         }
         
         // 检查是否已经在运行
-        const status = await getInstanceStatus(user.username);
-        if (status && status.status === 'online') {
-            return res.status(400).json({ error: 'Instance is already running' });
+        console.log(`[API] 检查实例 ${username} 状态...`);
+        let status;
+        try {
+            status = await getInstanceStatus(username);
+            console.log(`[API] 实例 ${username} 状态:`, status ? status.status : 'not found');
+            
+            if (status && status.status === 'online') {
+                console.log(`[API] 实例 ${username} 已经在运行`);
+                return res.status(400).json({ error: 'Instance is already running' });
+            }
+        } catch (statusError) {
+            console.log(`[API] 检查实例状态时出错，尝试启动新实例:`, statusError);
+            // 即使状态检查失败也继续尝试启动
         }
         
         // 数据目录
         const dataDir = path.join(user.data_dir, 'st-data');
+        console.log(`[API] 用户 ${username} 数据目录: ${dataDir}`);
         
         // 确保数据目录存在
         if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
-            console.log(`[Instance] 创建数据目录: ${dataDir}`);
+            console.log(`[API] 创建数据目录: ${dataDir}`);
+            try {
+                fs.mkdirSync(dataDir, { recursive: true });
+            } catch (mkdirError) {
+                console.error(`[API] 创建目录失败:`, mkdirError);
+                return res.status(500).json({ error: `Failed to create data directory: ${mkdirError.message}` });
+            }
         }
         
-        const result = await startInstance(user.username, user.port, user.st_dir, dataDir);
+        // 检查ST目录
+        console.log(`[API] 检查ST目录: ${user.st_dir}`);
+        if (!fs.existsSync(user.st_dir)) {
+            console.error(`[API] ST目录不存在: ${user.st_dir}`);
+            return res.status(400).json({ 
+                error: 'SillyTavern directory does not exist. Please reinstall.',
+                setup_status: 'failed'
+            });
+        }
+        
+        console.log(`[API] 开始启动实例 ${username}...`);
+        const result = await startInstance(username, user.port, user.st_dir, dataDir);
         
         // 使用实际分配的端口生成访问URL
         const actualPort = result.port;
+        console.log(`[API] 实例 ${username} 启动成功，端口: ${actualPort}`);
         
         res.json({
+            success: true,
             message: 'Instance started successfully',
             port: actualPort, // 返回实际使用的端口
             originalPort: user.port, // 返回原始端口
@@ -91,56 +131,114 @@ router.post('/start', async (req, res) => {
             accessUrl: `http://localhost:${actualPort}`
         });
     } catch (error) {
-        console.error('Start instance error:', error);
-        res.status(500).json({ error: 'Failed to start instance: ' + error.message });
+        console.error('[API] 启动实例错误:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to start instance: ' + error.message 
+        });
     }
 });
 
 // 停止实例
 router.post('/stop', async (req, res) => {
+    console.log('[API] 接收到停止实例请求，用户:', req.user?.username);
+    
     try {
-        const user = findUserByUsername(req.user.username);
+        if (!req.user || !req.user.username) {
+            console.log('[API] 用户身份验证失败');
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        
+        const username = req.user.username;
+        console.log(`[API] 查找用户 ${username} 信息...`);
+        const user = findUserByUsername(username);
         
         if (!user) {
+            console.log(`[API] 用户 ${username} 不存在`);
             return res.status(404).json({ error: 'User not found' });
         }
         
-        await stopInstance(user.username);
+        // 检查是否在运行
+        console.log(`[API] 检查实例 ${username} 状态...`);
+        try {
+            const status = await getInstanceStatus(username);
+            if (!status || status.status !== 'online') {
+                console.log(`[API] 实例 ${username} 已经停止或不存在`);
+                // 仍然执行停止操作以确保状态一致性
+            }
+        } catch (statusError) {
+            console.log(`[API] 检查实例状态时出错，继续停止操作:`, statusError);
+        }
+        
+        console.log(`[API] 开始停止实例 ${username}...`);
+        await stopInstance(username);
+        console.log(`[API] 实例 ${username} 停止成功`);
         
         res.json({
+            success: true,
             message: 'Instance stopped successfully'
         });
     } catch (error) {
-        console.error('Stop instance error:', error);
-        res.status(500).json({ error: 'Failed to stop instance: ' + error.message });
+        console.error('[API] 停止实例错误:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to stop instance: ' + error.message 
+        });
     }
 });
 
 // 重启实例
 router.post('/restart', async (req, res) => {
+    console.log('[API] 接收到重启实例请求，用户:', req.user?.username);
+    
     try {
-        const user = findUserByUsername(req.user.username);
+        if (!req.user || !req.user.username) {
+            console.log('[API] 用户身份验证失败');
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        
+        const username = req.user.username;
+        console.log(`[API] 查找用户 ${username} 信息...`);
+        const user = findUserByUsername(username);
         
         if (!user) {
+            console.log(`[API] 用户 ${username} 不存在`);
             return res.status(404).json({ error: 'User not found' });
         }
         
-        const result = await restartInstance(user.username);
+        // 检查ST目录
+        console.log(`[API] 检查ST目录: ${user.st_dir}`);
+        if (!fs.existsSync(user.st_dir)) {
+            console.error(`[API] ST目录不存在: ${user.st_dir}`);
+            return res.status(400).json({ 
+                error: 'SillyTavern directory does not exist. Please reinstall.',
+                setup_status: 'failed'
+            });
+        }
         
-        // 重启后，端口可能已经变化，因此我们需要获取最新的用户信息
-        const updatedUser = findUserByUsername(user.username);
-        const actualPort = updatedUser.port;
+        // 记录原始端口
+        const originalPort = user.port;
+        console.log(`[API] 开始重启实例 ${username}...`);
+        const result = await restartInstance(username);
+        console.log(`[API] 重启成功，端口: ${result.port}`);
+        
+        // 重启后，端口可能已经变化
+        const actualPort = result.port;
         
         res.json({
+            success: true,
             message: 'Instance restarted successfully',
             port: actualPort, // 返回实际使用的端口
-            originalPort: user.port, // 返回原始端口
-            portChanged: actualPort !== user.port, // 指示端口是否发生变化
+            originalPort: originalPort, // 返回原始端口
+            portChanged: actualPort !== originalPort, // 指示端口是否发生变化
             accessUrl: `http://localhost:${actualPort}`
         });
     } catch (error) {
-        console.error('Restart instance error:', error);
-        res.status(500).json({ error: 'Failed to restart instance: ' + error.message });
+        console.error('[API] 重启实例错误:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to restart instance: ' + error.message 
+        });
     }
 });
 
