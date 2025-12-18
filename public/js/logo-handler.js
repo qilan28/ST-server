@@ -97,6 +97,12 @@ function applyLoginPageLogo(logoPath) {
                 siteNameEl.textContent = siteNameEl.textContent.replace('🎭', '').trim();
             }
             
+            // 删除预加载器
+            const preloader = logoContainer.querySelector('.preloader');
+            if (preloader) {
+                preloader.remove();
+            }
+            
             // 将元素移入新容器
             newContainer.appendChild(logoImg);
             
