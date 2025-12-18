@@ -2,7 +2,8 @@ import pm2 from 'pm2';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { updateUserStatus } from './database.js';
+import { updateUserStatus, updateUserPort } from './database.js';
+import { getSafeRandomPort } from './utils/port-helper.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,41 +47,57 @@ const disconnectPM2 = () => {
 };
 
 // 启动SillyTavern实例
-export const startInstance = async (username, port, stDir, dataDir) => {
+export const startInstance = async (username, originalPort, stDir, dataDir) => {
     try {
         await connectPM2();
     } catch (error) {
         throw new Error(`Failed to connect to PM2: ${error.message}`);
     }
     
-    return new Promise((resolve, reject) => {
-        const stServerPath = path.join(stDir, 'server.js');
+    // 获取随机可用端口
+    try {
+        console.log(`[Instance] 为用户 ${username} 分配随机端口...`);
+        const port = await getSafeRandomPort(originalPort, 3001, 9000);
+        console.log(`[Instance] 用户 ${username} 分配到端口: ${port} (原端口: ${originalPort})`);
         
-        pm2.start({
-            name: `st-${username}`,
-            script: stServerPath,
-            args: `--port ${port} --dataRoot ${dataDir}`,
-            cwd: stDir,
-            interpreter: 'node',
-            env: {
-                NODE_ENV: 'production'
-            },
-            max_memory_restart: '500M',
-            error_file: path.join(__dirname, 'logs', `${username}-error.log`),
-            out_file: path.join(__dirname, 'logs', `${username}-out.log`),
-            time: true
-        }, (err, apps) => {
-            disconnectPM2();
+        // 更新数据库中的端口
+        if (port !== originalPort) {
+            await updateUserPort(username, port);
+            console.log(`[Instance] 已更新用户 ${username} 的端口为 ${port}`);
+        }
+        
+        return new Promise((resolve, reject) => {
+            const stServerPath = path.join(stDir, 'server.js');
             
-            if (err) {
-                console.error(`Failed to start instance for ${username}:`, err);
-                reject(err);
-            } else {
-                updateUserStatus(username, 'running');
-                resolve(apps);
-            }
+            pm2.start({
+                name: `st-${username}`,
+                script: stServerPath,
+                args: `--port ${port} --dataRoot ${dataDir}`,
+                cwd: stDir,
+                interpreter: 'node',
+                env: {
+                    NODE_ENV: 'production'
+                },
+                max_memory_restart: '500M',
+                error_file: path.join(__dirname, 'logs', `${username}-error.log`),
+                out_file: path.join(__dirname, 'logs', `${username}-out.log`),
+                time: true
+            }, (err, apps) => {
+                disconnectPM2();
+                
+                if (err) {
+                    console.error(`Failed to start instance for ${username}:`, err);
+                    reject(err);
+                } else {
+                    updateUserStatus(username, 'running');
+                    resolve({ apps, port });  // 返回应用和使用的端口
+                }
+            });
         });
-    });
+    } catch (error) {
+        disconnectPM2();
+        throw new Error(`Failed to allocate port or start instance: ${error.message}`);
+    }
 };
 
 // 停止实例
@@ -108,23 +125,26 @@ export const stopInstance = async (username) => {
 // 重启实例
 export const restartInstance = async (username) => {
     try {
-        await connectPM2();
+        // 获取用户信息，用于后续启动实例
+        const { findUserByUsername } = await import('./database.js');
+        const user = findUserByUsername(username);
+        
+        if (!user || !user.st_dir) {
+            throw new Error(`User not found or ST directory not set`);
+        }
+        
+        // 先停止实例
+        await stopInstance(username);
+        
+        // 获取数据目录
+        const dataDir = path.join(user.data_dir, 'st-data');
+        
+        // 使用原始端口重新启动实例
+        // 注意：实例会在startInstance函数中随机分配新端口
+        return await startInstance(username, user.port, user.st_dir, dataDir);
     } catch (error) {
-        throw new Error(`Failed to connect to PM2: ${error.message}`);
+        throw new Error(`Failed to restart instance: ${error.message}`);
     }
-    
-    return new Promise((resolve, reject) => {
-        pm2.restart(`st-${username}`, (err, proc) => {
-            disconnectPM2();
-            
-            if (err) {
-                reject(err);
-            } else {
-                updateUserStatus(username, 'running');
-                resolve(proc);
-            }
-        });
-    });
 };
 
 // 删除实例

@@ -78,11 +78,17 @@ router.post('/start', async (req, res) => {
             console.log(`[Instance] 创建数据目录: ${dataDir}`);
         }
         
-        await startInstance(user.username, user.port, user.st_dir, dataDir);
+        const result = await startInstance(user.username, user.port, user.st_dir, dataDir);
+        
+        // 使用实际分配的端口生成访问URL
+        const actualPort = result.port;
         
         res.json({
             message: 'Instance started successfully',
-            accessUrl: `http://localhost:${user.port}`
+            port: actualPort, // 返回实际使用的端口
+            originalPort: user.port, // 返回原始端口
+            portChanged: actualPort !== user.port, // 指示端口是否发生变化
+            accessUrl: `http://localhost:${actualPort}`
         });
     } catch (error) {
         console.error('Start instance error:', error);
@@ -119,11 +125,18 @@ router.post('/restart', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        await restartInstance(user.username);
+        const result = await restartInstance(user.username);
+        
+        // 重启后，端口可能已经变化，因此我们需要获取最新的用户信息
+        const updatedUser = findUserByUsername(user.username);
+        const actualPort = updatedUser.port;
         
         res.json({
             message: 'Instance restarted successfully',
-            accessUrl: `http://localhost:${user.port}`
+            port: actualPort, // 返回实际使用的端口
+            originalPort: user.port, // 返回原始端口
+            portChanged: actualPort !== user.port, // 指示端口是否发生变化
+            accessUrl: `http://localhost:${actualPort}`
         });
     } catch (error) {
         console.error('Restart instance error:', error);

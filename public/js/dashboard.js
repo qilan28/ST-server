@@ -476,7 +476,12 @@ async function handleStart() {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage('实例启动成功！', 'success');
+            // 检查是否返回了端口信息
+            if (data.portChanged && data.port) {
+                showMessage(`实例启动成功！端口已变更为: ${data.port}`, 'success');
+            } else {
+                showMessage('实例启动成功！', 'success');
+            }
             await loadUserInfo();
             await loadInstanceStatus();
         } else {
@@ -540,7 +545,12 @@ async function handleRestart() {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage('实例重启成功！', 'success');
+            // 检查是否返回了端口信息
+            if (data.portChanged && data.port) {
+                showMessage(`实例重启成功！端口已变更为: ${data.port}`, 'success');
+            } else {
+                showMessage('实例重启成功！', 'success');
+            }
             await loadUserInfo();
             await loadInstanceStatus();
         } else {

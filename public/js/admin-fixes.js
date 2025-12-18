@@ -396,7 +396,7 @@ async function startUserInstance(username) {
     
     try {
         // 显示确认对话框
-        if (!await showConfirm(`确定要启动用户 ${username} 的实例吗？`, '启动实例')) {
+        if (!await showConfirm(`确定要启动用户 ${username} 的实例吗？\n\n启动时将分配随机端口，可能与原端口不同。`, '启动实例')) {
             return;
         }
         
@@ -411,7 +411,12 @@ async function startUserInstance(username) {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage(`用户 ${username} 的实例启动成功`, 'success');
+            // 检查是否返回了新的端口信息
+            if (data.port) {
+                showMessage(`用户 ${username} 的实例启动成功，使用端口: ${data.port}`, 'success');
+            } else {
+                showMessage(`用户 ${username} 的实例启动成功`, 'success');
+            }
             // 重新加载用户列表和实例状态
             loadUsers();
             setTimeout(() => loadInstances(), 500);
@@ -462,7 +467,7 @@ async function restartUserInstance(username) {
     
     try {
         // 显示确认对话框
-        if (!await showConfirm(`确定要重启用户 ${username} 的实例吗？`, '重启实例')) {
+        if (!await showConfirm(`确定要重启用户 ${username} 的实例吗？\n\n重启时将分配随机端口，可能与原端口不同。`, '重启实例')) {
             return;
         }
         
@@ -477,7 +482,12 @@ async function restartUserInstance(username) {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage(`用户 ${username} 的实例重启成功`, 'success');
+            // 检查是否返回了新的端口信息
+            if (data.port) {
+                showMessage(`用户 ${username} 的实例重启成功，使用端口: ${data.port}`, 'success');
+            } else {
+                showMessage(`用户 ${username} 的实例重启成功`, 'success');
+            }
             // 重新加载用户列表和实例状态
             loadUsers();
             setTimeout(() => loadInstances(), 500);

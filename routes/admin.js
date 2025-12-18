@@ -128,8 +128,17 @@ router.post('/users/:username/start', async (req, res) => {
             return res.status(400).json({ error: 'SillyTavern not set up for this user' });
         }
         
-        await startInstance(user.username, user.port, user.st_dir, user.data_dir);
-        res.json({ message: 'Instance started successfully' });
+        const result = await startInstance(user.username, user.port, user.st_dir, user.data_dir);
+        
+        // 返回实际使用的端口
+        const actualPort = result.port || user.port;
+        
+        res.json({ 
+            message: 'Instance started successfully',
+            port: actualPort,
+            originalPort: user.port,
+            portChanged: actualPort !== user.port
+        });
     } catch (error) {
         console.error('Start instance error:', error);
         res.status(500).json({ error: error.message });
@@ -164,8 +173,18 @@ router.post('/users/:username/restart', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        await restartInstance(user.username);
-        res.json({ message: 'Instance restarted successfully' });
+        const result = await restartInstance(user.username);
+        
+        // 重新获取用户信息以获取最新端口
+        const updatedUser = findUserByUsername(username);
+        const actualPort = updatedUser ? updatedUser.port : user.port;
+        
+        res.json({ 
+            message: 'Instance restarted successfully',
+            port: actualPort,
+            originalPort: user.port,
+            portChanged: actualPort !== user.port
+        });
     } catch (error) {
         console.error('Restart instance error:', error);
         res.status(500).json({ error: error.message });
