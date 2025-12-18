@@ -7,7 +7,7 @@ import {
     deleteFriendsLink, 
     getFriendsLink 
 } from '../database-friends.js';
-import { isAdmin } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ router.get('/api/friends', (req, res) => {
 // 以下路由需要管理员权限
 
 // 获取所有友情链接（包括不活跃的，管理员专用）
-router.get('/api/admin/friends', isAdmin, (req, res) => {
+router.get('/api/admin/friends', requireAdmin, (req, res) => {
     try {
         const friendsLinks = getAllFriendsLinksAdmin();
         res.json({ success: true, data: friendsLinks });
@@ -36,7 +36,7 @@ router.get('/api/admin/friends', isAdmin, (req, res) => {
 });
 
 // 获取单个友情链接
-router.get('/api/admin/friends/:id', isAdmin, (req, res) => {
+router.get('/api/admin/friends/:id', requireAdmin, (req, res) => {
     try {
         const { id } = req.params;
         const friendLink = getFriendsLink(id);
@@ -53,7 +53,7 @@ router.get('/api/admin/friends/:id', isAdmin, (req, res) => {
 });
 
 // 添加友情链接
-router.post('/api/admin/friends', isAdmin, (req, res) => {
+router.post('/api/admin/friends', requireAdmin, (req, res) => {
     try {
         const { name, url, logo, description, sort_order = 0 } = req.body;
         
@@ -75,7 +75,7 @@ router.post('/api/admin/friends', isAdmin, (req, res) => {
 });
 
 // 更新友情链接
-router.put('/api/admin/friends/:id', isAdmin, (req, res) => {
+router.put('/api/admin/friends/:id', requireAdmin, (req, res) => {
     try {
         const { id } = req.params;
         const { name, url, logo, description, is_active, sort_order } = req.body;
@@ -107,7 +107,7 @@ router.put('/api/admin/friends/:id', isAdmin, (req, res) => {
 });
 
 // 删除友情链接
-router.delete('/api/admin/friends/:id', isAdmin, (req, res) => {
+router.delete('/api/admin/friends/:id', requireAdmin, (req, res) => {
     try {
         const { id } = req.params;
         
