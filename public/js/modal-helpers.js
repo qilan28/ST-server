@@ -9,7 +9,7 @@ function showModalById(modalId) {
     if (modal) {
         modal.classList.add('show');
     } else {
-        console.error(`模态框 ${modalId} 未找到`);
+        // 模态框未找到
     }
 }
 
@@ -19,7 +19,7 @@ function hideModal(modalId) {
     if (modal) {
         modal.classList.remove('show');
     } else {
-        console.error(`模态框 ${modalId} 未找到`);
+        // 模态框未找到
     }
 }
 
@@ -27,4 +27,4 @@ function hideModal(modalId) {
 window.showModalById = showModalById;
 window.hideModal = hideModal;
 
-console.log('模态框辅助函数已加载');
+// 页面加载时初始化

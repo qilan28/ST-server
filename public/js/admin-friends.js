@@ -47,7 +47,7 @@ async function loadFriendsLinksTable() {
         hideSpinner('friendsLinksTableContainer');
         
     } catch (error) {
-        console.error('加载友情链接失败:', error);
+        // 错误处理
         hideSpinner('friendsLinksTableContainer');
         showMessage('加载友情链接失败，请稍后重试', 'error', 'friendsLinkMessage');
     }
@@ -119,7 +119,7 @@ async function editFriendLink(id) {
             showMessage('获取友情链接详情失败', 'error', 'friendsLinkMessage');
         }
     } catch (error) {
-        console.error('获取友情链接详情失败:', error);
+        // 错误处理
         showMessage('获取友情链接详情失败，请稍后重试', 'error', 'friendsLinkMessage');
     }
 }
@@ -170,7 +170,7 @@ async function saveFriendLink() {
             showMessage(data.error || '操作失败', 'error', 'friendsLinkMessage');
         }
     } catch (error) {
-        console.error('保存友情链接失败:', error);
+        // 错误处理
         showMessage('保存友情链接失败，请稍后重试', 'error', 'friendsLinkMessage');
     }
 }
@@ -208,7 +208,7 @@ async function deleteFriendLink(id) {
             showMessage(data.error || '删除失败', 'error', 'friendsLinkMessage');
         }
     } catch (error) {
-        console.error('删除友情链接失败:', error);
+        // 错误处理
         showMessage('删除友情链接失败，请稍后重试', 'error', 'friendsLinkMessage');
     }
 }
@@ -232,7 +232,7 @@ function switchToFriendsLinksManagement() {
     loadFriendsLinksTable();
     
     // 可以在这里添加其他标签切换逻辑，如隐藏其他标签内容等
-    console.log('切换到友情链接管理模块');
+    // 切换到友情链接管理模块
 }
 
 // 页面加载完成后初始化友情链接管理

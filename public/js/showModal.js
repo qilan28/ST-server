@@ -13,7 +13,7 @@ function showModal(options = {}) {
     const modalAlertFn = window.originalModalAlert || window.showAlert;
     
     if (!modalConfirmFn || !modalAlertFn) {
-        console.error('原生对话框函数未找到，使用默认对话框');
+        // 原生对话框函数未找到，使用默认对话框
         if (buttons && buttons.length >= 1) {
             return confirm(content) ? 
                 (buttons[1] && typeof buttons[1].onClick === 'function' ? buttons[1].onClick() : true) : 

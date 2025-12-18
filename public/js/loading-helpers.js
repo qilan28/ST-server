@@ -24,4 +24,4 @@ window.showSpinner = showSpinner;
 window.hideSpinner = hideSpinner;
 
 // 在页面加载时通知
-console.log('加载状态辅助函数已加载');
+// 页面加载时初始化
