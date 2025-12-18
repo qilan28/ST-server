@@ -1118,6 +1118,37 @@ body {
     color: #333;
 }
 
+/* 行内表单样式 - 标签和输入框在同一行 */
+.inline-form {
+    display: flex;
+    align-items: center;
+}
+
+.inline-form .label-container {
+    width: 50px;
+    flex-shrink: 0;
+    margin-right: 10px;
+}
+
+.inline-form .input-container {
+    flex: 1;
+}
+
+.inline-form label {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+/* 表单提示文本 */
+.form-tip {
+    display: block;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    color: #718096;
+    font-size: 0.85rem;
+    padding-left: 60px; /* 与输入框对齐 */
+}
+
 .input-container {
     position: relative;
     border-bottom: 1px solid #e2e8f0;
@@ -1240,6 +1271,16 @@ input:checked + .slider:before {
     .header-logo-container h1,
     .header-logo-container h2 {
         font-size: 1.2rem;
+    }
+    
+    /* 表单输入框响应式优化 */
+    .inline-form .label-container {
+        width: 40px;
+        margin-right: 8px;
+    }
+    
+    .form-tip {
+        padding-left: 48px;
     }
     
     /* 通用移动端优化 */
@@ -1637,6 +1678,17 @@ input:checked + .slider:before {
     .header-logo-container h1,
     .header-logo-container h2 {
         font-size: 1rem;
+    }
+    
+    /* 输入框更小屏幕优化 */
+    .inline-form .label-container {
+        width: 36px;
+        margin-right: 5px;
+    }
+    
+    .form-tip {
+        padding-left: 41px;
+        font-size: 0.8rem;
     }
     
     /* 管理员面板头部调整 */

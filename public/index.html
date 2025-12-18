@@ -97,14 +97,18 @@
             <div id="loginForm" class="form-container active">
                 <h2>登录</h2>
                 <form onsubmit="handleLogin(event)">
-                    <div class="form-group modern-input">
-                        <label for="loginUsername">账号</label>
+                    <div class="form-group modern-input inline-form">
+                        <div class="label-container">
+                            <label for="loginUsername">账号</label>
+                        </div>
                         <div class="input-container">
                             <input type="text" id="loginUsername" name="username" placeholder="请输入账号" required>
                         </div>
                     </div>
-                    <div class="form-group modern-input">
-                        <label for="loginPassword">密码</label>
+                    <div class="form-group modern-input inline-form">
+                        <div class="label-container">
+                            <label for="loginPassword">密码</label>
+                        </div>
                         <div class="input-container password-container">
                             <input type="password" id="loginPassword" name="password" placeholder="请输入密码" required>
                             <span class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)">
@@ -126,22 +130,26 @@
             <div id="registerForm" class="form-container">
                 <h2>注册</h2>
                 <form onsubmit="handleRegister(event)">
-                    <div class="form-group modern-input">
-                        <label for="registerUsername">QQ</label>
+                    <div class="form-group modern-input inline-form">
+                        <div class="label-container">
+                            <label for="registerUsername">QQ</label>
+                        </div>
                         <div class="input-container">
                             <input type="text" id="registerUsername" name="username" required 
                                   placeholder="请输入QQ账号" minlength="5" maxlength="13" pattern="[0-9]+" oninput="updateQQAvatar()">
                         </div>
-                        <small>5-13个字符，仅限数字</small>
                     </div>
+                    <small class="form-tip">5-13个字符，仅限数字</small>
                     <!-- QQ头像预览 -->
                     <div class="form-group" style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
                         <div id="qqAvatarContainer" style="display: none; margin-top: 10px;">
                             <img id="qqAvatar" src="" alt="QQ头像" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid #667eea; box-shadow: 0 3px 10px rgba(0,0,0,0.15);">
                         </div>
                     </div>
-                    <div class="form-group modern-input">
-                        <label for="registerPassword">密码</label>
+                    <div class="form-group modern-input inline-form">
+                        <div class="label-container">
+                            <label for="registerPassword">密码</label>
+                        </div>
                         <div class="input-container password-container">
                             <input type="password" id="registerPassword" name="password" placeholder="请输入密码" required minlength="6">
                             <span class="password-toggle" onclick="togglePasswordVisibility('registerPassword', this)">
@@ -151,10 +159,12 @@
                                 </svg>
                             </span>
                         </div>
-                        <small>至少6个字符</small>
                     </div>
-                    <div class="form-group modern-input">
-                        <label for="registerPasswordConfirm">确认密码</label>
+                    <small class="form-tip">至少6个字符</small>
+                    <div class="form-group modern-input inline-form">
+                        <div class="label-container">
+                            <label for="registerPasswordConfirm">确认</label>
+                        </div>
                         <div class="input-container password-container">
                             <input type="password" id="registerPasswordConfirm" name="passwordConfirm" placeholder="请再次输入密码" required>
                             <span class="password-toggle" onclick="togglePasswordVisibility('registerPasswordConfirm', this)">
