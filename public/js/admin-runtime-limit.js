@@ -88,17 +88,45 @@ async function loadRuntimeLimitConfig() {
 
         console.log('开始加载运行时长限制配置...');
         
+        // 设置请求超时
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('请求超时')), 5000);
+        });
+        
         // 直接使用fetch调用API
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/runtime-limit/config', {
+        const fetchPromise = fetch('/api/runtime-limit/config', {
             headers: {
                 'Authorization': token ? `Bearer ${token}` : ''
             }
         });
         
+        // 使用Promise.race来实现超时处理
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
         if (!response.ok) {
             console.error('加载配置失败:', response.status, response.statusText);
-            configSection.innerHTML = `<div class="error-message">加载失败: ${response.status} ${response.statusText}</div>`;
+            // 使用默认配置并显示错误
+            const defaultConfig = {
+                enabled: 0,
+                max_runtime_minutes: 120,
+                warning_minutes: 5,
+                check_interval_seconds: 60
+            };
+            
+            renderRuntimeLimitForm(defaultConfig);
+            
+            if (configSection) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.style.marginTop = '10px';
+                errorDiv.innerHTML = `加载失败: ${response.status} ${response.statusText}。使用默认配置。`;
+                configSection.appendChild(errorDiv);
+            }
+            
+            if (typeof showMessage === 'function') {
+                showMessage('配置加载失败，使用默认配置', 'warning');
+            }
             return;
         }
 
@@ -130,7 +158,30 @@ async function loadRuntimeLimitConfig() {
         renderRuntimeLimitForm(config);
     } catch (error) {
         console.error('加载运行时长限制配置错误:', error);
-        showMessage('加载配置失败: ' + error.message, 'error');
+        
+        // 出错时使用默认配置
+        const defaultConfig = {
+            enabled: 0,
+            max_runtime_minutes: 120,
+            warning_minutes: 5,
+            check_interval_seconds: 60
+        };
+        
+        // 确保表单渲染即使有错误
+        const configSection = document.getElementById('runtimeLimitConfig');
+        if (configSection) {
+            renderRuntimeLimitForm(defaultConfig);
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.marginTop = '10px';
+            errorDiv.innerHTML = `加载失败: ${error.message}。使用默认配置。`;
+            configSection.appendChild(errorDiv);
+        }
+        
+        if (typeof showMessage === 'function') {
+            showMessage('加载配置失败: ' + error.message + '，使用默认配置', 'error');
+        }
     }
 }
 
@@ -269,22 +320,49 @@ async function loadRuntimeLimitStatus() {
         statusDiv.style.display = 'block';
         statusContent.innerHTML = '<div class="loading-indicator">加载中...</div>';
         
+        // 设置请求超时
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('请求超时')), 5000);
+        });
+        
         // 直接使用fetch
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/runtime-limit/status', {
+        const fetchPromise = fetch('/api/runtime-limit/status', {
             headers: {
                 'Authorization': token ? `Bearer ${token}` : ''
             }
         });
-        if (!response) {
-            statusContent.innerHTML = '<div class="error-message">加载失败</div>';
+        
+        // 使用Promise.race来实现超时处理
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        if (!response || !response.ok) {
+            statusContent.innerHTML = `<div class="error-message">加载失败: ${response ? response.status + ' ' + response.statusText : '网络错误'}</div>`;
             return;
         }
         
-        const data = await response.json();
+        const data = await response.json().catch(err => {
+            console.error('解析响应数据失败:', err);
+            statusContent.innerHTML = `<div class="error-message">解析数据失败: ${err.message}</div>`;
+            return null;
+        });
+        
+        if (!data) return;
         
         if (data.success) {
             const { config, timeoutInstances, warningInstances } = data;
+            
+            // 预设默认的config，以防数据不完整
+            const safeConfig = config || {
+                enabled: 0,
+                max_runtime_minutes: 120,
+                warning_minutes: 5,
+                check_interval_seconds: 60
+            };
+            
+            // 确保实例数组有效
+            const safeTimeoutInstances = Array.isArray(timeoutInstances) ? timeoutInstances : [];
+            const safeWarningInstances = Array.isArray(warningInstances) ? warningInstances : [];
             
             // 创建状态概览
             let html = `
@@ -292,28 +370,28 @@ async function loadRuntimeLimitStatus() {
                 <div class="status-item">
                     <div class="status-label">功能状态</div>
                     <div class="status-value">
-                        <span class="status-badge ${config.enabled ? 'status-running' : 'status-stopped'}">
-                            ${config.enabled ? '已启用' : '已禁用'}
+                        <span class="status-badge ${safeConfig.enabled ? 'status-running' : 'status-stopped'}">
+                            ${safeConfig.enabled ? '已启用' : '已禁用'}
                         </span>
                     </div>
                 </div>
                 <div class="status-item">
                     <div class="status-label">最大运行时长</div>
-                    <div class="status-value">${config.max_runtime_minutes} 分钟</div>
+                    <div class="status-value">${safeConfig.max_runtime_minutes} 分钟</div>
                 </div>
                 <div class="status-item">
                     <div class="status-label">超时实例数</div>
                     <div class="status-value">
-                        <span class="${timeoutInstances.length > 0 ? 'warning-text' : ''}">
-                            ${timeoutInstances.length}
+                        <span class="${safeTimeoutInstances.length > 0 ? 'warning-text' : ''}">
+                            ${safeTimeoutInstances.length}
                         </span>
                     </div>
                 </div>
                 <div class="status-item">
                     <div class="status-label">即将超时实例</div>
                     <div class="status-value">
-                        <span class="${warningInstances.length > 0 ? 'notice-text' : ''}">
-                            ${warningInstances.length}
+                        <span class="${safeWarningInstances.length > 0 ? 'notice-text' : ''}">
+                            ${safeWarningInstances.length}
                         </span>
                     </div>
                 </div>
@@ -321,10 +399,10 @@ async function loadRuntimeLimitStatus() {
             `;
             
             // 添加实例列表（如果有的话）
-            if (timeoutInstances.length > 0 || warningInstances.length > 0) {
+            if (safeTimeoutInstances.length > 0 || safeWarningInstances.length > 0) {
                 html += '<h5 class="mt-4">实例详情</h5>';
                 
-                if (timeoutInstances.length > 0) {
+                if (safeTimeoutInstances.length > 0) {
                     html += `
                     <div class="instance-group">
                         <h6>已超时实例</h6>
@@ -340,14 +418,14 @@ async function loadRuntimeLimitStatus() {
                             <tbody>
                     `;
                     
-                    timeoutInstances.forEach(instance => {
+                    safeTimeoutInstances.forEach(instance => {
                         html += `
                         <tr>
-                            <td>${instance.username}</td>
+                            <td>${instance.username || '-'}</td>
                             <td>${formatDate(instance.start_time || '')}</td>
-                            <td>${Math.floor(instance.runtime_minutes)} 分钟</td>
+                            <td>${Math.floor(instance.runtime_minutes || 0)} 分钟</td>
                             <td>
-                                <button onclick="stopUserInstance('${instance.username}')" class="btn-action btn-stop" title="停止">⏸️</button>
+                                <button onclick="stopUserInstance('${instance.username || ''}')" class="btn-action btn-stop" title="停止">⏸️</button>
                             </td>
                         </tr>
                         `;
@@ -360,7 +438,7 @@ async function loadRuntimeLimitStatus() {
                     `;
                 }
                 
-                if (warningInstances.length > 0) {
+                if (safeWarningInstances.length > 0) {
                     html += `
                     <div class="instance-group">
                         <h6>即将超时实例</h6>
@@ -377,17 +455,17 @@ async function loadRuntimeLimitStatus() {
                             <tbody>
                     `;
                     
-                    warningInstances.forEach(instance => {
-                        const remainingMinutes = Math.floor(config.max_runtime_minutes - instance.runtime_minutes);
+                    safeWarningInstances.forEach(instance => {
+                        const remainingMinutes = Math.floor(safeConfig.max_runtime_minutes - (instance.runtime_minutes || 0));
                         
                         html += `
                         <tr>
-                            <td>${instance.username}</td>
+                            <td>${instance.username || '-'}</td>
                             <td>${formatDate(instance.start_time || '')}</td>
-                            <td>${Math.floor(instance.runtime_minutes)} 分钟</td>
+                            <td>${Math.floor(instance.runtime_minutes || 0)} 分钟</td>
                             <td>${remainingMinutes} 分钟</td>
                             <td>
-                                <button onclick="stopUserInstance('${instance.username}')" class="btn-action btn-stop" title="停止">⏸️</button>
+                                <button onclick="stopUserInstance('${instance.username || ''}')" class="btn-action btn-stop" title="停止">⏸️</button>
                             </td>
                         </tr>
                         `;
@@ -447,7 +525,59 @@ function showRuntimeLimitMessage(text, type = 'error') {
 }
 
 // 页面加载完成后自动加载配置
+// 停止用户实例的函数
+async function stopUserInstance(username) {
+    if (!username) {
+        showMessage('用户名无效', 'error');
+        return;
+    }
+    
+    try {
+        if (!confirm(`确定要停止用户 ${username} 的实例吗？`)) {
+            return;
+        }
+        
+        showMessage(`正在停止 ${username} 的实例...`, 'info');
+        
+        // 直接使用fetch
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/instances/stop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({ username })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                showMessage(`已停止 ${username} 的实例`, 'success');
+                // 重新加载状态
+                setTimeout(loadRuntimeLimitStatus, 1000);
+            } else {
+                showMessage(`停止失败: ${data.error || '未知错误'}`, 'error');
+            }
+        } else {
+            showMessage(`停止失败: ${response.status} ${response.statusText}`, 'error');
+        }
+    } catch (error) {
+        console.error('停止实例错误:', error);
+        showMessage('停止实例时出错: ' + error.message, 'error');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // 如果在admin.js中已经有调用，这里就不重复调用了
     console.log('运行时长限制脚本已加载');
+    
+    // 检查配置区域是否存在
+    const configSection = document.getElementById('runtimeLimitConfig');
+    if (configSection) {
+        // 没有从admin.js中调用时自动加载
+        if (configSection.querySelector('.loading-indicator')) {
+            console.log('自动加载运行时长限制配置...');
+            setTimeout(loadRuntimeLimitConfig, 100); // 稍微延迟加载以确保页面已完全加载
+        }
+    }
 });
