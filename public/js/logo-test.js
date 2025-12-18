@@ -18,31 +18,11 @@
         img.src = '/logo.png?t=' + new Date().getTime();
     }
     
-    // 显示成功消息
+    // 不再显示成功消息
     function showSuccessMessage() {
-        // 创建临时消息
-        const messageDiv = document.createElement('div');
-        messageDiv.style.position = 'fixed';
-        messageDiv.style.bottom = '20px';
-        messageDiv.style.left = '50%';
-        messageDiv.style.transform = 'translateX(-50%)';
-        messageDiv.style.backgroundColor = '#4BB543';
-        messageDiv.style.color = 'white';
-        messageDiv.style.padding = '10px 20px';
-        messageDiv.style.borderRadius = '5px';
-        messageDiv.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-        messageDiv.style.zIndex = '9999';
-        messageDiv.textContent = 'Logo已成功加载并应用到页面';
-        
-        // 添加到页面
-        document.body.appendChild(messageDiv);
-        
-        // 3秒后移除
-        setTimeout(() => {
-            messageDiv.style.opacity = '0';
-            messageDiv.style.transition = 'opacity 0.5s';
-            setTimeout(() => document.body.removeChild(messageDiv), 500);
-        }, 3000);
+        // 只在控制台记录成功信息
+        console.log('✅ Logo已成功加载并应用到页面');
+        // 不再显示UI通知
     }
     
     // 页面完全加载后执行测试
