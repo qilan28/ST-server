@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { createSiteSettingsTable } from './database-site-settings.js';
 import { createFriendsLinkTable } from './database-friends.js';
+import { createRuntimeLimitTable } from './runtime-limiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -184,6 +185,14 @@ export const initDatabase = () => {
         createAnnouncementsTable();
         createAutoBackupConfigTable();
         createFriendsLinkTable();
+        
+        // 创建运行时长限制表
+        try {
+            createRuntimeLimitTable();
+            console.log('[Database] ✅ 运行时长限制表已初始化');
+        } catch (error) {
+            console.error('[Database] ❌ 创建运行时长限制表失败:', error);
+        }
         
         // 创建站点设置表并测试写入
         try {

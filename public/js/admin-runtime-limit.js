@@ -3,7 +3,79 @@
  * 管理员可以设置实例的最大运行时长，超时自动停止
  */
 
+// API基地址
 const API_BASE = '/api';
+
+// 适配管理员页面的API请求函数
+if (typeof apiRequest !== 'function') {
+    async function apiRequest(url, options = {}) {
+        const token = localStorage.getItem('token');
+        
+        const defaultOptions = {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        };
+        
+        const mergedOptions = {
+            ...defaultOptions,
+            ...options,
+            headers: {
+                ...defaultOptions.headers,
+                ...(options.headers || {})
+            }
+        };
+        
+        // 使用协议帮手，如果有的话
+        let apiUrl = url;
+        if (window.protocolHelper) {
+            apiUrl = window.protocolHelper.getApiUrl(url);
+        }
+        
+        try {
+            const response = await fetch(apiUrl, mergedOptions);
+            
+            if (response.status === 401) {
+                console.warn('未授权访问，可能需要重新登录');
+                if (showMessage) showMessage('会话已过期，请重新登录', 'error');
+                // 可选：重定向到登录页面
+                // window.location.href = '/login.html';
+            }
+            
+            return response;
+            
+        } catch (error) {
+            console.error('API请求错误:', error);
+            if (showMessage) showMessage('网络请求失败', 'error');
+            return null;
+        }
+    }
+    
+    // 将函数添加到全局作用域
+    window.apiRequest = apiRequest;
+}
+
+// 格式化日期的帮助函数
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString; // 如果日期无效，直接返回原字符串
+        
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch (error) {
+        console.error('格式化日期错误:', error);
+        return dateString;
+    }
+}
 
 // 加载运行时长限制配置
 async function loadRuntimeLimitConfig() {
@@ -14,19 +86,48 @@ async function loadRuntimeLimitConfig() {
             configSection.innerHTML = '<div class="loading-indicator">加载中...</div>';
         }
 
-        const response = await apiRequest(`${API_BASE}/runtime-limit/config`);
-        if (!response) return;
+        console.log('开始加载运行时长限制配置...');
+        
+        // 直接使用fetch调用API
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/runtime-limit/config', {
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+        
+        if (!response.ok) {
+            console.error('加载配置失败:', response.status, response.statusText);
+            configSection.innerHTML = `<div class="error-message">加载失败: ${response.status} ${response.statusText}</div>`;
+            return;
+        }
 
         const data = await response.json();
+        console.log('获取到的配置数据:', data);
 
+        // 即使数据格式不正确，也使用默认配置呈现表单
+        let config;
+        
         if (data.success && data.config) {
-            // 渲染表单
-            const config = data.config;
-            renderRuntimeLimitForm(config);
+            // 使用服务器返回的配置
+            config = data.config;
         } else {
-            showMessage('加载配置失败', 'error');
-            console.error('加载运行时长限制配置失败:', data.error || '未知错误');
+            // 如果服务器返回的数据格式不正确，使用默认配置
+            console.warn('加载运行时长限制配置失败，使用默认配置:', data.error || '未知错误');
+            config = {
+                enabled: 0,
+                max_runtime_minutes: 120,
+                warning_minutes: 5,
+                check_interval_seconds: 60
+            };
+            
+            if (typeof showMessage === 'function') {
+                showMessage('使用默认配置，请保存设置', 'warning');
+            }
         }
+        
+        // 渲染表单
+        renderRuntimeLimitForm(config);
     } catch (error) {
         console.error('加载运行时长限制配置错误:', error);
         showMessage('加载配置失败: ' + error.message, 'error');
@@ -117,8 +218,14 @@ async function saveRuntimeLimitConfig() {
         // 显示保存中状态
         showRuntimeLimitMessage('保存中...', 'info');
         
-        const response = await apiRequest(`${API_BASE}/runtime-limit/config`, {
+        // 直接使用fetch
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/runtime-limit/config', {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
             body: JSON.stringify({
                 enabled,
                 maxRuntimeMinutes,
@@ -162,7 +269,13 @@ async function loadRuntimeLimitStatus() {
         statusDiv.style.display = 'block';
         statusContent.innerHTML = '<div class="loading-indicator">加载中...</div>';
         
-        const response = await apiRequest(`${API_BASE}/runtime-limit/status`);
+        // 直接使用fetch
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/runtime-limit/status', {
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
         if (!response) {
             statusContent.innerHTML = '<div class="error-message">加载失败</div>';
             return;
@@ -231,7 +344,7 @@ async function loadRuntimeLimitStatus() {
                         html += `
                         <tr>
                             <td>${instance.username}</td>
-                            <td>${formatDate(instance.start_time)}</td>
+                            <td>${formatDate(instance.start_time || '')}</td>
                             <td>${Math.floor(instance.runtime_minutes)} 分钟</td>
                             <td>
                                 <button onclick="stopUserInstance('${instance.username}')" class="btn-action btn-stop" title="停止">⏸️</button>
@@ -270,7 +383,7 @@ async function loadRuntimeLimitStatus() {
                         html += `
                         <tr>
                             <td>${instance.username}</td>
-                            <td>${formatDate(instance.start_time)}</td>
+                            <td>${formatDate(instance.start_time || '')}</td>
                             <td>${Math.floor(instance.runtime_minutes)} 分钟</td>
                             <td>${remainingMinutes} 分钟</td>
                             <td>
@@ -310,7 +423,16 @@ async function loadRuntimeLimitStatus() {
 // 显示运行时长限制相关消息
 function showRuntimeLimitMessage(text, type = 'error') {
     const messageEl = document.getElementById('runtimeLimitMessage');
-    if (!messageEl) return;
+    if (!messageEl) {
+        // 如果找不到消息元素，尝试使用全局的showMessage函数
+        if (typeof showMessage === 'function') {
+            showMessage(text, type);
+        } else {
+            console.warn('无法显示消息:', text);
+            alert(text); // 作为最后的备选方案
+        }
+        return;
+    }
     
     messageEl.textContent = text;
     messageEl.className = `message show ${type}`;
@@ -323,3 +445,9 @@ function showRuntimeLimitMessage(text, type = 'error') {
         }, 3000);
     }
 }
+
+// 页面加载完成后自动加载配置
+document.addEventListener('DOMContentLoaded', function() {
+    // 如果在admin.js中已经有调用，这里就不重复调用了
+    console.log('运行时长限制脚本已加载');
+});

@@ -5,19 +5,30 @@ import {
     getTimeoutInstances 
 } from '../runtime-limiter.js';
 import { isAdmin } from '../database.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // 验证管理员权限的中间件
 const adminAuthMiddleware = (req, res, next) => {
-    if (!req.user || !isAdmin(req.user.username)) {
-        return res.status(403).json({ error: '需要管理员权限' });
+    console.log('[Runtime Limiter] 权限验证: 用户=', req.user ? req.user.username : '未登录');
+    
+    if (!req.user) {
+        console.log('[Runtime Limiter] 权限验证失败: 未登录');
+        return res.status(401).json({ error: '需要登录', message: '请先登录' });
     }
+    
+    if (!isAdmin(req.user.username)) {
+        console.log('[Runtime Limiter] 权限验证失败: 非管理员', req.user.username);
+        return res.status(403).json({ error: '需要管理员权限', message: '您没有访问此功能的权限' });
+    }
+    
+    console.log('[Runtime Limiter] 权限验证通过: 管理员=', req.user.username);
     next();
 };
 
 // 获取运行时长限制配置
-router.get('/config', adminAuthMiddleware, (req, res) => {
+router.get('/config', authenticateToken, adminAuthMiddleware, (req, res) => {
     try {
         const config = getRuntimeLimitConfig();
         res.json({ success: true, config });
@@ -28,7 +39,7 @@ router.get('/config', adminAuthMiddleware, (req, res) => {
 });
 
 // 更新运行时长限制配置
-router.put('/config', adminAuthMiddleware, (req, res) => {
+router.put('/config', authenticateToken, adminAuthMiddleware, (req, res) => {
     try {
         const { enabled, maxRuntimeMinutes, warningMinutes, checkIntervalSeconds } = req.body;
         
@@ -77,7 +88,7 @@ router.put('/config', adminAuthMiddleware, (req, res) => {
 });
 
 // 获取当前运行实例状态
-router.get('/status', adminAuthMiddleware, (req, res) => {
+router.get('/status', authenticateToken, adminAuthMiddleware, (req, res) => {
     try {
         const config = getRuntimeLimitConfig();
         if (!config) {
