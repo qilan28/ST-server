@@ -16,6 +16,7 @@ import announcementsRoutes from './routes/announcements.js';
 import backupRoutes from './routes/backup.js';
 import proxyRoutes from './routes/proxy.js';
 import siteSettingsRoutes from './routes/site-settings.js';
+import { protectPage } from './middleware/page-auth.js';
 import './database.js';
 import { findUserByUsername, createAdminUser } from './database.js';
 import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
@@ -120,6 +121,9 @@ app.use(cors({ credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 应用页面保护中间件（必须在静态文件服务之前）
+app.use(protectPage);
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
