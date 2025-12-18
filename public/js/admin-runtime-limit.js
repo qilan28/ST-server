@@ -192,6 +192,8 @@ function renderRuntimeLimitForm(config) {
 
     configSection.innerHTML = `
     <div class="config-form">
+        <h3>运行时长限制设置</h3>
+        
         <div class="form-group">
             <label class="form-label">
                 <input type="checkbox" id="runtimeLimitEnabled" 
@@ -222,9 +224,20 @@ function renderRuntimeLimitForm(config) {
             <div class="help-text">系统检查实例运行时长的间隔（10-3600秒）</div>
         </div>
         
+        <div class="form-group">
+            <label class="form-label">
+                <input type="checkbox" id="autoRestartEnabled" 
+                       ${config.auto_restart_after_stop ? 'checked' : ''}>
+                超时后自动重启
+            </label>
+            <div class="help-text">当实例因时间限制被停止后，自动重启它</div>
+        </div>
+        
         <div class="form-actions">
             <button onclick="saveRuntimeLimitConfig()" class="btn btn-primary">保存设置</button>
             <button onclick="loadRuntimeLimitStatus()" class="btn btn-secondary">查看当前状态</button>
+            <button onclick="loadExemptionsList()" class="btn btn-secondary">谁免名单</button>
+            <button onclick="loadRuntimeStats()" class="btn btn-secondary">运行统计</button>
         </div>
         
         <div id="runtimeLimitMessage" class="message" style="display: none;"></div>
@@ -233,6 +246,16 @@ function renderRuntimeLimitForm(config) {
     <div id="runtimeLimitStatus" style="display: none; margin-top: 20px;">
         <h4>当前运行实例状态</h4>
         <div id="runtimeLimitStatusContent"></div>
+    </div>
+    
+    <div id="runtimeExemptions" style="display: none; margin-top: 20px;">
+        <h4>运行时间谁免名单</h4>
+        <div id="runtimeExemptionsContent"></div>
+    </div>
+    
+    <div id="runtimeStatsSection" style="display: none; margin-top: 20px;">
+        <h4>运行时间统计数据</h4>
+        <div id="runtimeStatsContent"></div>
     </div>
     `;
 }
@@ -244,6 +267,7 @@ async function saveRuntimeLimitConfig() {
         const maxRuntimeMinutes = parseInt(document.getElementById('maxRuntimeMinutes').value);
         const warningMinutes = parseInt(document.getElementById('warningMinutes').value);
         const checkIntervalSeconds = parseInt(document.getElementById('checkIntervalSeconds').value);
+        const autoRestart = document.getElementById('autoRestartEnabled').checked;
         
         // 验证输入
         if (isNaN(maxRuntimeMinutes) || maxRuntimeMinutes < 5 || maxRuntimeMinutes > 1440) {
@@ -281,7 +305,8 @@ async function saveRuntimeLimitConfig() {
                 enabled,
                 maxRuntimeMinutes,
                 warningMinutes,
-                checkIntervalSeconds
+                checkIntervalSeconds,
+                autoRestart
             })
         });
         
@@ -294,10 +319,15 @@ async function saveRuntimeLimitConfig() {
             
             // 如果启用了限制，提示用户关于实例的可能影响
             if (enabled) {
-                showMessage(
-                    `运行时长限制已启用！所有实例在运行超过 ${maxRuntimeMinutes} 分钟后将自动停止。`, 
-                    'warning'
-                );
+                let message = `运行时长限制已启用！所有实例在运行超过 ${maxRuntimeMinutes} 分钟后将自动停止`;  
+                
+                if (autoRestart) {
+                    message += '，并自动重启。';
+                } else {
+                    message += '。';
+                }
+                
+                showMessage(message, 'warning');
             }
         } else {
             showRuntimeLimitMessage(data.error || '保存失败', 'error');
@@ -565,6 +595,389 @@ async function stopUserInstance(username) {
     } catch (error) {
         console.error('停止实例错误:', error);
         showMessage('停止实例时出错: ' + error.message, 'error');
+    }
+}
+
+// 加载豁免用户名单
+async function loadExemptionsList() {
+    try {
+        const exemptionsSection = document.getElementById('runtimeExemptions');
+        const exemptionsContent = document.getElementById('runtimeExemptionsContent');
+        
+        if (!exemptionsSection || !exemptionsContent) return;
+        
+        // 显示加载中
+        exemptionsSection.style.display = 'block';
+        exemptionsContent.innerHTML = '<div class="loading-indicator">加载中...</div>';
+        
+        // 设置请求超时
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('请求超时')), 5000);
+        });
+        
+        // 发起请求
+        const token = localStorage.getItem('token');
+        const fetchPromise = fetch('/api/runtime-limit/exemptions', {
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+        
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        if (!response || !response.ok) {
+            exemptionsContent.innerHTML = `<div class="error-message">加载失败: ${response ? response.status + ' ' + response.statusText : '网络错误'}</div>`;
+            return;
+        }
+        
+        const data = await response.json().catch(err => {
+            console.error('解析响应数据失败:', err);
+            exemptionsContent.innerHTML = `<div class="error-message">解析数据失败: ${err.message}</div>`;
+            return null;
+        });
+        
+        if (!data) return;
+        
+        if (data.success) {
+            const exemptions = data.exemptions || [];
+            
+            // 创建添加豁免表单
+            let html = `
+            <div class="add-exemption-form">
+                <h5>添加豁免用户</h5>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="exemptUsername" class="form-control" placeholder="输入用户名" style="flex-grow: 1;">
+                    <input type="text" id="exemptReason" class="form-control" placeholder="豁免原因（可选）" style="flex-grow: 2;">
+                    <button onclick="addExemptionUser()" class="btn btn-primary">添加</button>
+                </div>
+            </div>
+            `;
+            
+            // 如果已有豁免用户，显示列表
+            if (exemptions.length > 0) {
+                html += `
+                <div class="exemptions-list">
+                    <h5>当前豁免用户</h5>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>邮箱</th>
+                                <th>原因</th>
+                                <th>添加者</th>
+                                <th>添加时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                exemptions.forEach(exemption => {
+                    html += `
+                    <tr>
+                        <td>${exemption.username || '-'}</td>
+                        <td>${exemption.email || '-'}</td>
+                        <td>${exemption.reason || '-'}</td>
+                        <td>${exemption.added_by || 'system'}</td>
+                        <td>${formatDate(exemption.created_at || '')}</td>
+                        <td>
+                            <button onclick="removeExemptionUser('${exemption.username}')" class="btn-action btn-danger" title="移除豁免">✖</button>
+                        </td>
+                    </tr>
+                    `;
+                });
+                
+                html += `
+                        </tbody>
+                    </table>
+                </div>
+                `;
+            } else {
+                html += `
+                <div class="no-exemptions">
+                    <p>当前没有用户在豁免名单中。</p>
+                </div>
+                `;
+            }
+            
+            exemptionsContent.innerHTML = html;
+        } else {
+            exemptionsContent.innerHTML = `<div class="error-message">加载失败: ${data.error || '未知错误'}</div>`;
+        }
+    } catch (error) {
+        console.error('加载豁免名单错误:', error);
+        const exemptionsContent = document.getElementById('runtimeExemptionsContent');
+        if (exemptionsContent) {
+            exemptionsContent.innerHTML = `<div class="error-message">加载失败: ${error.message}</div>`;
+        }
+    }
+}
+
+// 添加豁免用户
+async function addExemptionUser() {
+    try {
+        const username = document.getElementById('exemptUsername').value.trim();
+        const reason = document.getElementById('exemptReason').value.trim();
+        
+        if (!username) {
+            showMessage('请输入用户名', 'error');
+            return;
+        }
+        
+        showMessage(`正在添加用户 ${username} 到豁免名单...`, 'info');
+        
+        // 发送请求
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/runtime-limit/exemptions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            },
+            body: JSON.stringify({ username, reason })
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            showMessage(`添加失败: ${response.status} ${errorText}`, 'error');
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage(`用户 ${username} 已添加到豁免名单`, 'success');
+            
+            // 重新加载豁免名单
+            setTimeout(loadExemptionsList, 1000);
+            
+            // 清空输入框
+            document.getElementById('exemptUsername').value = '';
+            document.getElementById('exemptReason').value = '';
+        } else {
+            showMessage(`添加失败: ${data.error || '未知错误'}`, 'error');
+        }
+    } catch (error) {
+        console.error('添加豁免用户错误:', error);
+        showMessage('添加豁免用户时出错: ' + error.message, 'error');
+    }
+}
+
+// 移除豁免用户
+async function removeExemptionUser(username) {
+    if (!username) {
+        showMessage('用户名无效', 'error');
+        return;
+    }
+    
+    try {
+        if (!confirm(`确定要移除用户 ${username} 的豁免吗？`)) {
+            return;
+        }
+        
+        showMessage(`正在移除用户 ${username} 的豁免...`, 'info');
+        
+        // 发送请求
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/runtime-limit/exemptions/${encodeURIComponent(username)}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            showMessage(`移除失败: ${response.status} ${errorText}`, 'error');
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage(`用户 ${username} 已从豁免名单中移除`, 'success');
+            // 重新加载豁免名单
+            setTimeout(loadExemptionsList, 1000);
+        } else {
+            showMessage(`移除失败: ${data.error || '未知错误'}`, 'error');
+        }
+    } catch (error) {
+        console.error('移除豁免用户错误:', error);
+        showMessage('移除豁免用户时出错: ' + error.message, 'error');
+    }
+}
+
+// 加载运行时间统计
+async function loadRuntimeStats() {
+    try {
+        const statsSection = document.getElementById('runtimeStatsSection');
+        const statsContent = document.getElementById('runtimeStatsContent');
+        
+        if (!statsSection || !statsContent) return;
+        
+        // 显示加载中
+        statsSection.style.display = 'block';
+        statsContent.innerHTML = '<div class="loading-indicator">加载中...</div>';
+        
+        // 发送请求
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/runtime-limit/stats', {
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+        
+        if (!response.ok) {
+            statsContent.innerHTML = `<div class="error-message">加载失败: ${response.status} ${response.statusText}</div>`;
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.stats) {
+            const stats = data.stats;
+            
+            // 格式化时间数据的函数
+            const formatTime = (minutes) => {
+                if (!minutes || isNaN(minutes)) return '0';
+                
+                const hours = Math.floor(minutes / 60);
+                const mins = Math.floor(minutes % 60);
+                
+                if (hours > 0) {
+                    return `${hours}小时${mins > 0 ? ` ${mins}分钟` : ''}`;
+                } else {
+                    return `${mins}分钟`;
+                }
+            };
+            
+            // 创建统计卡片
+            let html = `
+            <div class="stats-overview">
+                <div class="stats-item">
+                    <div class="stats-label">运行中实例</div>
+                    <div class="stats-value">${stats.running_instances || 0}</div>
+                </div>
+                <div class="stats-item">
+                    <div class="stats-label">谁免实例</div>
+                    <div class="stats-value">${stats.exempt_instances || 0}</div>
+                </div>
+                <div class="stats-item">
+                    <div class="stats-label">受限制实例</div>
+                    <div class="stats-value">${stats.watched_instances || 0}</div>
+                </div>
+                <div class="stats-item">
+                    <div class="stats-label">总历史会话</div>
+                    <div class="stats-value">${stats.total_sessions || 0}</div>
+                </div>
+            </div>
+            
+            <div class="stats-details">
+                <h5>总体统计</h5>
+                <div class="stats-grid">
+                    <div class="stats-detail-item">
+                        <div class="stats-detail-label">平均会话时长</div>
+                        <div class="stats-detail-value">${formatTime(stats.avg_duration)}</div>
+                    </div>
+                    <div class="stats-detail-item">
+                        <div class="stats-detail-label">最长会话时长</div>
+                        <div class="stats-detail-value">${formatTime(stats.max_duration)}</div>
+                    </div>
+                    <div class="stats-detail-item">
+                        <div class="stats-detail-label">累计运行时间</div>
+                        <div class="stats-detail-value">${formatTime(stats.total_runtime)}</div>
+                    </div>
+                </div>
+                
+                <h5>今日统计</h5>
+                <div class="stats-grid">
+                    <div class="stats-detail-item">
+                        <div class="stats-detail-label">今日会话数</div>
+                        <div class="stats-detail-value">${stats.today_sessions || 0}</div>
+                    </div>
+                    <div class="stats-detail-item">
+                        <div class="stats-detail-label">今日平均时长</div>
+                        <div class="stats-detail-value">${formatTime(stats.today_avg_duration)}</div>
+                    </div>
+                    <div class="stats-detail-item">
+                        <div class="stats-detail-label">今日总时长</div>
+                        <div class="stats-detail-value">${formatTime(stats.today_runtime)}</div>
+                    </div>
+                </div>
+            </div>
+            `;
+            
+            statsContent.innerHTML = html;
+            
+            // 添加美化样式
+            const style = document.createElement('style');
+            style.textContent = `
+                .stats-overview {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 20px;
+                }
+                .stats-item {
+                    background: white;
+                    padding: 15px;
+                    border-radius: 8px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    text-align: center;
+                }
+                .stats-label {
+                    color: #718096;
+                    font-size: 0.9rem;
+                    margin-bottom: 5px;
+                }
+                .stats-value {
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: #2d3748;
+                }
+                .stats-details {
+                    background: white;
+                    padding: 15px;
+                    border-radius: 8px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 20px;
+                }
+                .stats-detail-item {
+                    padding: 10px;
+                    background: #f7fafc;
+                    border-radius: 6px;
+                }
+                .stats-detail-label {
+                    color: #4a5568;
+                    font-size: 0.85rem;
+                    margin-bottom: 3px;
+                }
+                .stats-detail-value {
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    color: #2d3748;
+                }
+                h5 {
+                    color: #4a5568;
+                    margin: 15px 0 10px 0;
+                    font-size: 16px;
+                }
+            `;
+            document.head.appendChild(style);
+        } else {
+            statsContent.innerHTML = `<div class="error-message">加载失败: ${data.error || '未知错误'}</div>`;
+        }
+    } catch (error) {
+        console.error('加载运行时间统计错误:', error);
+        const statsContent = document.getElementById('runtimeStatsContent');
+        if (statsContent) {
+            statsContent.innerHTML = `<div class="error-message">加载失败: ${error.message}</div>`;
+        }
     }
 }
 

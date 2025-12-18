@@ -2,9 +2,15 @@ import express from 'express';
 import { 
     getRuntimeLimitConfig, 
     updateRuntimeLimitConfig, 
-    getTimeoutInstances 
+    getTimeoutInstances,
+    addExemption,
+    removeExemption,
+    getAllExemptions,
+    isUserExempt,
+    getUserRuntimeHistory,
+    getRuntimeStats
 } from '../runtime-limiter.js';
-import { isAdmin } from '../database.js';
+import { isAdmin, findUserByUsername } from '../database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -41,7 +47,7 @@ router.get('/config', authenticateToken, adminAuthMiddleware, (req, res) => {
 // 更新运行时长限制配置
 router.put('/config', authenticateToken, adminAuthMiddleware, (req, res) => {
     try {
-        const { enabled, maxRuntimeMinutes, warningMinutes, checkIntervalSeconds } = req.body;
+        const { enabled, maxRuntimeMinutes, warningMinutes, checkIntervalSeconds, autoRestart } = req.body;
         
         // 验证参数
         if (maxRuntimeMinutes === undefined || warningMinutes === undefined || checkIntervalSeconds === undefined) {
@@ -57,7 +63,7 @@ router.put('/config', authenticateToken, adminAuthMiddleware, (req, res) => {
             return res.status(400).json({ error: '警告提前时间必须在1-60分钟之间' });
         }
         
-        if (checkIntervalSeconds < 10 || checkIntervalSeconds > 3600) { // 10秒到1小时
+        if (checkIntervalSeconds < 10 || checkIntervalSeconds > 3600) { // 10秒到21小时
             return res.status(400).json({ error: '检查间隔必须在10-3600秒之间' });
         }
         
@@ -70,7 +76,8 @@ router.put('/config', authenticateToken, adminAuthMiddleware, (req, res) => {
             enabled, 
             maxRuntimeMinutes, 
             warningMinutes,
-            checkIntervalSeconds
+            checkIntervalSeconds,
+            !!autoRestart
         );
         
         res.json({ 
@@ -79,7 +86,8 @@ router.put('/config', authenticateToken, adminAuthMiddleware, (req, res) => {
             enabled: !!enabled,
             maxRuntimeMinutes,
             warningMinutes,
-            checkIntervalSeconds
+            checkIntervalSeconds,
+            autoRestart: !!autoRestart
         });
     } catch (error) {
         console.error('[Runtime Limiter] 更新配置失败:', error);
@@ -111,6 +119,109 @@ router.get('/status', authenticateToken, adminAuthMiddleware, (req, res) => {
     } catch (error) {
         console.error('[Runtime Limiter] 获取状态失败:', error);
         res.status(500).json({ error: '获取状态失败: ' + error.message });
+    }
+});
+
+// 获取运行时间统计信息
+router.get('/stats', authenticateToken, adminAuthMiddleware, (req, res) => {
+    try {
+        const stats = getRuntimeStats();
+        res.json({ success: true, stats });
+    } catch (error) {
+        console.error('[Runtime Limiter] 获取统计数据失败:', error);
+        res.status(500).json({ error: '获取统计数据失败: ' + error.message });
+    }
+});
+
+// 获取用户运行时间历史
+router.get('/history/:username', authenticateToken, adminAuthMiddleware, (req, res) => {
+    try {
+        const { username } = req.params;
+        const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+        
+        // 检查用户是否存在
+        const user = findUserByUsername(username);
+        if (!user) {
+            return res.status(404).json({ error: `用户 ${username} 不存在` });
+        }
+        
+        const history = getUserRuntimeHistory(username, limit);
+        res.json({ success: true, username, history });
+    } catch (error) {
+        console.error('[Runtime Limiter] 获取用户历史失败:', error);
+        res.status(500).json({ error: '获取用户历史失败: ' + error.message });
+    }
+});
+
+// 获取所有豁免用户
+router.get('/exemptions', authenticateToken, adminAuthMiddleware, (req, res) => {
+    try {
+        const exemptions = getAllExemptions();
+        res.json({ success: true, exemptions });
+    } catch (error) {
+        console.error('[Runtime Limiter] 获取豁免用户列表失败:', error);
+        res.status(500).json({ error: '获取豁免用户列表失败: ' + error.message });
+    }
+});
+
+// 添加用户豁免
+router.post('/exemptions', authenticateToken, adminAuthMiddleware, (req, res) => {
+    try {
+        const { username, reason } = req.body;
+        
+        if (!username) {
+            return res.status(400).json({ error: '用户名不能为空' });
+        }
+        
+        // 检查用户是否存在
+        const user = findUserByUsername(username);
+        if (!user) {
+            return res.status(404).json({ error: `用户 ${username} 不存在` });
+        }
+        
+        const result = addExemption(username, reason, req.user.username);
+        res.json({
+            success: true,
+            message: `用户 ${username} 已添加到运行时间豁免名单`,
+            username,
+            reason,
+            addedBy: req.user.username
+        });
+    } catch (error) {
+        console.error('[Runtime Limiter] 添加豁免失败:', error);
+        res.status(500).json({ error: '添加豁免失败: ' + error.message });
+    }
+});
+
+// 删除用户豁免
+router.delete('/exemptions/:username', authenticateToken, adminAuthMiddleware, (req, res) => {
+    try {
+        const { username } = req.params;
+        
+        if (!username) {
+            return res.status(400).json({ error: '用户名不能为空' });
+        }
+        
+        // 检查用户是否存在
+        const user = findUserByUsername(username);
+        if (!user) {
+            return res.status(404).json({ error: `用户 ${username} 不存在` });
+        }
+        
+        // 检查用户是否已豁免
+        if (!isUserExempt(username)) {
+            return res.status(400).json({ error: `用户 ${username} 不在豁免名单中` });
+        }
+        
+        const result = removeExemption(username);
+        res.json({
+            success: true,
+            message: `用户 ${username} 已从豁免名单中移除`,
+            username
+        });
+    } catch (error) {
+        console.error('[Runtime Limiter] 移除豁免失败:', error);
+        res.status(500).json({ error: '移除豁免失败: ' + error.message });
     }
 });
 
