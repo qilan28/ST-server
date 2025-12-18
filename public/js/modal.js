@@ -46,7 +46,9 @@ function showConfirm(message, title = '确认操作', options = {}) {
         
         modalTitle.textContent = title;
         // 保留换行符格式
-        modalMessage.innerHTML = message.replace(/\n/g, '<br>');
+        // 确保message是字符串
+        const messageStr = typeof message === 'string' ? message : String(message || '');
+        modalMessage.innerHTML = messageStr.replace(/\n/g, '<br>');
         
         // 自定义按钮文本
         if (options.confirmText) {
@@ -146,9 +148,11 @@ function showAlert(message, title = '提示', type = 'info') {
             'info': '💡'
         };
         modalTitle.textContent = title;
-        modalTitle.style.setProperty('--icon', `"${icons[type] || '💬'}"`);
+        modalTitle.style.setProperty('--icon', `"${icons[type] || '🗣'}"`); 
         
-        modalMessage.innerHTML = message.replace(/\n/g, '<br>');
+        // 确保message是字符串
+        const messageStr = typeof message === 'string' ? message : String(message || '');
+        modalMessage.innerHTML = messageStr.replace(/\n/g, '<br>');
         
         // 只显示确定按钮
         confirmBtn.textContent = '确定';

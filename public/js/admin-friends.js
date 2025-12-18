@@ -61,7 +61,7 @@ function setupFriendsLinksEventListeners() {
         document.getElementById('friendLinkModalTitle').textContent = '添加友情链接';
         document.getElementById('friendLinkSaveBtn').textContent = '添加';
         currentEditingFriendLinkId = null;
-        showModal('friendLinkModal');
+        showModalById('friendLinkModal');
     });
     
     // 友情链接表单提交
@@ -114,7 +114,7 @@ async function editFriendLink(id) {
             currentEditingFriendLinkId = id;
             
             // 显示模态框
-            showModal('friendLinkModal');
+            showModalById('friendLinkModal');
         } else {
             showMessage('获取友情链接详情失败', 'error', 'friendsLinkMessage');
         }
@@ -224,6 +224,15 @@ function resetFriendLinkForm() {
     
     const logoPreview = document.getElementById('friendLinkLogoPreview');
     logoPreview.innerHTML = '<p class="text-muted">无Logo</p>';
+}
+
+// 切换到友情链接管理标签
+function switchToFriendsLinksManagement() {
+    // 重新加载友情链接数据
+    loadFriendsLinksTable();
+    
+    // 可以在这里添加其他标签切换逻辑，如隐藏其他标签内容等
+    console.log('切换到友情链接管理模块');
 }
 
 // 页面加载完成后初始化友情链接管理
