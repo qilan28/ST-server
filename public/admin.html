@@ -398,10 +398,11 @@
             <!-- 友情链接管理 -->
             <div class="users-card" id="friendsLinksManagementTab">
                 <h2>🔗 友情链接管理</h2>
+                <div id="friendsLinkMessage" class="message" style="display: none;"></div>
                 <div style="margin-bottom: 20px;">
                     <button id="addFriendLinkBtn" class="btn btn-primary">✚ 添加友情链接</button>
                 </div>
-                <div id="friendsLinksTableContainer" class="table-container">
+                <div id="friendsLinksTableContainer" class="table-container loading">
                     <table class="users-table">
                         <thead>
                             <tr>
@@ -588,6 +589,7 @@
     <!-- 管理面板辅助函数 -->
     <script src="/js/admin-helpers.js"></script>
     <script src="/js/message-helpers.js"></script>
+    <script src="/js/loading-helpers.js"></script>
     
     <!-- 确保modal.js在前，showModal.js在后加载 -->
     <script src="/js/modal.js"></script>

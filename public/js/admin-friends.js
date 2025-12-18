@@ -49,7 +49,7 @@ async function loadFriendsLinksTable() {
     } catch (error) {
         console.error('加载友情链接失败:', error);
         hideSpinner('friendsLinksTableContainer');
-        showMessage('error', '加载友情链接失败，请稍后重试');
+        showMessage('加载友情链接失败，请稍后重试', 'error', 'friendsLinkMessage');
     }
 }
 
@@ -116,11 +116,11 @@ async function editFriendLink(id) {
             // 显示模态框
             showModal('friendLinkModal');
         } else {
-            showMessage('error', '获取友情链接详情失败');
+            showMessage('获取友情链接详情失败', 'error', 'friendsLinkMessage');
         }
     } catch (error) {
         console.error('获取友情链接详情失败:', error);
-        showMessage('error', '获取友情链接详情失败，请稍后重试');
+        showMessage('获取友情链接详情失败，请稍后重试', 'error', 'friendsLinkMessage');
     }
 }
 
@@ -135,7 +135,7 @@ async function saveFriendLink() {
         const is_active = document.getElementById('friendLinkIsActive').checked;
         
         if (!name || !url) {
-            showMessage('error', '名称和URL不能为空');
+            showMessage('名称和URL不能为空', 'error', 'friendsLinkMessage');
             return;
         }
         
@@ -163,15 +163,15 @@ async function saveFriendLink() {
         const data = await response.json();
         
         if (data.success) {
-            showMessage('success', isUpdate ? '友情链接更新成功' : '友情链接添加成功');
+            showMessage(isUpdate ? '友情链接更新成功' : '友情链接添加成功', 'success', 'friendsLinkMessage');
             hideModal('friendLinkModal');
             loadFriendsLinksTable(); // 重新加载表格
         } else {
-            showMessage('error', data.error || '操作失败');
+            showMessage(data.error || '操作失败', 'error', 'friendsLinkMessage');
         }
     } catch (error) {
         console.error('保存友情链接失败:', error);
-        showMessage('error', '保存友情链接失败，请稍后重试');
+        showMessage('保存友情链接失败，请稍后重试', 'error', 'friendsLinkMessage');
     }
 }
 
@@ -202,14 +202,14 @@ async function deleteFriendLink(id) {
         const data = await response.json();
         
         if (data.success) {
-            showMessage('success', '友情链接删除成功');
+            showMessage('友情链接删除成功', 'success', 'friendsLinkMessage');
             loadFriendsLinksTable(); // 重新加载表格
         } else {
-            showMessage('error', data.error || '删除失败');
+            showMessage(data.error || '删除失败', 'error', 'friendsLinkMessage');
         }
     } catch (error) {
         console.error('删除友情链接失败:', error);
-        showMessage('error', '删除友情链接失败，请稍后重试');
+        showMessage('删除友情链接失败，请稍后重试', 'error', 'friendsLinkMessage');
     }
 }
 
