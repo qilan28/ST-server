@@ -279,7 +279,9 @@
                         <div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(102, 126, 234, 0.3); border-radius: 50%; border-top-color: #667eea; animation: spin 1s linear infinite; margin-right: 8px;"></div>
                         正在加载 Nginx 配置...
                     </div>
-                    <div style="display: grid; gap: 15px;">
+                    
+                    <!-- 基本设置 -->
+                    <div style="display: grid; gap: 15px; margin-bottom: 15px;">
                         <div>
                             <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
                                 启用 Nginx 模式
@@ -309,11 +311,70 @@
                                 默认 HTTP 端口为 80，HTTPS 端口为 443
                             </small>
                         </div>
-                        
-                        <div style="display: flex; gap: 10px;">
-                            <button onclick="saveNginxConfig()" class="btn btn-primary">保存配置</button>
-                            <button onclick="generateNginxConfig()" class="btn btn-secondary">生成 Nginx 配置文件</button>
+                    </div>
+                    
+                    <!-- 高级设置 -->
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 15px; color: #1e40af;">🔧 高级配置</h4>
+                            <button id="toggleAdvancedBtn" class="btn btn-sm btn-secondary" style="font-size: 12px; padding: 4px 8px;">显示高级选项</button>
                         </div>
+                        
+                        <div id="advancedSettings" style="display: none;">
+                            <div style="display: grid; gap: 15px;">
+                                <!-- 配置模板选择 -->
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                        配置模板
+                                    </label>
+                                    <select id="nginxTemplate" class="form-input">
+                                        <option value="basic">基础反向代理</option>
+                                        <option value="advanced">高级反向代理(静态文件缓存)</option>
+                                        <option value="https">HTTPS 配置</option>
+                                        <option value="multiuser">多用户模式</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- SSL证书路径 -->
+                                <div id="sslCertOptions" style="display: none;">
+                                    <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                        SSL 证书路径
+                                    </label>
+                                    <input type="text" id="sslCertPath" class="form-input" placeholder="/etc/letsencrypt/live/yourdomain.com/fullchain.pem">
+                                    <small style="display: block; margin-top: 5px; color: #718096;">
+                                        Let's Encrypt 证书通常在 /etc/letsencrypt/live/域名/ 目录下
+                                    </small>
+                                </div>
+                                
+                                <!-- 日志目录 -->
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                        日志目录
+                                    </label>
+                                    <input type="text" id="nginxLogDir" class="form-input" placeholder="/var/log/nginx" value="/var/log/nginx">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 配置预览 -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 15px; color: #1e40af;">🔍 配置预览</h4>
+                            <button id="refreshPreviewBtn" class="btn btn-sm btn-secondary" style="font-size: 12px; padding: 4px 8px;">刷新预览</button>
+                        </div>
+                        <div style="background: #1a202c; border-radius: 6px; padding: 10px; overflow-x: auto;">
+                            <pre id="nginxConfigPreview" style="margin: 0; color: #e2e8f0; font-family: monospace; font-size: 12px; line-height: 1.4;">
+# 点击“刷新预览”按钮查看 Nginx 配置预览
+                            </pre>
+                        </div>
+                    </div>
+                    
+                    <!-- 按钮组 -->
+                    <div style="display: flex; gap: 10px;">
+                        <button id="saveNginxConfigBtn" onclick="saveNginxConfig()" class="btn btn-primary">保存配置</button>
+                        <button id="generateNginxConfigBtn" onclick="generateNginxConfig()" class="btn btn-secondary">生成配置文件</button>
+                        <button id="testNginxConfigBtn" onclick="testNginxConfig()" class="btn btn-secondary">测试配置</button>
                     </div>
                 </div>
             </div>
@@ -599,6 +660,9 @@
     <script src="/js/user-search.js"></script>
     <script src="/js/site-settings.js"></script>
     <script src="/js/admin-friends.js"></script>
+    <!-- Nginx配置相关脚本 -->
+    <script src="/js/nginx-templates.js"></script>
+    <script src="/js/admin-nginx.js"></script>
     <!-- 新增修复脚本 -->
     <script src="/js/admin-fixes.js"></script>
     

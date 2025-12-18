@@ -3,6 +3,7 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getConfig, getNginxConfig, updateNginxConfig, getSystemConfig, updateSystemConfig } from '../utils/config-manager.js';
 import { generateNginxConfig } from '../scripts/generate-nginx-config.js';
 import { reloadNginx, getNginxStatus, getNginxConfigPath } from '../utils/nginx-reload.js';
+import { testNginxConfig, getNginxTemplate, renderNginxConfig } from '../utils/nginx-test.js';
 
 const router = express.Router();
 
@@ -229,6 +230,42 @@ router.put('/system', (req, res) => {
     } catch (error) {
         console.error('Update system config error:', error);
         res.status(500).json({ error: 'Failed to update system config' });
+    }
+});
+
+// 测试Nginx配置
+router.post('/nginx/test', async (req, res) => {
+    try {
+        // 获取配置对象
+        const { enabled, domain, port, template = 'basic', ssl_cert_path, log_dir } = req.body;
+        
+        // 获取对应的配置模板
+        const templateContent = getNginxTemplate(template);
+        if (!templateContent) {
+            return res.status(400).json({ 
+                error: '未找到指定的配置模板', 
+                available_templates: ['basic', 'advanced', 'https', 'multiuser']
+            });
+        }
+        
+        // 渲染配置内容
+        const configContent = renderNginxConfig(templateContent, domain, port, {
+            sslCertPath: ssl_cert_path,
+            logDir: log_dir
+        });
+        
+        // 测试配置语法
+        const testResult = await testNginxConfig(configContent);
+        
+        // 返回测试结果
+        res.json(testResult);
+        
+    } catch (error) {
+        console.error('Test nginx config error:', error);
+        res.status(500).json({ 
+            error: 'Failed to test nginx config', 
+            message: error.message 
+        });
     }
 });
 
