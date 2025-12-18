@@ -291,14 +291,16 @@ async function loadUsers() {
                             ${user.role === 'admin' ? '👤' : '👑'}
                         </button>
                         <button onclick="deleteUserAccount('${user.username}')" class="btn-action btn-delete" title="删除">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
         
-        if (response) {
-            showMessage('状态切换成功', 'success');
-            loadAnnouncements();
-        }
+        // 延迟加载头像
+        setTimeout(() => lazyLoadUserAvatars(), 300);
     } catch (error) {
-        console.error('Toggle announcement status error:', error);
-        showMessage('操作失败', 'error');
+        console.error('Load users error:', error);
+        showMessage('加载用户列表失败', 'error');
     }
 }
 

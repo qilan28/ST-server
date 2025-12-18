@@ -48,7 +48,7 @@
                     <button onclick="manualRefresh()" class="btn btn-secondary" title="立即刷新数据">🔄 刷新</button>
                     <div>
                         <label for="refreshIntervalSelect" style="margin-right: 10px; white-space: nowrap;">自动刷新间隔：</label>
-                        <select id="refreshIntervalSelect" class="form-input" style="width: auto;">
+                        <select id="refreshIntervalSelect" class="form-input" style="width: auto;" onchange="handleRefreshIntervalChange()">
                             <option value="0">关闭</option>
                             <option value="10000">10 秒</option>
                             <option value="15000">15 秒</option>
@@ -503,6 +503,8 @@
     <script src="/js/site-settings.js"></script>
     <!-- 添加调试/测试脚本 -->
     <script src="/js/test-site-settings.js"></script>
+    <!-- 新增修复脚本 -->
+    <script src="/js/admin-fixes.js"></script>
     
     <!-- 调试信息区域 -->
     <div id="debugInfo" style="position: fixed; bottom: 10px; right: 10px; background: #f8f9fa; border: 1px solid #ddd; padding: 10px; max-width: 300px; max-height: 200px; overflow: auto; z-index: 9999; font-size: 12px; display: none;">
@@ -547,5 +549,7 @@
             } catch (e) {}
         };
     </script>
+    <!-- 调试工具脚本 -->
+    <script src="/js/admin-debug.js"></script>
 </body>
 </html>
