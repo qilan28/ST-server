@@ -15,13 +15,6 @@ const BASIC_TEMPLATE = `server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
-        
-        # 替换HTML标题为站点设置的标题
-        sub_filter '<title>SillyTavern</title>' '<title>{{site_title}}</title>';
-        sub_filter '<title>SillyTavern </title>' '<title>{{site_title}}</title>';
-        sub_filter '<title>SillyTavern - ' '<title>{{site_title}} - ';
-        sub_filter_once off;
-        sub_filter_types text/html;
     }
 }`;
 
@@ -233,11 +226,8 @@ window.nginxTemplates = {
 };
 
 // 替换模板变量
-window.renderNginxTemplate = function(template, domain, port, options = {}) {
-    const siteTitle = options.siteTitle || '公益云酒馆多开管理平台';
-    
+window.renderNginxTemplate = function(template, domain, port) {
     return template
         .replace(/{{domain}}/g, domain || 'localhost')
-        .replace(/{{port}}/g, port || '7092')
-        .replace(/{{site_title}}/g, siteTitle);
+        .replace(/{{port}}/g, port || '7092');
 };
