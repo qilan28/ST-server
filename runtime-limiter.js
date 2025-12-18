@@ -30,7 +30,7 @@ export const createRuntimeLimitTable = () => {
             )
         `);
         
-        // 创建用户豁免表
+        // 创建用户谁免表
         db.exec(`
             CREATE TABLE IF NOT EXISTS runtime_exemptions (
                 username TEXT PRIMARY KEY,
@@ -54,6 +54,9 @@ export const createRuntimeLimitTable = () => {
             )
         `);
         
+        // 检查并更新表结构
+        migrateRuntimeLimitTable();
+        
         // 插入默认配置（如果不存在）
         const checkConfig = db.prepare('SELECT COUNT(*) as count FROM runtime_limits');
         const { count } = checkConfig.get();
@@ -68,6 +71,38 @@ export const createRuntimeLimitTable = () => {
         console.log('[Database] ✅ 运行时长限制表创建成功');
     } catch (error) {
         console.error('[Database] ❌ 创建运行时长限制表失败:', error);
+    }
+};
+
+// 数据库结构迁移函数 - 确保所有必要列存在
+export const migrateRuntimeLimitTable = () => {
+    try {
+        console.log('[Database] 检查运行时长限制表结构...');
+        
+        // 检查auto_restart_after_stop列是否存在
+        const tableInfo = db.prepare("PRAGMA table_info(runtime_limits)").all();
+        const columns = tableInfo.map(col => col.name);
+        
+        // 如果不存在auto_restart_after_stop列，添加它
+        if (!columns.includes('auto_restart_after_stop')) {
+            console.log('[Database] 开始添加auto_restart_after_stop列...');
+            db.exec(`ALTER TABLE runtime_limits ADD COLUMN auto_restart_after_stop INTEGER DEFAULT 0`);
+            console.log('[Database] ✅ auto_restart_after_stop列添加成功');
+        }
+        
+        // 检查restart_count列在instance_start_times表中是否存在
+        const startTimeInfo = db.prepare("PRAGMA table_info(instance_start_times)").all();
+        const startTimeColumns = startTimeInfo.map(col => col.name);
+        
+        if (!startTimeColumns.includes('restart_count')) {
+            console.log('[Database] 开始添加restart_count列...');
+            db.exec(`ALTER TABLE instance_start_times ADD COLUMN restart_count INTEGER DEFAULT 0`);
+            console.log('[Database] ✅ restart_count列添加成功');
+        }
+        
+        console.log('[Database] 表结构检查与迁移完成');
+    } catch (error) {
+        console.error('[Database] ❌ 表结构迁移失败:', error);
     }
 };
 
