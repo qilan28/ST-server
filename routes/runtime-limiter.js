@@ -8,10 +8,12 @@ import {
     getAllExemptions,
     isUserExempt,
     getUserRuntimeHistory,
-    getRuntimeStats
+    getRuntimeStats,
+    forceCheckInstances
 } from '../runtime-limiter.js';
 import { isAdmin, findUserByUsername } from '../database.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { db } from '../database.js';
 
 const router = express.Router();
 
@@ -222,6 +224,43 @@ router.delete('/exemptions/:username', authenticateToken, adminAuthMiddleware, (
     } catch (error) {
         console.error('[Runtime Limiter] 移除豁免失败:', error);
         res.status(500).json({ error: '移除豁免失败: ' + error.message });
+    }
+});
+
+// 强制检查超时实例
+router.post('/force-check', authenticateToken, adminAuthMiddleware, async (req, res) => {
+    try {
+        console.log('[Runtime Limiter] 接收到强制检查请求');
+        await forceCheckInstances();
+        res.json({ success: true, message: '强制检查完成' });
+    } catch (error) {
+        console.error('[Runtime Limiter] 强制检查失败:', error);
+        res.status(500).json({ error: '强制检查失败: ' + error.message });
+    }
+});
+
+// 检查实例的记录状态
+router.get('/instance-records', authenticateToken, adminAuthMiddleware, (req, res) => {
+    try {
+        console.log('[Runtime Limiter] 获取实例启动时间记录');
+        
+        const stmt = db.prepare(`
+            SELECT i.username, i.start_time, i.warning_sent, i.restart_count,
+                   (julianday('now') - julianday(i.start_time)) * 24 * 60 AS runtime_minutes,
+                   u.status,
+                   CASE WHEN e.username IS NOT NULL THEN 1 ELSE 0 END AS is_exempt
+            FROM instance_start_times i
+            JOIN users u ON i.username = u.username
+            LEFT JOIN runtime_exemptions e ON i.username = e.username
+            ORDER BY runtime_minutes DESC
+        `);
+        
+        const records = stmt.all();
+        
+        res.json({ success: true, records });
+    } catch (error) {
+        console.error('[Runtime Limiter] 获取实例记录失败:', error);
+        res.status(500).json({ error: '获取实例记录失败: ' + error.message });
     }
 });
 

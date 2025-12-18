@@ -235,27 +235,46 @@ export const updateRuntimeLimitConfig = (enabled, maxRuntimeMinutes, warningMinu
 // 记录实例启动时间
 export const recordInstanceStart = (username) => {
     try {
+        if (!username) {
+            console.error('[Runtime Limiter] 无法记录启动时间：用户名为空');
+            return null;
+        }
+
+        console.log(`[Runtime Limiter] 记录用户 ${username} 的实例启动时间`);
+
         // 先删除旧记录（如果存在）
-        db.prepare('DELETE FROM instance_start_times WHERE username = ?').run(username);
+        const deleteResult = db.prepare('DELETE FROM instance_start_times WHERE username = ?').run(username);
+        console.log(`[Runtime Limiter] 删除用户 ${username} 的旧记录结果:`, deleteResult);
         
         // 插入新记录
         const stmt = db.prepare(`
-            INSERT INTO instance_start_times (username, start_time, warning_sent)
-            VALUES (?, CURRENT_TIMESTAMP, 0)
+            INSERT INTO instance_start_times (username, start_time, warning_sent, restart_count)
+            VALUES (?, CURRENT_TIMESTAMP, 0, 0)
         `);
-        return stmt.run(username);
+        const result = stmt.run(username);
+        console.log(`[Runtime Limiter] 用户 ${username} 实例启动时间记录成功`);
+        return result;
     } catch (error) {
         console.error(`[Runtime Limiter] 记录 ${username} 的实例启动时间失败:`, error);
+        return null;
     }
 };
 
 // 删除实例启动时间记录（实例停止时调用）
 export const removeInstanceStartTime = (username) => {
     try {
-        const stmt = db.prepare('DELETE FROM instance_start_times WHERE username = ?');
-        return stmt.run(username);
+        if (!username) {
+            console.error('[Runtime Limiter] 无法删除启动时间记录：用户名为空');
+            return null;
+        }
+
+        // 删除记录
+        const result = db.prepare('DELETE FROM instance_start_times WHERE username = ?').run(username);
+        console.log(`[Runtime Limiter] 用户 ${username} 的启动时间记录已删除`);
+        return result;
     } catch (error) {
         console.error(`[Runtime Limiter] 删除 ${username} 的实例启动时间记录失败:`, error);
+        return null;
     }
 };
 
@@ -558,7 +577,15 @@ export const startRuntimeLimitCheck = () => {
     runtimeCheckInterval = setInterval(checkTimeoutInstances, intervalSeconds * 1000);
     
     // 立即执行一次检查
+    console.log('[Runtime Limiter] 立即执行实例检查...');
     checkTimeoutInstances();
+};
+
+// 强制执行检查，用于手动检查所有超时实例
+export const forceCheckInstances = async () => {
+    console.log('[Runtime Limiter] 强制执行超时检查');
+    await checkTimeoutInstances();
+    console.log('[Runtime Limiter] 强制检查完成');
 };
 
 // 停止运行时长检查

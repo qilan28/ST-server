@@ -241,6 +241,8 @@ function renderRuntimeLimitForm(config) {
             <button onclick="loadRuntimeLimitStatus()" class="btn btn-secondary">查看当前状态</button>
             <button onclick="loadExemptionsList()" class="btn btn-secondary">谁免名单</button>
             <button onclick="loadRuntimeStats()" class="btn btn-secondary">运行统计</button>
+            <button onclick="forceCheckTimeout()" class="btn btn-warning">强制检查超时</button>
+            <button onclick="loadInstanceRecords()" class="btn btn-info">实例记录状态</button>
         </div>
         
         <div id="runtimeLimitMessage" class="message" style="display: none;"></div>
@@ -259,6 +261,11 @@ function renderRuntimeLimitForm(config) {
     <div id="runtimeStatsSection" style="display: none; margin-top: 20px;">
         <h4>运行时间统计数据</h4>
         <div id="runtimeStatsContent"></div>
+    </div>
+    
+    <div id="instanceRecordsSection" style="display: none; margin-top: 20px;">
+        <h4>实例记录状态</h4>
+        <div id="instanceRecordsContent"></div>
     </div>
     `;
 }
@@ -980,6 +987,189 @@ async function loadRuntimeStats() {
         const statsContent = document.getElementById('runtimeStatsContent');
         if (statsContent) {
             statsContent.innerHTML = `<div class="error-message">加载失败: ${error.message}</div>`;
+        }
+    }
+}
+
+// 强制检查超时实例
+async function forceCheckTimeout() {
+    try {
+        showMessage('正在强制检查超时实例...', 'info');
+        
+        // 发送请求
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/runtime-limit/force-check', {
+            method: 'POST',
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+        
+        if (!response.ok) {
+            showMessage(`检查失败: ${response.status} ${response.statusText}`, 'error');
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage('强制检查完成，请刷新状态查看结果', 'success');
+            // 自动刷新状态
+            setTimeout(loadRuntimeLimitStatus, 2000);
+        } else {
+            showMessage(`检查失败: ${data.error || '未知错误'}`, 'error');
+        }
+    } catch (error) {
+        console.error('强制检查超时实例错误:', error);
+        showMessage('强制检查超时实例失败: ' + error.message, 'error');
+    }
+}
+
+// 加载实例记录状态
+async function loadInstanceRecords() {
+    try {
+        const recordsSection = document.getElementById('instanceRecordsSection');
+        const recordsContent = document.getElementById('instanceRecordsContent');
+        
+        if (!recordsSection || !recordsContent) return;
+        
+        // 显示加载中
+        recordsSection.style.display = 'block';
+        recordsContent.innerHTML = '<div class="loading-indicator">加载中...</div>';
+        
+        // 设置请求超时
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('请求超时')), 5000);
+        });
+        
+        // 发起请求
+        const token = localStorage.getItem('token');
+        const fetchPromise = fetch('/api/runtime-limit/instance-records', {
+            headers: {
+                'Authorization': token ? `Bearer ${token}` : ''
+            }
+        });
+        
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        if (!response || !response.ok) {
+            recordsContent.innerHTML = `<div class="error-message">加载失败: ${response ? response.status + ' ' + response.statusText : '网络错误'}</div>`;
+            return;
+        }
+        
+        const data = await response.json().catch(err => {
+            console.error('解析响应数据失败:', err);
+            recordsContent.innerHTML = `<div class="error-message">解析数据失败: ${err.message}</div>`;
+            return null;
+        });
+        
+        if (!data) return;
+        
+        if (data.success) {
+            const records = data.records || [];
+            
+            if (records.length > 0) {
+                // 格式化运行时间的函数
+                const formatRuntime = (minutes) => {
+                    if (!minutes) return '0分钟';
+                    if (minutes < 60) return `${Math.floor(minutes)}分钟`;
+                    return `${Math.floor(minutes / 60)}小时 ${Math.floor(minutes % 60)}分钟`;
+                };
+                
+                let html = `
+                <div class="records-table-container">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>启动时间</th>
+                                <th>已运行</th>
+                                <th>实例状态</th>
+                                <th>谁免状态</th>
+                                <th>警告状态</th>
+                                <th>重启次数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                records.forEach(record => {
+                    const runtimeFormatted = formatRuntime(record.runtime_minutes);
+                    const isExempt = record.is_exempt === 1;
+                    const warningSent = record.warning_sent === 1;
+                    
+                    html += `
+                    <tr class="${isExempt ? 'exempt-row' : record.runtime_minutes > 120 ? 'timeout-row' : ''}">
+                        <td>${record.username || '-'}</td>
+                        <td>${formatDate(record.start_time || '')}</td>
+                        <td>${runtimeFormatted}</td>
+                        <td>${record.status || '-'}</td>
+                        <td>
+                            <span class="${isExempt ? 'status-badge exempt-badge' : 'status-badge normal-badge'}">
+                                ${isExempt ? '已谁免' : '正常'}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="${warningSent ? 'status-badge warning-badge' : 'status-badge normal-badge'}">
+                                ${warningSent ? '已发送' : '未警告'}
+                            </span>
+                        </td>
+                        <td>${record.restart_count || 0}</td>
+                    </tr>
+                    `;
+                });
+                
+                html += `
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="actions-container" style="margin-top: 15px;">
+                    <button onclick="forceCheckTimeout()" class="btn btn-warning">立即检查超时</button>
+                </div>
+                `;
+                
+                recordsContent.innerHTML = html;
+            } else {
+                recordsContent.innerHTML = `
+                <div class="no-records">
+                    <p>当前没有实例启动时间记录。</p>
+                </div>
+                `;
+            }
+            
+            // 添加颜色样式
+            const style = document.createElement('style');
+            style.textContent = `
+                .exempt-row {
+                    background-color: #d4edda !important;
+                }
+                .timeout-row {
+                    background-color: #f8d7da !important;
+                }
+                .exempt-badge {
+                    background-color: #28a745;
+                    color: white;
+                }
+                .warning-badge {
+                    background-color: #ffc107;
+                    color: #212529;
+                }
+                .normal-badge {
+                    background-color: #e2e3e5;
+                    color: #212529;
+                }
+            `;
+            document.head.appendChild(style);
+            
+        } else {
+            recordsContent.innerHTML = `<div class="error-message">加载失败: ${data.error || '未知错误'}</div>`;
+        }
+    } catch (error) {
+        console.error('加载实例记录错误:', error);
+        const recordsContent = document.getElementById('instanceRecordsContent');
+        if (recordsContent) {
+            recordsContent.innerHTML = `<div class="error-message">加载失败: ${error.message}</div>`;
         }
     }
 }
