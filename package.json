@@ -5,7 +5,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node scripts/auto-fix-nginx-title.js && node server.js",
     "dev": "node --watch server.js",
     "setup": "node setup.js",
     "create-admin": "node scripts/create-admin.js",
@@ -16,6 +16,7 @@
     "fix-site-settings": "node scripts/fix-site-settings.js",
     "set-default-favicon": "node scripts/set-default-favicon.js",
     "generate-nginx": "node scripts/generate-nginx-config.js",
+    "fix-nginx-title": "node scripts/auto-fix-nginx-title.js",
     "deploy-nginx": "sudo bash scripts/deploy-nginx.sh",
     "start-nginx": "sudo bash scripts/start-nginx-standalone.sh",
     "diagnose-nginx": "sudo bash scripts/diagnose-nginx.sh",
