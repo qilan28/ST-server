@@ -16,23 +16,17 @@
             transition: opacity 0.3s ease-in-out;
         }
         
-        /* 预设管理面板布局样式 */
-        .admin-header-buttons > div {
-            display: flex !important;
-            justify-content: space-between !important;
-            width: 100% !important;
-            align-items: center !important;
+        /* 管理面板Logo样式 */
+        .header-logo-container {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
         }
-
-        /* 管理面板左侧元素布局 */
-        .admin-header-buttons .header-logo-container {
-            margin-right: 15px !important;
-        }
-
-        /* 管理面板用户信息固定在右边 */
-        .admin-header-buttons > div > div:nth-child(1) {
-            margin-left: auto !important;
-            order: 2 !important;
+        
+        .header-logo-image {
+            height: 28px;
+            width: auto;
+            margin-right: 10px;
         }
 
         /* 页面加载指示器样式 */
