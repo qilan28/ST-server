@@ -97,12 +97,6 @@ function applyLoginPageLogo(logoPath) {
                 siteNameEl.textContent = siteNameEl.textContent.replace('🎭', '').trim();
             }
             
-            // 删除预加载器
-            const preloader = logoContainer.querySelector('.preloader');
-            if (preloader) {
-                preloader.remove();
-            }
-            
             // 将元素移入新容器
             newContainer.appendChild(logoImg);
             
@@ -124,67 +118,33 @@ function applyLoginPageLogo(logoPath) {
 function applyDashboardLogo(logoPath) {
     try {
         const headerContent = document.querySelector('.dashboard-header .header-content');
-        if (!headerContent) {
-            console.warn('未找到仪表盘页面头部元素');
-            return;
-        }
-        
-        // 获取原标题和用户信息元素
         const siteNameEl = headerContent.querySelector('.site-name');
-        const userInfoEl = headerContent.querySelector('.user-info');
         
-        if (!siteNameEl) {
-            console.warn('未找到网站标题元素');
-            return;
+        if (headerContent && siteNameEl) {
+            // 创建Logo容器
+            const logoContainer = document.createElement('div');
+            logoContainer.className = 'header-logo-container';
+            
+            // 添加Logo图片
+            const logoImg = document.createElement('img');
+            logoImg.src = logoPath;
+            logoImg.alt = '网站Logo';
+            logoImg.className = 'header-logo-image';
+            
+            // 移除表情符号
+            if (siteNameEl.textContent.includes('🎭')) {
+                siteNameEl.textContent = siteNameEl.textContent.replace('🎭', '').trim();
+            }
+            
+            // 添加到容器
+            logoContainer.appendChild(logoImg);
+            logoContainer.appendChild(siteNameEl);
+            
+            // 替换原标题
+            headerContent.replaceChild(logoContainer, siteNameEl);
+            
+            console.log('仪表盘Logo已更新');
         }
-        
-        // 创建Logo容器和标题容器
-        const leftContainer = document.createElement('div');
-        leftContainer.className = 'header-left-section';
-        leftContainer.style.display = 'flex';
-        leftContainer.style.alignItems = 'center';
-        leftContainer.style.gap = '10px';
-        
-        // 添加Logo图片
-        const logoImg = document.createElement('img');
-        logoImg.src = logoPath;
-        logoImg.alt = '网站Logo';
-        logoImg.className = 'header-logo-image';
-        logoImg.style.height = '32px';
-        logoImg.style.width = 'auto';
-        
-        // 移除表情符号
-        if (siteNameEl.textContent.includes('🎭')) {
-            siteNameEl.textContent = siteNameEl.textContent.replace('🎭', '').trim();
-        }
-        
-        // 保存原标题内容
-        const titleClone = siteNameEl.cloneNode(true);
-        
-        // 清空 header-content并重建结构
-        while (headerContent.firstChild) {
-            headerContent.removeChild(headerContent.firstChild);
-        }
-        
-        // 添加元素到左侧容器
-        leftContainer.appendChild(logoImg);
-        leftContainer.appendChild(titleClone);
-        
-        // 重新添加到页面
-        headerContent.appendChild(leftContainer);
-        
-        // 如果有用户信息，再加回去
-        if (userInfoEl) {
-            headerContent.appendChild(userInfoEl);
-        }
-        
-        // 添加样式使左右对齐
-        headerContent.style.display = 'flex';
-        headerContent.style.justifyContent = 'space-between';
-        headerContent.style.alignItems = 'center';
-        headerContent.style.width = '100%';
-        
-        console.log('仪表盘Logo已更新，布局已修复');
     } catch (error) {
         console.error('更新仪表盘Logo失败:', error);
     }

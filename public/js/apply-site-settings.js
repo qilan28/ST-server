@@ -73,21 +73,9 @@
                         document.head.appendChild(link);
                     }
                 }
-                
-                // 通知预加载器设置已加载完成
-                if (window.preloader && typeof window.preloader.markSettingsLoaded === 'function') {
-                    window.preloader.markSettingsLoaded();
-                    console.log('已通知预加载器：设置加载完成');
-                } else {
-                    console.log('预加载器不存在或未就绪');
-                }
             }
         } catch (error) {
             console.error('应用站点设置失败:', error);
-            // 即使出错也尝试显示内容
-            if (window.preloader && typeof window.preloader.markSettingsLoaded === 'function') {
-                window.preloader.markSettingsLoaded();
-            }
         }
     }
     
