@@ -1,0 +1,111 @@
+/* 加载状态样式 */
+
+/* 旋转动画 */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 淡入动画 */
+@keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* 淡出动画 */
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* 加载中状态样式 */
+.loading {
+    position: relative;
+}
+
+.loading:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 1;
+    animation: fadeIn 0.3s;
+    pointer-events: auto;
+}
+
+.loading:after {
+    content: '加载中...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #667eea;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 加载指示器 */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background-color: #f7fafc;
+    border-radius: 4px;
+    color: #4a5568;
+    animation: fadeIn 0.3s;
+}
+
+.loading-indicator .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(102, 126, 234, 0.3);
+    border-radius: 50%;
+    border-top-color: #667eea;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+/* 加载指示器显示和隐藏 */
+.nginx-settings.loading .loading-indicator {
+    display: flex !important;
+}
+
+/* 结果消息样式 */
+.message {
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    animation: fadeIn 0.3s;
+}
+
+.message.success {
+    background-color: #f0fff4;
+    color: #276749;
+    border-left: 4px solid #48bb78;
+}
+
+.message.error {
+    background-color: #fff5f5;
+    color: #c53030;
+    border-left: 4px solid #f56565;
+}
+
+.message.info {
+    background-color: #ebf8ff;
+    color: #2b6cb0;
+    border-left: 4px solid #4299e1;
+}
+
+.message.warning {
+    background-color: #fffaf0;
+    color: #c05621;
+    border-left: 4px solid #ed8936;
+}

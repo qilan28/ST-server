@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#4a69bd">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/table-fix.css">
+    <link rel="stylesheet" href="/css/loading.css">
     <!-- 权限验证脚本 (必须放在最前面) -->
     <script src="/js/auth-check.js"></script>
     
@@ -263,8 +264,13 @@
                 </div>
                 
                 <!-- Nginx 配置 -->
-                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;" class="nginx-settings">
                     <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🌐 Nginx 反向代理配置</h3>
+                    <div id="nginxConfigMessage" class="message" style="margin-bottom: 10px; display: none;"></div>
+                    <div class="loading-indicator" style="margin-bottom: 10px; display: none; text-align: center; padding: 10px; background: #f7fafc; border-radius: 4px;">
+                        <div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(102, 126, 234, 0.3); border-radius: 50%; border-top-color: #667eea; animation: spin 1s linear infinite; margin-right: 8px;"></div>
+                        正在加载 Nginx 配置...
+                    </div>
                     <div style="display: grid; gap: 15px;">
                         <div>
                             <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
@@ -554,5 +560,6 @@
     <!-- 调试工具脚本 -->
     <script src="/js/admin-debug.js"></script>
     <script src="/js/diagnose-api.js"></script>
+    <script src="/js/nginx-diagnostics.js"></script>
 </body>
 </html>

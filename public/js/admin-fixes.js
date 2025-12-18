@@ -108,21 +108,127 @@ async function loadAnnouncements() {
 
 // Nginx配置功能
 async function loadNginxConfig() {
+    console.log('正在加载 Nginx 配置...');
+    
+    // 显示加载中状态
+    const nginxSection = document.querySelector('.nginx-settings');
+    const loadingIndicator = nginxSection ? nginxSection.querySelector('.loading-indicator') : null;
+    const messageContainer = document.getElementById('nginxConfigMessage');
+    
+    // 显示加载中状态
+    if (loadingIndicator) loadingIndicator.style.display = 'flex';
+    if (messageContainer) messageContainer.style.display = 'none';
+    
     try {
+        // 生成随机查询参数防止缓存
+        const timestamp = new Date().getTime();
+        const requestUrl = `${API_BASE}/config/nginx?_nocache=${timestamp}`;
+        console.log(`发送 Nginx 配置请求到: ${requestUrl}`);
+        
         // 发送API请求获取当前配置
-        const response = await apiRequest(`${API_BASE}/config/nginx`);
-        if (!response) return;
+        const response = await apiRequest(requestUrl);
+        
+        if (!response) {
+            console.error('加载 Nginx 配置失败: 无响应');
+            
+            // 显示错误消息
+            if (messageContainer) {
+                messageContainer.textContent = '加载 Nginx 配置失败: 服务器无响应';
+                messageContainer.className = 'message error';
+                messageContainer.style.display = 'block';
+            }
+            
+            // 全局消息
+            if (window.showMessage) {
+                window.showMessage('加载 Nginx 配置失败: 服务器无响应', 'error');
+            }
+            return;
+        }
+        
+        if (!response.ok) {
+            console.error(`加载 Nginx 配置失败: HTTP 状态 ${response.status}`);
+            
+            // 显示错误消息
+            const errorMsg = `加载失败: ${response.statusText || `状态码 ${response.status}`}`;
+            
+            if (messageContainer) {
+                messageContainer.textContent = errorMsg;
+                messageContainer.className = 'message error';
+                messageContainer.style.display = 'block';
+            }
+            
+            // 全局消息
+            if (window.showMessage) {
+                window.showMessage(errorMsg, 'error');
+            }
+            return;
+        }
         
         const data = await response.json();
+        console.log('收到 Nginx 配置数据:', data);
+        
         const config = data.config || {};
         
+        // 检查UI元素
+        const enabledCheckbox = document.getElementById('nginxEnabled');
+        const domainInput = document.getElementById('nginxDomain');
+        const portInput = document.getElementById('nginxPort');
+        
+        if (!enabledCheckbox || !domainInput || !portInput) {
+            console.error('加载 Nginx 配置失败: UI 元素不存在');
+            
+            if (messageContainer) {
+                messageContainer.textContent = '加载 Nginx 配置失败: UI 元素不存在';
+                messageContainer.className = 'message error';
+                messageContainer.style.display = 'block';
+            }
+            return;
+        }
+        
         // 更新UI
-        document.getElementById('nginxEnabled').checked = Boolean(config.enabled);
-        document.getElementById('nginxDomain').value = config.domain || '';
-        document.getElementById('nginxPort').value = config.port || 80;
+        enabledCheckbox.checked = Boolean(config.enabled);
+        domainInput.value = config.domain || '';
+        portInput.value = config.port || 80;
+        
+        console.log('加载 Nginx 配置成功');
+        
+        // 显示成功消息
+        if (messageContainer) {
+            messageContainer.textContent = '配置已成功加载';
+            messageContainer.className = 'message success';
+            messageContainer.style.display = 'block';
+            
+            // 3秒后自动隐藏成功消息
+            setTimeout(() => {
+                messageContainer.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 全局消息
+        if (window.showMessage) {
+            window.showMessage('配置已加载', 'success');
+        }
     } catch (error) {
         console.error('加载Nginx配置失败:', error);
-        // 可以添加错误提示
+        
+        // 显示错误消息
+        const errorMsg = `加载 Nginx 配置失败: ${error.message || '未知错误'}`;
+        
+        if (messageContainer) {
+            messageContainer.textContent = errorMsg;
+            messageContainer.className = 'message error';
+            messageContainer.style.display = 'block';
+        }
+        
+        // 全局消息
+        if (window.showMessage) {
+            window.showMessage(errorMsg, 'error');
+        }
+    } finally {
+        // 隐藏加载指示器
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
     }
 }
 

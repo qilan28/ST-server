@@ -1,6 +1,7 @@
 // 站点设置管理
 // 自动适应当前协议，而不是硬编码 HTTP 或 HTTPS
-const API_BASE = '/api';  // 使用相对路径，自动采用当前协议
+// 使用全局 API_BASE 变量，避免重复声明
+// const API_BASE = '/api';  // 已在 admin.js 中定义
 
 // 加载站点设置
 async function loadSiteSettings() {
