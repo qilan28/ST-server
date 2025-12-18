@@ -2566,3 +2566,50 @@ label input[type="checkbox"] {
         width: 100%;
     }
 }
+
+/* 友情链接样式 */
+.friends-links-container {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #edf2f7;
+    text-align: center;
+}
+
+.friends-links-container h3 {
+    font-size: 1rem;
+    color: #4a5568;
+    margin-bottom: 15px;
+}
+
+.friends-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.friend-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #f9fafb;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: #4a5568;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.friend-link:hover {
+    background-color: #edf2f7;
+    border-color: #cbd5e0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.friend-logo {
+    height: 20px;
+    width: auto;
+    margin-right: 8px;
+    border-radius: 4px;
+}

@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { createSiteSettingsTable } from './database-site-settings.js';
+import { createFriendsLinkTable } from './database-friends.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -182,6 +183,7 @@ export const initDatabase = () => {
         createUsersTable();
         createAnnouncementsTable();
         createAutoBackupConfigTable();
+        createFriendsLinkTable();
         
         // 创建站点设置表并测试写入
         try {
