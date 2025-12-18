@@ -2,8 +2,17 @@
  * 管理员面板 Nginx 配置管理
  */
 
-// API基础路径
-const API_BASE = '/api';
+// 使用已经存在的API_BASE变量或默认为'/api'
+let nginxApiBase = '/api';
+
+// 尝试使用全局API_BASE变量如果存在
+try {
+    if (typeof API_BASE !== 'undefined') {
+        nginxApiBase = API_BASE;
+    }
+} catch (e) {
+    // 如果API_BASE未定义，使用默认值
+}
 
 // 当前Nginx配置
 let currentNginxConfig = null;
@@ -74,7 +83,7 @@ async function loadNginxConfig() {
         }
         
         // 请求配置
-        const response = await fetch(`${API_BASE}/config/nginx`, {
+        const response = await fetch(`${nginxApiBase}/config/nginx`, {
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
@@ -196,7 +205,7 @@ async function testNginxConfig() {
         config.log_dir = document.getElementById('nginxLogDir').value;
         
         // 发送测试请求
-        const response = await fetch(`${API_BASE}/config/nginx/test`, {
+        const response = await fetch(`${nginxApiBase}/config/nginx/test`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -263,7 +272,7 @@ async function saveNginxConfig() {
         config.log_dir = document.getElementById('nginxLogDir').value;
         
         // 发送保存请求
-        const response = await fetch(`${API_BASE}/config/nginx`, {
+        const response = await fetch(`${nginxApiBase}/config/nginx`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -332,7 +341,7 @@ async function generateNginxConfig() {
         }
         
         // 发送生成配置文件请求
-        const response = await fetch(`${API_BASE}/config/nginx/generate`, {
+        const response = await fetch(`${nginxApiBase}/config/nginx/generate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
