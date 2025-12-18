@@ -7,7 +7,7 @@ import {
     deleteFriendsLink, 
     getFriendsLink 
 } from '../database-friends.js';
-import { isAdmin } from '../middlewares/auth.js';
+import { isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
