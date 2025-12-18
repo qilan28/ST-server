@@ -446,11 +446,36 @@ async function showAutoBackupUsers() {
             usersDiv.style.display = 'block';
             
             if (data.users && data.users.length > 0) {
+                // 先显示统计信息的概要卡片
                 let html = `
-                    <p style="margin-bottom: 15px;">
-                        备份类型：<strong>${getBackupTypeText(data.backup_type)}</strong> | 
-                        符合条件：<strong>${data.total}</strong> 个用户
-                    </p>
+                    <div style="margin-bottom: 20px; background: #f7fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h4 style="margin-top: 0; margin-bottom: 10px; color: #4a5568;">用户备份状态统计</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                            <div style="flex: 1; min-width: 120px; background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <div style="color: #718096; font-size: 0.9rem;">总用户数</div>
+                                <div style="font-size: 1.5rem; font-weight: 600; color: #4a5568;">${data.total}</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px; background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <div style="color: #718096; font-size: 0.9rem;">可备份用户</div>
+                                <div style="font-size: 1.5rem; font-weight: 600; color: #48bb78;">${data.eligible}</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px; background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <div style="color: #718096; font-size: 0.9rem;">缺失HF配置</div>
+                                <div style="font-size: 1.5rem; font-weight: 600; color: #ed8936;">${data.stats.missing_config}</div>
+                            </div>
+                            <div style="flex: 1; min-width: 120px; background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <div style="color: #718096; font-size: 0.9rem;">未启用备份</div>
+                                <div style="font-size: 1.5rem; font-weight: 600; color: #f56565;">${data.stats.disabled}</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; color: #718096; font-size: 0.9rem;">
+                            备份类型: <strong>${getBackupTypeText(data.backup_type)}</strong>
+                        </div>
+                    </div>
+                `;
+                
+                // 然后显示详细的用户列表
+                html += `
                     <div style="overflow-x: auto;">
                         <table class="users-table">
                             <thead>
@@ -466,15 +491,36 @@ async function showAutoBackupUsers() {
                             <tbody>
                 `;
                 
-                data.users.forEach(user => {
+                // 按照是否满足条件排序：先显示满足条件的用户
+                const sortedUsers = [...data.users].sort((a, b) => {
+                    // 满足备份条件的优先
+                    const aEligible = a.hasHFConfig && a.auto_backup_enabled;
+                    const bEligible = b.hasHFConfig && b.auto_backup_enabled;
+                    
+                    if (aEligible && !bEligible) return -1;
+                    if (!aEligible && bEligible) return 1;
+                    
+                    // 其次按运行状态排序
+                    if (a.status === 'running' && b.status !== 'running') return -1;
+                    if (a.status !== 'running' && b.status === 'running') return 1;
+                    
+                    // 最后按用户名字母排序
+                    return a.username.localeCompare(b.username);
+                });
+                
+                sortedUsers.forEach(user => {
+                    // 判断行的样式：可备份的用户高亮显示
+                    const isEligible = user.hasHFConfig && user.auto_backup_enabled;
+                    const rowStyle = isEligible ? 'background-color: #f0fff4;' : '';
+                    
                     html += `
-                        <tr>
+                        <tr style="${rowStyle}">
                             <td>${user.username}</td>
                             <td>${user.email}</td>
-                            <td><span class="status-badge status-${user.status}">${user.status === 'running' ? '运行中' : '已停止'}</span></td>
+                            <td><span class="status-badge status-${user.status === 'running' ? 'running' : 'stopped'}">${user.status === 'running' ? '运行中' : '已停止'}</span></td>
                             <td>${user.last_login_at ? new Date(user.last_login_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '从未登录'}</td>
-                            <td>${user.hasHFConfig ? '✅ 已配置' : '❌ 未配置'}</td>
-                            <td>${user.auto_backup_enabled ? '✅ 已启用' : '❌ 已停用'}</td>
+                            <td>${user.hasHFConfig ? '✅ 已配置' : '<span style="color: #f56565;">❌ 未配置</span>'}</td>
+                            <td>${user.auto_backup_enabled ? '✅ 已启用' : '<span style="color: #ed8936;">❌ 未启用</span>'}</td>
                         </tr>
                     `;
                 });
@@ -487,7 +533,13 @@ async function showAutoBackupUsers() {
                 
                 usersContent.innerHTML = html;
             } else {
-                usersContent.innerHTML = '<p style="text-align: center; padding: 20px; color: #718096;">暂无符合条件的用户</p>';
+                usersContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; background: #f7fafc; border-radius: 8px; color: #718096;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">📭</div>
+                        <p style="margin: 0;">系统中暂无普通用户账号</p>
+                        <p style="margin-top: 10px; font-size: 0.9rem;">请先创建用户账号再尝试查看备份用户</p>
+                    </div>
+                `;
             }
         }
     } catch (error) {

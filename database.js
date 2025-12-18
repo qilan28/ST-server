@@ -528,21 +528,37 @@ export const updateAutoBackupLastRun = () => {
 };
 
 // 获取需要自动备份的用户列表
-export const getUsersForAutoBackup = (backupType) => {
-    let query = `
-        SELECT * FROM users 
-        WHERE role = 'user' 
-        AND auto_backup_enabled = 1
-        AND hf_token IS NOT NULL 
-        AND hf_repo IS NOT NULL
-    `;
+export const getUsersForAutoBackup = (backupType, showAll = false) => {
+    let baseQuery;
     
-    if (backupType === 'logged_in_today') {
-        // 当日登录过的用户
-        query += ` AND DATE(last_login_at) = DATE('now')`;
-    } else if (backupType === 'running') {
-        // 运行中的实例
-        query += ` AND status = 'running'`;
+    if (showAll) {
+        // 仅过滤普通用户，显示所有潜在用户（即使未设置备份或未启用）
+        baseQuery = `
+            SELECT * FROM users 
+            WHERE role = 'user'
+        `;
+    } else {
+        // 原来的查询，只包含符合所有备份条件的用户
+        baseQuery = `
+            SELECT * FROM users 
+            WHERE role = 'user' 
+            AND auto_backup_enabled = 1
+            AND hf_token IS NOT NULL 
+            AND hf_repo IS NOT NULL
+        `;
+    }
+    
+    let query = baseQuery;
+    
+    // 根据备份类型添加额外条件
+    if (!showAll) {
+        if (backupType === 'logged_in_today') {
+            // 当日登录过的用户
+            query += ` AND DATE(last_login_at) = DATE('now')`;
+        } else if (backupType === 'running') {
+            // 运行中的实例
+            query += ` AND status = 'running'`;
+        }
     }
     // backupType === 'all' 不需要额外条件
     

@@ -423,7 +423,10 @@ router.put('/auto-backup/config', (req, res) => {
 router.get('/auto-backup/users', (req, res) => {
     try {
         const config = getAutoBackupConfig();
-        const users = getUsersForAutoBackup(config.backup_type);
+        
+        // 始终显示所有潜在用户，而不仅显示已设置完成的用户
+        const showAll = true;
+        const users = getUsersForAutoBackup(config.backup_type, showAll);
         
         // 只返回必要的信息
         const userList = users.map(user => ({
@@ -435,10 +438,24 @@ router.get('/auto-backup/users', (req, res) => {
             auto_backup_enabled: Boolean(user.auto_backup_enabled)
         }));
         
+        // 计算统计信息
+        const eligibleUsers = userList.filter(user => 
+            user.hasHFConfig && user.auto_backup_enabled
+        );
+        
+        const stats = {
+            total: userList.length,
+            eligible: eligibleUsers.length,
+            missing_config: userList.filter(u => !u.hasHFConfig).length,
+            disabled: userList.filter(u => !u.auto_backup_enabled).length
+        };
+        
         res.json({
             success: true,
             backup_type: config.backup_type,
             total: userList.length,
+            eligible: eligibleUsers.length,
+            stats: stats,
             users: userList
         });
     } catch (error) {
