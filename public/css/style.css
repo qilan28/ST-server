@@ -1122,57 +1122,75 @@ body {
 .inline-form {
     display: flex;
     align-items: center;
+    margin-bottom: 20px;
 }
 
 .inline-form .label-container {
-    width: 50px;
+    width: 45px;
     flex-shrink: 0;
-    margin-right: 10px;
+    margin-right: 12px;
+    text-align: left;
+    font-weight: 600;
 }
 
 .inline-form .input-container {
     flex: 1;
+    position: relative;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    background-color: #fff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.inline-form .input-container:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 1px 3px rgba(102, 126, 234, 0.1), 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 .inline-form label {
     margin-bottom: 0;
     white-space: nowrap;
+    font-weight: 500;
+    color: #333;
 }
 
 /* 表单提示文本 */
 .form-tip {
     display: block;
-    margin-top: 5px;
-    margin-bottom: 15px;
-    color: #718096;
+    margin-top: 6px;
+    margin-bottom: 16px;
+    color: #6B7280;
     font-size: 0.85rem;
-    padding-left: 60px; /* 与输入框对齐 */
+    padding-left: 57px; /* 与输入框对齐 */
+    line-height: 1.4;
 }
 
 .input-container {
     position: relative;
-    border-bottom: 1px solid #e2e8f0;
     transition: all 0.3s;
 }
 
 .modern-input input {
     width: 100%;
-    padding: 10px 0;
+    padding: 10px 12px;
     border: none;
     outline: none;
     background: transparent;
-    font-size: 1rem;
-    color: #333;
+    font-size: 0.95rem;
+    color: #111827;
+    height: 42px;
+    box-sizing: border-box;
+    font-family: inherit;
 }
 
 .modern-input input::placeholder {
-    color: #999;
-    font-size: 0.9rem;
+    color: #9CA3AF;
+    font-size: 0.95rem;
 }
 
-.input-container:focus-within {
-    border-bottom: 1px solid var(--primary-color);
-}
+/* 已在.inline-form .input-container:focus-within中定义焦点状态 */
 
 /* 密码输入框特殊样式 */
 .password-container {
@@ -1182,17 +1200,29 @@ body {
 
 .password-toggle {
     cursor: pointer;
-    color: #999;
-    padding: 0 5px;
-    transition: color 0.3s;
+    color: #6B7280;
+    padding: 0 12px;
+    transition: all 0.2s ease;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
 }
 
 .password-toggle:hover {
     color: var(--primary-color);
+    background-color: rgba(102, 126, 234, 0.04);
+}
+
+.password-toggle:active {
+    background-color: rgba(102, 126, 234, 0.1);
 }
 
 .password-toggle svg {
     vertical-align: middle;
+    width: 20px;
+    height: 20px;
 }
 
 /* 表单输入框 - 原来的样式，保留作兼容 */
@@ -1275,12 +1305,16 @@ input:checked + .slider:before {
     
     /* 表单输入框响应式优化 */
     .inline-form .label-container {
-        width: 40px;
+        width: 42px;
         margin-right: 8px;
     }
     
     .form-tip {
-        padding-left: 48px;
+        padding-left: 50px;
+    }
+    
+    .modern-input input {
+        font-size: 0.9rem;
     }
     
     /* 通用移动端优化 */
@@ -1683,12 +1717,28 @@ input:checked + .slider:before {
     /* 输入框更小屏幕优化 */
     .inline-form .label-container {
         width: 36px;
-        margin-right: 5px;
+        margin-right: 6px;
+    }
+    
+    .inline-form .input-container {
+        border-radius: 5px;
     }
     
     .form-tip {
-        padding-left: 41px;
+        padding-left: 42px;
         font-size: 0.8rem;
+        margin-top: 4px;
+        margin-bottom: 12px;
+    }
+    
+    .modern-input input {
+        height: 40px;
+        font-size: 0.85rem;
+    }
+    
+    .password-toggle {
+        height: 40px;
+        padding: 0 10px;
     }
     
     /* 管理员面板头部调整 */
