@@ -35,19 +35,26 @@ const connectPM2 = () => {
             }, 5000);
             
             console.log('[PM2] 尝试连接到 PM2...');
-            pm2.connect((err) => {
+            try {
+                pm2.connect((err) => {
+                    clearTimeout(timeoutId);
+                    
+                    if (err) {
+                        console.error('[PM2] 连接错误:', err);
+                        pm2Connected = false;
+                        reject(new Error(`无法连接到 PM2: ${err.message || '未知错误'}`));
+                    } else {
+                        console.log('[PM2] 连接成功');
+                        pm2Connected = true;
+                        resolve();
+                    }
+                });
+            } catch (connectErr) {
                 clearTimeout(timeoutId);
-                
-                if (err) {
-                    console.error('[PM2] 连接错误:', err);
-                    pm2Connected = false;
-                    reject(err);
-                } else {
-                    console.log('[PM2] 连接成功');
-                    pm2Connected = true;
-                    resolve();
-                }
-            });
+                console.error('[PM2] 连接异常:', connectErr);
+                pm2Connected = false;
+                reject(new Error(`PM2 连接异常: ${connectErr.message || '未知错误'}`));
+            }
         } catch (error) {
             console.error('[PM2] 连接异常:', error);
             pm2Connected = false;
@@ -221,7 +228,17 @@ export const stopInstance = async (username) => {
             
             // 先检查实例是否存在
             pm2.describe(`st-${username}`, (descErr, processDescription) => {
-                if (descErr || !processDescription || processDescription.length === 0) {
+                if (descErr) {
+                    clearTimeout(timeoutId);
+                    disconnectPM2();
+                    console.error(`[Instance] 检查实例状态时出错:`, descErr);
+                    updateUserStatus(username, 'stopped');
+                    removeInstanceStartTime(username);
+                    resolve({message: 'Error checking instance, status updated to stopped'});
+                    return;
+                }
+                
+                if (!processDescription || processDescription.length === 0) {
                     clearTimeout(timeoutId);
                     disconnectPM2();
                     console.log(`[Instance] 实例 ${username} 不存在，更新状态为停止`);
@@ -295,8 +312,17 @@ export const restartInstance = async (username) => {
             await stopInstance(username);
             console.log(`[Instance] 实例 ${username} 停止成功`);
         } catch (stopError) {
-            // 即使停止失败，也尝试继续启动
-            console.log(`[Instance] 停止实例失败，但仍将继续:`, stopError);
+            // 处理不同的错误类型
+            if (stopError.message && stopError.message.includes('not found') || stopError.message.includes('不存在')) {
+                console.log(`[Instance] 实例 ${username} 不存在，继续启动新实例`);
+                // 更新用户状态为停止
+                updateUserStatus(username, 'stopped');
+            } else if (stopError.message && stopError.message.includes('PM2')) {
+                console.log(`[Instance] PM2 连接错误，尝试继续:`, stopError.message);
+            } else {
+                // 其他错误
+                console.log(`[Instance] 停止实例失败，但仍将继续:`, stopError.message || stopError);
+            }
         }
         
         // 等待短暂停确保实例完全停止

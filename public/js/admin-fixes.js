@@ -401,11 +401,27 @@ async function startUserInstance(username) {
         }
         
         // 发送请求
-        const response = await apiRequest(`${API_BASE}/admin/users/${username}/start`, {
-            method: 'POST'
+        const response = await fetch(`${API_BASE}/admin/users/${username}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
         });
         
         if (!response) return;
+        
+        // 处理各种错误状态
+        if (response.status === 404) {
+            showMessage(`启动失败: 找不到用户 ${username}`, 'error');
+            // 重新加载用户列表
+            loadUsers();
+            return;
+        } else if (response.status === 400) {
+            showMessage(`启动失败: 用户 ${username} 未配置 SillyTavern`, 'error');
+            loadUsers();
+            return;
+        }
         
         // 解析响应
         const data = await response.json();
@@ -439,11 +455,24 @@ async function stopUserInstance(username) {
         }
         
         // 发送请求
-        const response = await apiRequest(`${API_BASE}/admin/users/${username}/stop`, {
-            method: 'POST'
+        const response = await fetch(`${API_BASE}/admin/users/${username}/stop`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
         });
         
         if (!response) return;
+        
+        // 处理各种错误状态
+        if (response.status === 404) {
+            showMessage(`停止失败: 找不到用户 ${username} 的实例，可能该实例已经停止或不存在`, 'warning');
+            // 重新加载用户列表和实例状态
+            loadUsers();
+            setTimeout(() => loadInstances(), 500);
+            return;
+        }
         
         // 解析响应
         const data = await response.json();
@@ -472,11 +501,24 @@ async function restartUserInstance(username) {
         }
         
         // 发送请求
-        const response = await apiRequest(`${API_BASE}/admin/users/${username}/restart`, {
-            method: 'POST'
+        const response = await fetch(`${API_BASE}/admin/users/${username}/restart`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
         });
         
         if (!response) return;
+        
+        // 处理各种错误状态
+        if (response.status === 404) {
+            showMessage(`重启失败: 找不到用户 ${username} 的实例，可能实例不存在`, 'warning');
+            // 重新加载用户列表和实例状态
+            loadUsers();
+            setTimeout(() => loadInstances(), 500);
+            return;
+        }
         
         // 解析响应
         const data = await response.json();
