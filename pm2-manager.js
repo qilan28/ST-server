@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import { updateUserStatus, updateUserPort } from './database.js';
 import { getSafeRandomPort } from './utils/port-helper.js';
 import { recordInstanceStart, removeInstanceStartTime } from './runtime-limiter.js';
+import { generateNginxConfig } from './scripts/generate-nginx-config.js';
+import { reloadNginx } from './utils/nginx-reload.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,6 +122,22 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
         if (port !== originalPort) {
             await updateUserPort(username, port);
             console.log(`[Instance] 已更新用户 ${username} 的端口为 ${port}`);
+            
+            // 重新生成 Nginx 配置并重载
+            try {
+                console.log(`[Instance] 由于端口变更，重新生成 Nginx 配置...`);
+                generateNginxConfig();
+                console.log(`[Instance] 尝试重载 Nginx...`);
+                const reloadResult = await reloadNginx();
+                if (reloadResult.success) {
+                    console.log(`[Instance] Nginx 配置重载成功，方法: ${reloadResult.method}`);
+                } else {
+                    console.warn(`[Instance] Nginx 重载失败: ${reloadResult.error}，可能需要手动重载`);
+                }
+            } catch (nginxError) {
+                console.error(`[Instance] Nginx 配置更新失败:`, nginxError);
+                // 继续启动实例，不要因为 Nginx 问题中断
+            }
         }
         
         // 创建数据目录（如果不存在）
@@ -293,6 +311,21 @@ export const restartInstance = async (username) => {
         console.log(`[Instance] 开始启动实例 ${username}, 原端口: ${user.port}...`);
         const result = await startInstance(username, user.port, user.st_dir, dataDir);
         console.log(`[Instance] 实例 ${username} 启动成功，端口: ${result.port}`);
+        
+        // 检查端口是否变更，如果未在 startInstance 中重载 Nginx，这里再次确认
+        if (result.port !== user.port) {
+            try {
+                console.log(`[Instance] 确保端口变更后的 Nginx 配置已更新...`);
+                // 再次尝试重载 Nginx，以保证配置生效
+                const reloadResult = await reloadNginx();
+                if (reloadResult.success) {
+                    console.log(`[Instance] Nginx 配置再次重载成功，方法: ${reloadResult.method}`);
+                }
+            } catch (nginxError) {
+                console.warn(`[Instance] 重启后重载 Nginx 失败:`, nginxError.message);
+                // 不影响实例重启结果
+            }
+        }
         
         return result;
     } catch (error) {
