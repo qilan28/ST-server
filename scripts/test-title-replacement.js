@@ -41,14 +41,32 @@ if (!fs.existsSync(stDir)) {
 // 检查是否为SillyTavern目录
 const publicDir = path.join(stDir, 'public');
 const loginHtmlPath = path.join(publicDir, 'login.html');
+const indexHtmlPath = path.join(publicDir, 'index.html');
 
 if (!fs.existsSync(publicDir)) {
     console.error(`❌ 指定的目录不是SillyTavern目录，未找到 public 文件夹: ${publicDir}`);
     process.exit(1);
 }
 
-if (!fs.existsSync(loginHtmlPath)) {
-    console.error(`❌ SillyTavern登录页不存在: ${loginHtmlPath}`);
+let htmlFilesFound = false;
+
+// 检查 login.html 和 index.html
+if (fs.existsSync(loginHtmlPath)) {
+    console.log(`✅ 找到 login.html: ${loginHtmlPath}`);
+    htmlFilesFound = true;
+} else {
+    console.warn(`⚠️ SillyTavern login.html 不存在: ${loginHtmlPath}`);
+}
+
+if (fs.existsSync(indexHtmlPath)) {
+    console.log(`✅ 找到 index.html: ${indexHtmlPath}`);
+    htmlFilesFound = true;
+} else {
+    console.warn(`⚠️ SillyTavern index.html 不存在: ${indexHtmlPath}`);
+}
+
+if (!htmlFilesFound) {
+    console.error('❌ 未找到任何要替换的HTML文件');
     process.exit(1);
 }
 
@@ -60,21 +78,39 @@ console.log('='.repeat(60));
 console.log('🔍 测试SillyTavern标题替换');
 console.log('='.repeat(60));
 console.log(`📂 SillyTavern目录: ${stDir}`);
-console.log(`📄 登录页文件: ${loginHtmlPath}`);
 console.log(`🔤 当前站点名称: ${siteName}`);
 
-// 显示原始标题
-try {
-    const originalContent = fs.readFileSync(loginHtmlPath, 'utf8');
-    const titleMatch = originalContent.match(/<title>(.*?)<\/title>/);
-    if (titleMatch && titleMatch[1]) {
-        console.log(`📌 原始标题: ${titleMatch[1]}`);
-    } else {
-        console.log('⚠️ 无法找到原始标题标签');
+// 显示所有文件的原始标题
+console.log('\n原始标题信息:');
+
+// 检查并显示 login.html 的标题
+if (fs.existsSync(loginHtmlPath)) {
+    try {
+        const loginContent = fs.readFileSync(loginHtmlPath, 'utf8');
+        const loginTitleMatch = loginContent.match(/<title>(.*?)<\/title>/);
+        if (loginTitleMatch && loginTitleMatch[1]) {
+            console.log(`  登录页(login.html): ${loginTitleMatch[1]}`);
+        } else {
+            console.log('  登录页(login.html): ⚠️ 无法找到标题标签');
+        }
+    } catch (error) {
+        console.error(`  登录页(login.html): ❌ 读取失败 - ${error.message}`);
     }
-} catch (error) {
-    console.error('❌ 读取文件失败:', error);
-    process.exit(1);
+}
+
+// 检查并显示 index.html 的标题
+if (fs.existsSync(indexHtmlPath)) {
+    try {
+        const indexContent = fs.readFileSync(indexHtmlPath, 'utf8');
+        const indexTitleMatch = indexContent.match(/<title>(.*?)<\/title>/);
+        if (indexTitleMatch && indexTitleMatch[1]) {
+            console.log(`  主页面(index.html): ${indexTitleMatch[1]}`);
+        } else {
+            console.log('  主页面(index.html): ⚠️ 无法找到标题标签');
+        }
+    } catch (error) {
+        console.error(`  主页面(index.html): ❌ 读取失败 - ${error.message}`);
+    }
 }
 
 // 执行替换
@@ -84,17 +120,37 @@ replaceSillyTavernTitle(stDir, siteName)
         if (success) {
             console.log('✅ 标题替换成功!');
 
-            // 显示新标题
-            try {
-                const updatedContent = fs.readFileSync(loginHtmlPath, 'utf8');
-                const newTitleMatch = updatedContent.match(/<title>(.*?)<\/title>/);
-                if (newTitleMatch && newTitleMatch[1]) {
-                    console.log(`📌 新标题: ${newTitleMatch[1]}`);
-                } else {
-                    console.log('⚠️ 无法找到新标题标签');
+            // 显示更新后的标题
+            console.log('\n更新后的标题信息:');
+            
+            // 检查并显示 login.html 的更新标题
+            if (fs.existsSync(loginHtmlPath)) {
+                try {
+                    const updatedLoginContent = fs.readFileSync(loginHtmlPath, 'utf8');
+                    const updatedLoginTitleMatch = updatedLoginContent.match(/<title>(.*?)<\/title>/);
+                    if (updatedLoginTitleMatch && updatedLoginTitleMatch[1]) {
+                        console.log(`  登录页(login.html): ${updatedLoginTitleMatch[1]}`);
+                    } else {
+                        console.log('  登录页(login.html): ⚠️ 无法找到标题标签');
+                    }
+                } catch (error) {
+                    console.error(`  登录页(login.html): ❌ 读取失败 - ${error.message}`);
                 }
-            } catch (error) {
-                console.error('❌ 读取更新后的文件失败:', error);
+            }
+
+            // 检查并显示 index.html 的更新标题
+            if (fs.existsSync(indexHtmlPath)) {
+                try {
+                    const updatedIndexContent = fs.readFileSync(indexHtmlPath, 'utf8');
+                    const updatedIndexTitleMatch = updatedIndexContent.match(/<title>(.*?)<\/title>/);
+                    if (updatedIndexTitleMatch && updatedIndexTitleMatch[1]) {
+                        console.log(`  主页面(index.html): ${updatedIndexTitleMatch[1]}`);
+                    } else {
+                        console.log('  主页面(index.html): ⚠️ 无法找到标题标签');
+                    }
+                } catch (error) {
+                    console.error(`  主页面(index.html): ❌ 读取失败 - ${error.message}`);
+                }
             }
         } else {
             console.error('❌ 标题替换失败!');

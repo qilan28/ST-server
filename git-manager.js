@@ -261,38 +261,75 @@ export const deleteSillyTavern = async (stDir) => {
 // 替换SillyTavern的标题
 export const replaceSillyTavernTitle = async (stDir, title) => {
     try {
-        const loginHtmlPath = path.join(stDir, 'public', 'login.html');
+        let success = false;
+        const publicDir = path.join(stDir, 'public');
         
-        // 检查文件是否存在
-        if (!fs.existsSync(loginHtmlPath)) {
-            console.warn(`[Title] login.html 文件不存在: ${loginHtmlPath}`);
+        // 检查 public 目录是否存在
+        if (!fs.existsSync(publicDir)) {
+            console.warn(`[Title] public 目录不存在: ${publicDir}`);
             return false;
         }
         
+        // 处理 login.html
+        const loginHtmlPath = path.join(publicDir, 'login.html');
+        if (fs.existsSync(loginHtmlPath)) {
+            success = replaceFileTitle(loginHtmlPath, title) || success;
+        } else {
+            console.warn(`[Title] login.html 文件不存在: ${loginHtmlPath}`);
+        }
+        
+        // 处理 index.html
+        const indexHtmlPath = path.join(publicDir, 'index.html');
+        if (fs.existsSync(indexHtmlPath)) {
+            success = replaceFileTitle(indexHtmlPath, title) || success;
+        } else {
+            console.warn(`[Title] index.html 文件不存在: ${indexHtmlPath}`);
+        }
+        
+        return success;
+    } catch (error) {
+        console.error('[Title] 替换标题失败:', error);
+        return false;
+    }
+};
+
+// 帮助函数：替换单个文件的标题
+function replaceFileTitle(filePath, title) {
+    try {
         // 读取文件内容
-        let content = fs.readFileSync(loginHtmlPath, 'utf8');
+        let content = fs.readFileSync(filePath, 'utf8');
+        const fileName = path.basename(filePath);
         
         // 替换标题
         const originalTitleRegex = /<title>SillyTavern<\/title>/;
         
         if (!originalTitleRegex.test(content)) {
-            console.warn('[Title] 未找到匹配的标题标签');
-            return false;
+            // 尝试更宽松的标题模式
+            const looseRegex = /<title>([^<]+)<\/title>/;
+            if (looseRegex.test(content)) {
+                content = content.replace(looseRegex, `<title>${title}</title>`);
+                fs.writeFileSync(filePath, content, 'utf8');
+                console.log(`[Title] 已替换 ${fileName} 的标题为: ${title}`);
+                return true;
+            } else {
+                console.warn(`[Title] 未在 ${fileName} 中找到匹配的标题标签`);
+                return false;
+            }
         }
         
         // 使用配置的站点名称替换标题
         const newContent = content.replace(originalTitleRegex, `<title>${title}</title>`);
         
         // 写入文件
-        fs.writeFileSync(loginHtmlPath, newContent, 'utf8');
-        console.log(`[Title] 已替换 login.html 的标题为: ${title}`);
+        fs.writeFileSync(filePath, newContent, 'utf8');
+        console.log(`[Title] 已替换 ${fileName} 的标题为: ${title}`);
         
         return true;
     } catch (error) {
-        console.error('[Title] 替换标题失败:', error);
+        console.error(`[Title] 替换 ${path.basename(filePath)} 标题失败:`, error);
         return false;
     }
-};
+}
 
 export const checkDependenciesInstalled = (stDir) => {
     try {
