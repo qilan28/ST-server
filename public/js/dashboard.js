@@ -802,7 +802,7 @@ async function loadVersionList() {
 
 // 切换版本
 async function handleSwitchVersion(version) {
-    if (!await showConfirm(`确定要切换到版本 ${version} 吗？\n\n这将删除当前版本并安装新版本，请确保已停止实例。`, '切换版本', { type: 'danger' })) {
+    if (!await showConfirm(`确定要切换到版本 ${version} 吗？\n\n这将删除当前版本并安装新版本。\n\n如果实例正在运行，系统会自动尝试停止实例再进行切换操作。`, '切换版本', { type: 'danger' })) {
         return;
     }
     
@@ -877,7 +877,7 @@ async function handleReinstallDependencies() {
 
 // 删除版本
 async function handleDeleteVersion() {
-    if (!await showConfirm('确定要删除当前版本吗？\n\n这将删除所有 SillyTavern 代码文件，但不会删除您的数据。\n请确保已停止实例。', '删除版本', { type: 'danger' })) {
+    if (!await showConfirm('确定要删除当前版本吗？\n\n这将删除所有 SillyTavern 代码文件，但不会删除您的数据。\n\n如果实例正在运行，系统会自动尝试停止实例再进行删除操作。', '删除版本', { type: 'danger' })) {
         return;
     }
     

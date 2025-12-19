@@ -248,9 +248,20 @@ router.post('/delete', authenticateToken, async (req, res) => {
         // 检查实例是否在运行
         const status = await getInstanceStatus(user.username);
         if (status && status.status === 'online') {
-            return res.status(400).json({ 
-                error: 'Please stop the instance before deleting' 
-            });
+            console.log(`[${user.username}] 实例正在运行，尝试自动停止...`);
+            try {
+                // 自动停止运行中的实例
+                await stopInstance(user.username);
+                console.log(`[${user.username}] 实例已成功停止，继续删除操作`);
+                
+                // 等待一下确保实例完全停止
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch (stopError) {
+                console.error(`[${user.username}] 尝试停止实例失败:`, stopError);
+                return res.status(500).json({ 
+                    error: `无法停止正在运行的实例: ${stopError.message}` 
+                });
+            }
         }
         
         // 删除目录
@@ -283,9 +294,20 @@ router.post('/switch', authenticateToken, async (req, res) => {
         // 检查实例是否在运行
         const status = await getInstanceStatus(user.username);
         if (status && status.status === 'online') {
-            return res.status(400).json({ 
-                error: 'Please stop the instance before switching versions' 
-            });
+            console.log(`[${user.username}] 切换版本: 实例正在运行，尝试自动停止...`);
+            try {
+                // 自动停止运行中的实例
+                await stopInstance(user.username);
+                console.log(`[${user.username}] 实例已成功停止，继续切换版本操作`);
+                
+                // 等待一下确保实例完全停止
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch (stopError) {
+                console.error(`[${user.username}] 切换版本: 尝试停止实例失败:`, stopError);
+                return res.status(500).json({ 
+                    error: `无法停止正在运行的实例: ${stopError.message}` 
+                });
+            }
         }
         
         // 检查 Git 是否可用
