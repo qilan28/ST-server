@@ -325,6 +325,26 @@ router.post('/switch', authenticateToken, async (req, res) => {
             // 更新数据库
             updateUserSTInfo(user.username, stDir, version, 'completed');
             console.log(`[${user.username}] Switched to SillyTavern ${version}`);
+            
+            // 确保标题替换后仍然生效
+            import('../database-site-settings.js')
+                .then(({ getSiteSettings }) => {
+                    const settings = getSiteSettings(db);
+                    const siteName = settings && settings.site_name ? settings.site_name : '【管理员后台设置网站名称】';
+                    
+                    import('../git-manager.js')
+                        .then(({ replaceSillyTavernTitle }) => {
+                            replaceSillyTavernTitle(stDir, siteName)
+                                .then(success => {
+                                    if (success) {
+                                        console.log(`[${user.username}] 成功替换登录页标题为: ${siteName}`);
+                                    }
+                                })
+                                .catch(err => console.error(`[${user.username}] 替换登录页标题失败:`, err));
+                        })
+                        .catch(err => console.error(`[${user.username}] 加载 git-manager 模块失败:`, err));
+                })
+                .catch(err => console.error(`[${user.username}] 加载 site-settings 模块失败:`, err));
         }).catch((error) => {
             console.error(`[${user.username}] Switch version failed:`, error);
             updateSTSetupStatus(user.username, 'failed');

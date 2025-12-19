@@ -201,7 +201,7 @@ export const installDependencies = async (stDir, onProgress) => {
     }
 };
 
-// 完整设置 SillyTavern（clone + install）
+// 完整设置 SillyTavern（clone + install + custom title）
 export const setupSillyTavern = async (targetDir, version, onProgress) => {
     try {
         // 1. 克隆仓库
@@ -211,6 +211,25 @@ export const setupSillyTavern = async (targetDir, version, onProgress) => {
         // 2. 安装依赖
         if (onProgress) onProgress('正在安装依赖，这可能需要几分钟...');
         await installDependencies(targetDir, onProgress);
+        
+        // 3. 自定义网站标题
+        try {
+            // 从数据库获取网站设置（通过动态导入，避免循环依赖）
+            const { db } = await import('./database.js');
+            const { getSiteSettings } = await import('./database-site-settings.js');
+            
+            // 获取站点名称
+            const settings = getSiteSettings(db);
+            const siteName = settings && settings.site_name ? settings.site_name : '【管理员后台设置网站名称】';
+            
+            if (onProgress) onProgress(`正在更新网站标题为: ${siteName}`);
+            
+            // 替换标题
+            await replaceSillyTavernTitle(targetDir, siteName);
+        } catch (titleError) {
+            console.error('更新网站标题失败:', titleError);
+            // 继续运行，不影响整体安装
+        }
         
         if (onProgress) onProgress('设置完成！');
         
@@ -239,6 +258,42 @@ export const deleteSillyTavern = async (stDir) => {
 };
 
 // 检查依赖是否已安装
+// 替换SillyTavern的标题
+export const replaceSillyTavernTitle = async (stDir, title) => {
+    try {
+        const loginHtmlPath = path.join(stDir, 'public', 'login.html');
+        
+        // 检查文件是否存在
+        if (!fs.existsSync(loginHtmlPath)) {
+            console.warn(`[Title] login.html 文件不存在: ${loginHtmlPath}`);
+            return false;
+        }
+        
+        // 读取文件内容
+        let content = fs.readFileSync(loginHtmlPath, 'utf8');
+        
+        // 替换标题
+        const originalTitleRegex = /<title>SillyTavern<\/title>/;
+        
+        if (!originalTitleRegex.test(content)) {
+            console.warn('[Title] 未找到匹配的标题标签');
+            return false;
+        }
+        
+        // 使用配置的站点名称替换标题
+        const newContent = content.replace(originalTitleRegex, `<title>${title}</title>`);
+        
+        // 写入文件
+        fs.writeFileSync(loginHtmlPath, newContent, 'utf8');
+        console.log(`[Title] 已替换 login.html 的标题为: ${title}`);
+        
+        return true;
+    } catch (error) {
+        console.error('[Title] 替换标题失败:', error);
+        return false;
+    }
+};
+
 export const checkDependenciesInstalled = (stDir) => {
     try {
         if (!fs.existsSync(stDir)) {
