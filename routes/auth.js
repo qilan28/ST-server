@@ -63,7 +63,7 @@ router.post('/register', async (req, res) => {
         // 🔧 自动生成并重载 Nginx 配置
         console.log(`[Register] 新用户 ${username} 注册成功，正在更新 Nginx 配置...`);
         try {
-            generateNginxConfig();
+            await generateNginxConfig();
             console.log('[Register] Nginx 配置文件已生成');
             
             // 尝试重载 Nginx

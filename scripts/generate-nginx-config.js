@@ -1,13 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getAllUsers } from '../database.js';
 import { getNginxConfig } from '../utils/config-manager.js';
+// 避免循环依赖，使用动态导入
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function generateNginxConfig() {
+async function generateNginxConfig() {
     console.log('正在生成 Nginx 配置文件...');
     
     // 检测当前操作系统
@@ -25,6 +25,8 @@ function generateNginxConfig() {
         console.log(`域名: ${MAIN_DOMAIN}, 端口: ${NGINX_PORT}`);
         
         // 读取所有用户（排除管理员和没有端口的用户）
+        // 使用动态导入避免循环依赖
+        const { getAllUsers } = await import('../database.js');
         const allUsers = getAllUsers();
         const users = allUsers.filter(user => {
             // 排除管理员
@@ -294,11 +296,13 @@ upstream st_${user.username} {
 }
 
 // 如果直接运行此脚本
-try {
-    generateNginxConfig();
-} catch (error) {
-    console.error('❌ 生成配置文件失败:', error.message);
-    process.exit(1);
-}
+(async () => {
+    try {
+        await generateNginxConfig();
+    } catch (error) {
+        console.error('❌ 生成配置文件失败:', error.message);
+        process.exit(1);
+    }
+})();
 
 export { generateNginxConfig };

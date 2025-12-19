@@ -126,7 +126,7 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
             // 重新生成 Nginx 配置并重载
             try {
                 console.log(`[Instance] 由于端口变更，重新生成 Nginx 配置...`);
-                generateNginxConfig();
+                await generateNginxConfig();
                 console.log(`[Instance] 尝试重载 Nginx...`);
                 const reloadResult = await reloadNginx();
                 if (reloadResult.success) {

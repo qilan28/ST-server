@@ -30,7 +30,7 @@ async function fixNginxConfig() {
     // 重新生成 Nginx 配置
     console.log('\n🔄 重新生成 Nginx 配置...');
     try {
-        generateNginxConfig();
+        await generateNginxConfig();
         console.log('✅ Nginx 配置文件已重新生成');
         
         // 尝试重载 Nginx

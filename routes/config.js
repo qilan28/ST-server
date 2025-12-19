@@ -85,7 +85,7 @@ router.post('/nginx/generate', async (req, res) => {
         
         // 生成配置文件
         try {
-            generateNginxConfig();
+            await generateNginxConfig();
             console.log('[Config] Nginx 配置文件已生成');
         } catch (genError) {
             console.error('[Config] 生成Nginx配置文件失败:', genError.message);
