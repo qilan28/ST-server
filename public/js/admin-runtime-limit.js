@@ -581,26 +581,29 @@ async function stopUserInstance(username) {
         
         // 直接使用fetch
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/instances/stop', {
+        // 使用运行时限制器提供的管理员专用端点
+        const response = await fetch('/api/runtime-limit/admin-stop/' + encodeURIComponent(username), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': token ? `Bearer ${token}` : ''
-            },
-            body: JSON.stringify({ username })
+            }
         });
         
         if (response.ok) {
             const data = await response.json();
-            if (data.success) {
-                showMessage(`已停止 ${username} 的实例`, 'success');
-                // 重新加载状态
-                setTimeout(loadRuntimeLimitStatus, 1000);
-            } else {
-                showMessage(`停止失败: ${data.error || '未知错误'}`, 'error');
-            }
+            // 管理API的响应格式没有success字段，而是直接在200响应中返回消息
+            showMessage(`已停止 ${username} 的实例`, 'success');
+            // 重新加载状态
+            setTimeout(loadRuntimeLimitStatus, 1000);
         } else {
-            showMessage(`停止失败: ${response.status} ${response.statusText}`, 'error');
+            // 尝试解析错误信息
+            try {
+                const errorData = await response.json();
+                showMessage(`停止失败: ${errorData.error || response.statusText}`, 'error');
+            } catch (e) {
+                showMessage(`停止失败: ${response.status} ${response.statusText}`, 'error');
+            }
         }
     } catch (error) {
         console.error('停止实例错误:', error);
@@ -812,12 +815,12 @@ async function removeExemptionUser(username) {
             showMessage(`移除失败: ${data.error || '未知错误'}`, 'error');
         }
     } catch (error) {
-        console.error('移除豁免用户错误:', error);
-        showMessage('移除豁免用户时出错: ' + error.message, 'error');
+        console.error('移除谐免用户错误:', error);
+        showMessage('移除谐免用户时出错: ' + error.message, 'error');
     }
 }
 
-// 加载运行时间统计
+// 加载运行时间统计信息
 async function loadRuntimeStats() {
     try {
         const statsSection = document.getElementById('runtimeStatsSection');

@@ -239,6 +239,38 @@ router.post('/force-check', authenticateToken, adminAuthMiddleware, async (req, 
     }
 });
 
+// 管理员停止指定用户实例
+router.post('/admin-stop/:username', authenticateToken, adminAuthMiddleware, async (req, res) => {
+    try {
+        const { username } = req.params;
+        
+        if (!username) {
+            return res.status(400).json({ error: '用户名不能为空' });
+        }
+        
+        // 检查用户是否存在
+        const user = findUserByUsername(username);
+        if (!user) {
+            return res.status(404).json({ error: `用户 ${username} 不存在` });
+        }
+        
+        console.log(`[Runtime Limiter] 管理员 ${req.user.username} 要求停止用户 ${username} 的实例`);
+        
+        // 导入并使用stopInstance功能
+        const { stopInstance } = await import('../pm2-manager.js');
+        
+        await stopInstance(username);
+        
+        console.log(`[Runtime Limiter] 管理员已停止用户 ${username} 的实例`);
+        res.json({ 
+            message: `用户 ${username} 的实例已停止` 
+        });
+    } catch (error) {
+        console.error('[Runtime Limiter] 管理员停止实例错误:', error);
+        res.status(500).json({ error: '停止实例失败: ' + error.message });
+    }
+});
+
 // 检查实例的记录状态
 router.get('/instance-records', authenticateToken, adminAuthMiddleware, (req, res) => {
     try {
