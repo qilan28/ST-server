@@ -17,7 +17,7 @@ const connectPM2 = () => {
     return new Promise((resolve, reject) => {
         try {
             // 如果已经连接，直接返回
-            if (pm2Connected && pm2.Client && pm2.Client.isClientConnected()) {
+            if (pm2Connected) {
                 console.log('[PM2] 已存在连接，直接使用');
                 resolve();
                 return;
