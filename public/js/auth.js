@@ -325,12 +325,77 @@ function togglePasswordVisibility(inputId, toggleElement) {
     }
 }
 
+// 加载用户数量信息
+async function loadUserStats() {
+    try {
+        // 显示加载状态
+        document.getElementById('userStatsInfo').style.display = 'none';
+        document.getElementById('userStatsLoading').style.display = 'block';
+        
+        const response = await fetch(`${API_BASE}/site-settings/user-stats`);
+        if (!response.ok) {
+            console.error('获取用户统计信息失败:', response.status);
+            document.getElementById('userStatsContainer').style.display = 'none';
+            return;
+        }
+        
+        const data = await response.json();
+        console.log('获取到用户统计信息:', data);
+        
+        if (data.success) {
+            // 更新显示
+            document.getElementById('userCount').textContent = data.user_count;
+            
+            // 如果没有限制，显示为“无限”
+            const maxUsersEl = document.getElementById('maxUsers');
+            if (data.max_users === 0) {
+                maxUsersEl.textContent = '无限';
+            } else {
+                maxUsersEl.textContent = data.max_users;
+            }
+            
+            // 更新注册状态
+            const statusEl = document.getElementById('registrationStatus');
+            if (data.registration_allowed) {
+                statusEl.textContent = '✔️ 可注册';
+                statusEl.style.color = '#15803d'; // 绿色
+            } else {
+                statusEl.textContent = '❌ 已关闭注册';
+                statusEl.style.color = '#b91c1c'; // 红色
+            }
+            
+            // 显示信息
+            document.getElementById('userStatsInfo').style.display = 'block';
+        } else {
+            // 错误处理
+            document.getElementById('userStatsContainer').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('加载用户统计信息失败:', error);
+        document.getElementById('userStatsContainer').style.display = 'none';
+    } finally {
+        document.getElementById('userStatsLoading').style.display = 'none';
+    }
+}
+
+// 初始化页面
+function initPage() {
+    // 加载公告
+    loadLoginAnnouncements();
+    
+    // 加载用户数量信息
+    loadUserStats();
+}
+
 // 检查是否已登录
 function checkAuth() {
     const token = localStorage.getItem('token');
     if (token) {
         // 如果已登录，跳转到控制台
         window.location.href = '/dashboard.html';
+    } else {
+        // 未登录时初始化页面
+        initPage();
     }
 }
 

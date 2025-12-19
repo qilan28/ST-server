@@ -9,6 +9,8 @@ import { generateNginxConfig } from '../scripts/generate-nginx-config.js';
 import { reloadNginx } from '../utils/nginx-reload.js';
 import { deleteInstance } from '../pm2-manager.js';
 import { deleteSillyTavern } from '../git-manager.js';
+import { db } from '../database.js';
+import { getSiteSettings } from '../database-site-settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +54,21 @@ router.post('/register', async (req, res) => {
         // 检查邮箱是否已存在
         if (findUserByEmail(email)) {
             return res.status(400).json({ error: 'Email already exists' });
+        }
+        
+        // 检查用户数量上限
+        const settings = getSiteSettings(db);
+        if (settings.max_users > 0) {
+            // 获取当前用户数量（不包括管理员）
+            const countStmt = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = "user"');
+            const { count } = countStmt.get();
+            
+            if (count >= settings.max_users) {
+                return res.status(403).json({ 
+                    error: '用户数量已达上限，暂停注册', 
+                    message: `当前用户数: ${count}, 最大允许用户数: ${settings.max_users}` 
+                });
+            }
         }
         
         // 加密密码

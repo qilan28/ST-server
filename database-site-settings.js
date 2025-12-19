@@ -8,6 +8,7 @@ export const createSiteSettingsTable = (db) => {
             project_name TEXT,
             site_name TEXT,
             favicon_path TEXT,
+            max_users INTEGER DEFAULT 0,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
@@ -19,11 +20,26 @@ export const createSiteSettingsTable = (db) => {
     if (count === 0) {
         // 插入默认值
         const insertStmt = db.prepare(`
-            INSERT INTO site_settings (id, project_name, site_name, favicon_path)
-            VALUES (1, '公益云酒馆多开管理平台', 'SillyTavern 多开管理平台', '/favicon.ico')
+            INSERT INTO site_settings (id, project_name, site_name, favicon_path, max_users)
+            VALUES (1, '公益云酒馆多开管理平台', 'SillyTavern 多开管理平台', '/favicon.ico', 0)
         `);
         insertStmt.run();
         console.log('[Database] ✅ 初始化站点设置');
+    }
+    
+    // 检查是否需要添加 max_users 字段
+    try {
+        const checkColumn = db.prepare("PRAGMA table_info(site_settings)");
+        const columns = checkColumn.all();
+        const hasMaxUsers = columns.some(col => col.name === 'max_users');
+        
+        if (!hasMaxUsers) {
+            console.log('[Database] 添加 max_users 字段...');
+            db.exec(`ALTER TABLE site_settings ADD COLUMN max_users INTEGER DEFAULT 0`);
+            console.log('[Database] ✅ max_users 字段添加成功');
+        }
+    } catch (error) {
+        console.error('[Database] ❌ 添加 max_users 字段失败:', error);
     }
 };
 
@@ -35,20 +51,22 @@ export const getSiteSettings = (db) => {
         return settings || {
             project_name: '公益云酒馆多开管理平台', 
             site_name: 'SillyTavern 多开管理平台', 
-            favicon_path: '/favicon.ico'
+            favicon_path: '/favicon.ico',
+            max_users: 0
         };
     } catch (error) {
         console.error('[Database] 获取站点设置失败:', error);
         return {
             project_name: '公益云酒馆多开管理平台', 
             site_name: 'SillyTavern 多开管理平台', 
-            favicon_path: '/favicon.ico'
+            favicon_path: '/favicon.ico',
+            max_users: 0
         };
     }
 };
 
 // 更新站点设置
-export const updateSiteSettings = (db, projectName, siteName, faviconPath) => {
+export const updateSiteSettings = (db, projectName, siteName, faviconPath, maxUsers) => {
     try {
         // 生成日志 ID
         const logId = Date.now().toString(36);
@@ -69,13 +87,14 @@ export const updateSiteSettings = (db, projectName, siteName, faviconPath) => {
             console.log(`[Database:${logId}] 记录不存在，尝试创建...`);
             try {
                 const insertStmt = db.prepare(`
-                    INSERT INTO site_settings (id, project_name, site_name, favicon_path)
-                    VALUES (1, ?, ?, ?)
+                    INSERT INTO site_settings (id, project_name, site_name, favicon_path, max_users)
+                    VALUES (1, ?, ?, ?, ?)
                 `);
                 const insertResult = insertStmt.run(
                     projectName || '公益云酒馆多开管理平台', 
                     siteName || 'SillyTavern 多开管理平台', 
-                    faviconPath || '/favicon.ico'
+                    faviconPath || '/favicon.ico',
+                    maxUsers !== undefined ? maxUsers : 0
                 );
                 console.log(`[Database:${logId}] 新记录创建结果:`, insertResult);
                 return true;
@@ -87,17 +106,20 @@ export const updateSiteSettings = (db, projectName, siteName, faviconPath) => {
         
         // 更新记录
         console.log(`[Database:${logId}] 执行更新操作...`);
+        console.log(`[Database:${logId}] 参数: maxUsers=${maxUsers !== undefined ? maxUsers : '未提供'}`);
+        
         const stmt = db.prepare(`
             UPDATE site_settings 
             SET 
                 project_name = COALESCE(?, project_name),
                 site_name = COALESCE(?, site_name),
                 favicon_path = COALESCE(?, favicon_path),
+                max_users = CASE WHEN ? IS NOT NULL THEN ? ELSE max_users END,
                 updated_at = CURRENT_TIMESTAMP 
             WHERE id = 1
         `);
         
-        const result = stmt.run(projectName, siteName, faviconPath);
+        const result = stmt.run(projectName, siteName, faviconPath, maxUsers !== undefined ? maxUsers : null, maxUsers);
         console.log(`[Database:${logId}] 更新结果: changes=${result.changes}`);
         
         // 查询更新后的记录

@@ -68,7 +68,8 @@ router.get('/', (req, res) => {
                 settings: {
                     project_name: '公益云酒馆多开管理平台', 
                     site_name: 'SillyTavern 多开管理平台', 
-                    favicon_path: '/favicon.ico'
+                    favicon_path: '/favicon.ico',
+                    max_users: 0
                 },
                 message: '使用默认设置'
             });
@@ -97,7 +98,7 @@ router.put('/', authenticateToken, requireAdmin, (req, res) => {
     console.log(`[API:${requestId}] 用户: ${req.user.username}, 角色: ${req.user.role}`);
     
     try {
-        const { project_name, site_name } = req.body;
+        const { project_name, site_name, max_users } = req.body;
         
         // 参数验证
         if (!project_name || !site_name) {
@@ -128,7 +129,8 @@ router.put('/', authenticateToken, requireAdmin, (req, res) => {
         
         // 更新文本设置
         console.log(`[API:${requestId}] 开始更新设置...`);
-        const result = updateSiteSettings(db, project_name, site_name, null);
+        console.log(`[API:${requestId}] max_users 参数: ${max_users !== undefined ? max_users : '未提供'}`);
+        const result = updateSiteSettings(db, project_name, site_name, null, max_users !== undefined ? parseInt(max_users) : undefined);
         console.log(`[API:${requestId}] 更新结果:`, result);
         
         // 检查是否更新成功
@@ -142,6 +144,7 @@ router.put('/', authenticateToken, requireAdmin, (req, res) => {
                 data: {
                     project_name: updatedSettings.project_name,
                     site_name: updatedSettings.site_name,
+                    max_users: updatedSettings.max_users,
                     updated_at: updatedSettings.updated_at
                 }
             });
@@ -246,6 +249,96 @@ router.post('/favicon-url', authenticateToken, requireAdmin, (req, res) => {
         res.status(500).json({ 
             success: false,
             error: '设置网站图标URL失败: ' + error.message
+        });
+    }
+});
+
+// 更新用户数量上限设置 - 仅管理员
+router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
+    const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+    console.log(`[API:${requestId}] 收到更新用户上限设置请求`);
+    console.log(`[API:${requestId}] 请求体:`, req.body);
+    console.log(`[API:${requestId}] 用户: ${req.user.username}, 角色: ${req.user.role}`);
+    
+    try {
+        const { max_users } = req.body;
+        
+        // 参数验证
+        if (max_users === undefined) {
+            console.error(`[API:${requestId}] 缺少必要参数 max_users`);
+            return res.status(400).json({
+                success: false,
+                error: '缺少必要参数 max_users'
+            });
+        }
+        
+        const maxUsersInt = parseInt(max_users);
+        if (isNaN(maxUsersInt) || maxUsersInt < 0) {
+            console.error(`[API:${requestId}] 无效的 max_users 值: ${max_users}`);
+            return res.status(400).json({
+                success: false,
+                error: 'max_users 必须为非负整数'
+            });
+        }
+        
+        console.log(`[API:${requestId}] 解析后的 max_users 值: ${maxUsersInt}`);
+        
+        // 更新设置
+        const result = updateSiteSettings(db, null, null, null, maxUsersInt);
+        console.log(`[API:${requestId}] 更新结果:`, result);
+        
+        if (result) {
+            const updatedSettings = db.prepare('SELECT max_users FROM site_settings WHERE id = 1').get();
+            console.log(`[API:${requestId}] 更新后的用户上限:`, updatedSettings?.max_users);
+            
+            res.json({
+                success: true,
+                message: '用户数量上限更新成功',
+                max_users: updatedSettings?.max_users
+            });
+        } else {
+            console.error(`[API:${requestId}] 更新失败或无变化`);
+            res.status(500).json({
+                success: false,
+                error: '用户数量上限更新失败或无变化'
+            });
+        }
+    } catch (error) {
+        console.error(`[API:${requestId}] 更新用户上限设置失败:`, error);
+        res.status(500).json({
+            success: false,
+            error: '更新用户上限设置失败: ' + error.message
+        });
+    }
+});
+
+// 获取用户数量信息 - 公开API，无需验证
+router.get('/user-stats', (req, res) => {
+    const requestId = 'API:' + Math.random().toString(36).substring(2, 10);
+    console.log(`[${requestId}] 接收到获取用户统计信息请求`);
+    
+    try {
+        // 获取用户数量（不包括管理员）
+        const countStmt = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = "user"');
+        const { count } = countStmt.get();
+        
+        // 获取用户上限设置
+        const settings = getSiteSettings(db);
+        const max_users = settings.max_users || 0;
+        
+        console.log(`[${requestId}] 当前用户数: ${count}, 最大允许用户数: ${max_users}`);
+        
+        res.json({
+            success: true,
+            user_count: count,
+            max_users: max_users,
+            registration_allowed: max_users === 0 || count < max_users
+        });
+    } catch (error) {
+        console.error(`[${requestId}] 获取用户统计信息失败:`, error);
+        res.status(500).json({
+            success: false,
+            error: '获取用户统计信息失败: ' + error.message
         });
     }
 });

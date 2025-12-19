@@ -48,6 +48,19 @@
             opacity: 0;
             pointer-events: none;
         }
+        
+        /* 小型加载动画 */
+        .loading-spinner-small {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(113, 128, 150, 0.3);
+            border-radius: 50%;
+            border-top-color: #718096;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
     </style>
     <!-- 在head中预加载站点设置 -->
     <script>
@@ -183,6 +196,17 @@
             </div>
 
             <div id="message" class="message"></div>
+            
+            <!-- 用户统计信息 -->
+            <div id="userStatsContainer" class="user-stats-container" style="margin-top: 20px; text-align: center; font-size: 14px; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                <div id="userStatsInfo">
+                    <span id="userCount">0</span> / <span id="maxUsers">0</span> 位用户
+                    <span id="registrationStatus" style="margin-left: 5px; font-size: 12px;">✔️ 可注册</span>
+                </div>
+                <div id="userStatsLoading" style="display: none;">
+                    <span class="loading-spinner-small"></span> 加载用户数据中...
+                </div>
+            </div>
             
             <!-- 友情链接区域 -->
             <div id="friendsLinksContainer" class="friends-links-container" style="display: none;">

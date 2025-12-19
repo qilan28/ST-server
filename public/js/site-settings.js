@@ -43,12 +43,14 @@ async function loadSiteSettings() {
         // 查找表单元素
         const projectNameInput = document.getElementById('projectName');
         const siteNameInput = document.getElementById('siteName');
+        const maxUsersInput = document.getElementById('maxUsers');
         const currentFaviconImg = document.getElementById('currentFavicon');
         
-        if (!projectNameInput || !siteNameInput) {
+        if (!projectNameInput || !siteNameInput || !maxUsersInput) {
             console.error('未找到表单元素:', {
                 projectNameInput: !!projectNameInput,
-                siteNameInput: !!siteNameInput
+                siteNameInput: !!siteNameInput,
+                maxUsersInput: !!maxUsersInput
             });
             showSiteSettingsMessage('表单元素不存在', 'error');
             return;
@@ -59,7 +61,8 @@ async function loadSiteSettings() {
             console.log('收到的设置数据:', {
                 project_name: data.settings.project_name,
                 site_name: data.settings.site_name,
-                favicon_path: data.settings.favicon_path
+                favicon_path: data.settings.favicon_path,
+                max_users: data.settings.max_users
             });
             
             // 强制设置表单值，即使为空也需要设置
@@ -69,11 +72,15 @@ async function loadSiteSettings() {
             siteNameInput.value = data.settings.site_name || '';
             console.log('设置网站名称为:', siteNameInput.value);
             
+            maxUsersInput.value = data.settings.max_users !== undefined ? data.settings.max_users : 0;
+            console.log('设置用户数量上限为:', maxUsersInput.value);
+            
             // 验证设置的值是否生效
             setTimeout(() => {
                 console.log('检查表单实际值:', {
                     projectName: projectNameInput.value,
-                    siteName: siteNameInput.value
+                    siteName: siteNameInput.value,
+                    maxUsers: maxUsersInput.value
                 });
             }, 100);
             
@@ -86,13 +93,15 @@ async function loadSiteSettings() {
             // 使用DOM API直接设置值以确保它生效
             document.querySelector('#projectName').setAttribute('value', data.settings.project_name || '');
             document.querySelector('#siteName').setAttribute('value', data.settings.site_name || '');
+            document.querySelector('#maxUsers').setAttribute('value', data.settings.max_users !== undefined ? data.settings.max_users : 0);
             
             // 更新页面标题
             updatePageTitle(data.settings.site_name);
             
             console.log('站点设置加载成功', {
                 projectNameValue: projectNameInput.value,
-                siteNameValue: siteNameInput.value
+                siteNameValue: siteNameInput.value,
+                maxUsersValue: maxUsersInput.value
             });
             
             // 显示成功消息
@@ -120,14 +129,22 @@ function saveSiteSettings() {
         // 获取表单数据
         const projectName = document.getElementById('projectName').value.trim();
         const siteName = document.getElementById('siteName').value.trim();
+        const maxUsers = document.getElementById('maxUsers').value.trim();
         
         if (!projectName || !siteName) {
             showSiteSettingsMessage('错误: 项目名称和网站名称不能为空', 'error');
             return;
         }
         
+        // 验证用户数量上限为非负整数
+        const maxUsersInt = parseInt(maxUsers);
+        if (isNaN(maxUsersInt) || maxUsersInt < 0) {
+            showSiteSettingsMessage('错误: 用户数量上限必须是非负整数', 'error');
+            return;
+        }
+        
         // 显示数据在控制台
-        console.log(`将保存的数据: 项目名称=${projectName}, 网站名称=${siteName}`);
+        console.log(`将保存的数据: 项目名称=${projectName}, 网站名称=${siteName}, 用户上限=${maxUsersInt}`);
         
         // 保存数据（这里简化为同步版本）
         const token = localStorage.getItem('token');
@@ -168,7 +185,8 @@ function saveSiteSettings() {
         // 发送数据
         xhr.send(JSON.stringify({
             project_name: projectName,
-            site_name: siteName
+            site_name: siteName,
+            max_users: maxUsersInt
         }));
     
     } catch (error) {
@@ -425,11 +443,13 @@ function initSiteSettings() {
         // 检查表单元素是否存在
         const projectNameInput = document.getElementById('projectName');
         const siteNameInput = document.getElementById('siteName');
+        const maxUsersInput = document.getElementById('maxUsers');
         
-        if (!projectNameInput || !siteNameInput) {
+        if (!projectNameInput || !siteNameInput || !maxUsersInput) {
             console.error(`${logPrefix} 关键表单元素缺失:`, {
                 projectNameInput: !!projectNameInput,
-                siteNameInput: !!siteNameInput
+                siteNameInput: !!siteNameInput,
+                maxUsersInput: !!maxUsersInput
             });
         } else {
             console.log(`${logPrefix} 表单元素已找到`);
@@ -441,6 +461,10 @@ function initSiteSettings() {
             
             siteNameInput.addEventListener('change', function() {
                 console.log('网站名称已更改:', this.value);
+            });
+            
+            maxUsersInput.addEventListener('change', function() {
+                console.log('用户数量上限已更改:', this.value);
             });
         }
         
@@ -497,7 +521,8 @@ function initSiteSettings() {
         window.debugSiteSettings = function() {
             const inputs = {
                 projectName: document.getElementById('projectName')?.value,
-                siteName: document.getElementById('siteName')?.value
+                siteName: document.getElementById('siteName')?.value,
+                maxUsers: document.getElementById('maxUsers')?.value
             };
             console.log('当前表单状态:', inputs);
             return inputs;
