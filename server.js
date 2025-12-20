@@ -21,6 +21,7 @@ import runtimeLimiterRoutes from './routes/runtime-limiter.js';
 import nginxFixRoutes from './routes/nginx-fix.js';
 import nginxApiFixRoutes from './routes/nginx-api-fix.js';
 import apiProxyRoutes from './routes/api-proxy.js';
+import apiBridgeRoutes from './routes/api-bridge.js';
 import debugHeadersRoutes from './routes/debug-headers.js';
 import dashboardFixRoutes from './routes/dashboard-fix.js';
 import { protectPage } from './middleware/page-auth.js';
@@ -137,6 +138,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // 注册仪表板修复路由（必须在页面保护之前）
 app.use(dashboardFixRoutes);
+
+// API 桌接路由 - 用于 Nginx 环境下的 API 请求
+app.use('/nginx-api', apiBridgeRoutes);
 
 // 应用页面保护中间件（必须在静态文件服务之前）
 app.use(protectPage);

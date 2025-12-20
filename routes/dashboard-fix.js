@@ -101,26 +101,26 @@ router.get('/dashboard.html', (req, res) => {
 </head>`
         );
         
-        // 添加API请求修复脚本
+        // API请求修复脚本 - 新版
         const apiFixScript = `
     <script>
-        // API请求修复脚本 - 确保API请求正确发送
+        // API请求修复脚本 - 使用专用API桌接路径
         (function() {
             const originalFetch = window.fetch;
             const originalXHROpen = XMLHttpRequest.prototype.open;
             const currentHost = window.location.host;
             const isProxiedRequest = currentHost.includes('7092') || window.location.pathname.includes('/st/');
+            const currentOrigin = window.location.origin;
             
             // 拦截fetch请求
             window.fetch = function(url, options) {
                 if (isProxiedRequest) {
-                    // 处理相对URL
-                    if (url.startsWith('/api/') || url.includes('/api/')) {
-                        // 确保使用完整的URL
-                        const baseUrl = window.location.origin;
-                        const fullUrl = url.startsWith('/') ? baseUrl + url : baseUrl + '/' + url;
-                        console.log('[API修复] Fetch请求重定向:', url, '->', fullUrl);
-                        return originalFetch(fullUrl, options);
+                    // 如果是API请求，转到 nginx-api 桌接端点
+                    if (url.startsWith('/api/')) {
+                        const apiPath = url.substring(5); // 移除 '/api/' 前缀
+                        const newUrl = currentOrigin + '/nginx-api/' + apiPath;
+                        console.log('[API桌接] Fetch请求重定向:', url, '->', newUrl);
+                        return originalFetch(newUrl, options);
                     }
                 }
                 return originalFetch(url, options);
@@ -128,17 +128,16 @@ router.get('/dashboard.html', (req, res) => {
             
             // 拦截XHR请求
             XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-                if (isProxiedRequest && (url.startsWith('/api/') || url.includes('/api/'))) {
-                    // 处理相对URL
-                    const baseUrl = window.location.origin;
-                    const fullUrl = url.startsWith('/') ? baseUrl + url : baseUrl + '/' + url;
-                    console.log('[API修复] XHR请求重定向:', url, '->', fullUrl);
-                    return originalXHROpen.call(this, method, fullUrl, async, user, password);
+                if (isProxiedRequest && url.startsWith('/api/')) {
+                    const apiPath = url.substring(5); // 移除 '/api/' 前缀
+                    const newUrl = currentOrigin + '/nginx-api/' + apiPath;
+                    console.log('[API桌接] XHR请求重定向:', url, '->', newUrl);
+                    return originalXHROpen.call(this, method, newUrl, async, user, password);
                 }
                 return originalXHROpen.call(this, method, url, async, user, password);
             };
             
-            console.log('[API修复] 请求拦截已启用', { host: currentHost, isProxied: isProxiedRequest });
+            console.log('[API桌接] 请求拦截已启用', { host: currentHost, isProxied: isProxiedRequest });
         })();
     </script>
 `;

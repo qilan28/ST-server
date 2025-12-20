@@ -173,6 +173,30 @@ function fixNginxApiRoutes(configPath) {
             # 保留请求参数
             proxy_pass_request_headers on;
             proxy_pass_request_body on;
+        }
+        
+        # 专用 API 桌接路由 - 特别处理 API 请求
+        location /nginx-api/ {
+            # 转发到管理平台
+            proxy_pass http://127.0.0.1:3000/nginx-api/;
+            proxy_http_version 1.1;
+            
+            # 设置代理头信息
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # 传递 cookie
+            proxy_set_header Cookie $http_cookie;
+            
+            # 处理 WebSocket
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            
+            # 保留请求参数
+            proxy_pass_request_headers on;
+            proxy_pass_request_body on;
         }`;
             
             // 替换配置
@@ -204,8 +228,31 @@ function fixNginxApiRoutes(configPath) {
             proxy_pass_request_headers on;
             proxy_pass_request_body on;
         }
+        
+        # 专用 API 桌接路由 - 特别处理 API 请求
+        location /nginx-api/ {
+            # 转发到管理平台
+            proxy_pass http://127.0.0.1:3000/nginx-api/;
+            proxy_http_version 1.1;
+            
+            # 设置代理头信息
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # 传递 cookie
+            proxy_set_header Cookie $http_cookie;
+            
+            # 处理 WebSocket
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            
+            # 保留请求参数
+            proxy_pass_request_headers on;
+            proxy_pass_request_body on;
+        }`;
                 
-`;
                 config = config.substring(0, insertPoint) + apiFixBlock + config.substring(insertPoint);
             }
         }
