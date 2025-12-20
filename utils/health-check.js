@@ -11,26 +11,49 @@ import { promisify } from 'util';
  */
 export async function checkServiceHealth(port, host = 'localhost', timeout = 5000) {
     return new Promise((resolve) => {
-        const request = http.get({
-            host: host,
-            port: port,
-            path: '/api/health',  // 尝试健康检查端点
-            timeout: timeout
-        }, (res) => {
-            console.log(`[健康检查] 端口 ${port} 返回状态: ${res.statusCode}`);
-            resolve(res.statusCode >= 200 && res.statusCode < 400);
-        });
+        // 尝试多个可能的端点
+        const endpoints = ['/', '/api/health', '/health', '/status'];
+        let currentEndpointIndex = 0;
+        
+        const tryEndpoint = () => {
+            if (currentEndpointIndex >= endpoints.length) {
+                console.log(`[健康检查] 端口 ${port} 所有端点都无响应`);
+                resolve(false);
+                return;
+            }
+            
+            const endpoint = endpoints[currentEndpointIndex];
+            const request = http.get({
+                host: host,
+                port: port,
+                path: endpoint,
+                timeout: timeout
+            }, (res) => {
+                console.log(`[健康检查] 端口 ${port} 端点 ${endpoint} 返回状态: ${res.statusCode}`);
+                // 对于SillyTavern，200-299或者404都表示服务在运行（404可能是正常的API响应）
+                if (res.statusCode >= 200 && res.statusCode < 500) {
+                    resolve(true);
+                } else {
+                    currentEndpointIndex++;
+                    tryEndpoint();
+                }
+            });
 
-        request.on('error', (err) => {
-            console.log(`[健康检查] 端口 ${port} 连接失败: ${err.message}`);
-            resolve(false);
-        });
+            request.on('error', (err) => {
+                console.log(`[健康检查] 端口 ${port} 端点 ${endpoint} 连接失败: ${err.message}`);
+                currentEndpointIndex++;
+                tryEndpoint();
+            });
 
-        request.on('timeout', () => {
-            console.log(`[健康检查] 端口 ${port} 连接超时`);
-            request.destroy();
-            resolve(false);
-        });
+            request.on('timeout', () => {
+                console.log(`[健康检查] 端口 ${port} 端点 ${endpoint} 连接超时`);
+                request.destroy();
+                currentEndpointIndex++;
+                tryEndpoint();
+            });
+        };
+        
+        tryEndpoint();
     });
 }
 

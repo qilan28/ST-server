@@ -8,6 +8,7 @@ import { recordInstanceStart, removeInstanceStartTime } from './runtime-limiter.
 import { generateNginxConfig } from './scripts/generate-nginx-config.js';
 import { reloadNginx } from './utils/nginx-reload.js';
 import { waitForServiceReady, checkPortOpen } from './utils/health-check.js';
+import { waitForPort, quickPortCheck } from './utils/simple-health-check.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -161,7 +162,7 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
             const timeoutId = setTimeout(() => {
                 disconnectPM2();
                 reject(new Error('PM2 start operation timed out'));
-            }, 10000); // 10秒超时
+            }, 15000); // 15秒超时
             
             pm2.start({
                 name: `st-${username}`,
@@ -190,28 +191,19 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
                     setTimeout(async () => {
                         try {
                             console.log(`[Instance] 等待端口 ${port} 上的服务启动...`);
-                            const isReady = await waitForServiceReady(port, 15, 3000); // 15次重试，每次等待3秒
+                            // 使用简单快速的端口检查
+                            const portReady = await waitForPort(port, 10, 1500); // 10次重试，每次等待1.5秒
                             
-                            if (isReady) {
-                                console.log(`[Instance] 实例 ${username} 在端口 ${port} 已完全就绪`);
-                                // 更新状态并记录启动时间
+                            if (portReady) {
+                                console.log(`[Instance] 实例 ${username} 在端口 ${port} 已启动`);
                                 updateUserStatus(username, 'running');
                                 recordInstanceStart(username);
                                 console.log(`[Instance] 已记录用户 ${username} 的实例启动时间`);
-                                resolve({ apps, port });  // 返回应用和使用的端口
+                                resolve({ apps, port });
                             } else {
-                                console.error(`[Instance] 实例 ${username} 启动超时，端口 ${port} 无响应`);
-                                // 尝试检查端口是否至少开放
-                                const portOpen = await checkPortOpen(port);
-                                if (portOpen) {
-                                    console.warn(`[Instance] 端口 ${port} 已开放但健康检查失败，仍然继续`);
-                                    updateUserStatus(username, 'running');
-                                    recordInstanceStart(username);
-                                    resolve({ apps, port });
-                                } else {
-                                    updateUserStatus(username, 'error');
-                                    reject(new Error(`实例启动失败：端口 ${port} 不可用`));
-                                }
+                                console.error(`[Instance] 实例 ${username} 启动失败，端口 ${port} 未开放`);
+                                updateUserStatus(username, 'error');
+                                reject(new Error(`实例启动失败：端口 ${port} 不可用`));
                             }
                         } catch (healthError) {
                             console.error(`[Instance] 健康检查出错:`, healthError);
@@ -393,7 +385,7 @@ export const restartInstance = async (username) => {
         // 额外确认实例真正可用
         console.log(`[Instance] 最终确认实例 ${username} 在端口 ${result.port} 是否可用...`);
         try {
-            const finalCheck = await waitForServiceReady(result.port, 5, 2000); // 额外5次检查
+            const finalCheck = await quickPortCheck(result.port); // 快速端口检查
             if (!finalCheck) {
                 console.warn(`[Instance] 警告：实例 ${username} 可能还未完全启动`);
                 // 再给一些时间
