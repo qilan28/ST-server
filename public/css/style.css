@@ -1192,6 +1192,24 @@ body {
 
 /* 已在.inline-form .input-container:focus-within中定义焦点状态 */
 
+/* 输入框图标样式 */
+.input-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    z-index: 1;
+}
+
+.username-container input,
+.password-container input {
+    padding-left: 40px !important;
+}
+
 /* 密码输入框特殊样式 */
 .password-container {
     display: flex;
@@ -1202,12 +1220,15 @@ body {
     cursor: pointer;
     color: #6B7280;
     padding: 0 12px;
-    transition: all 0.2s ease;
-    height: 42px;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: transparent;
+    z-index: 2;
+    background: rgba(255,255,255,0.5);
 }
 
 .password-toggle:hover {
