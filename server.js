@@ -136,11 +136,23 @@ app.use(protectPage);
 app.use((req, res, next) => {
     // 对静态资源应用特殊的缓存控制
     const staticFileExt = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot'];
+    
+    // 检查请求路径是否含有可能导致问题的前缀
+    const problematicPrefixes = ['/st/', '/123/st/', '/222/st/', '/333/st/'];
+    const hasProblematicPrefix = problematicPrefixes.some(prefix => req.path.includes(prefix));
+    
+    // 根据不同情况设置缓存控制
     if (staticFileExt.some(ext => req.path.endsWith(ext))) {
-        // 对静态资源禁用缓存，确保重启后能获得最新版本
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
+        if (hasProblematicPrefix || req.path.includes('dashboard')) {
+            // 对仪表板相关文件或有问题前缀的资源禁用缓存
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            console.log(`[缓存控制] 禁用缓存: ${req.path}`);
+        } else {
+            // 其他静态资源使用正常缓存
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+        }
     }
     next();
 });
@@ -152,7 +164,13 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // 初始化静态文件回退路径
-const staticFallbackPaths = [path.join(__dirname, 'public')];
+const staticFallbackPaths = [
+    path.join(__dirname, 'public'),          // 主要公共目录
+    path.join(__dirname, 'public/js'),       // JavaScript 目录
+    path.join(__dirname, 'public/css'),      // CSS 目录
+    path.join(__dirname, 'public/images'),   // 图片目录
+    path.join(__dirname, 'node_modules')     // 依赖目录
+];
 
 // 添加所有用户的 SillyTavern 目录作为回退路径
 try {
