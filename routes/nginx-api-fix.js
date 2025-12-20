@@ -82,35 +82,32 @@ function fixNginxApiRoutes(configPath) {
                 };
             }
             
-            // API 路由修复块
+            // API 路由修复块 - 简化版本
             const apiFixBlock = `
     # API 路由修复 - 确保通过 Nginx 访问时 API 请求正确转发
     location /api/ {
         # 转发到管理平台
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
-        
-        # 设置代理头信息
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # 传递 cookie
         proxy_set_header Cookie $http_cookie;
-        
-        # 处理 WebSocket
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
-        
-        # 超时设置
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-        
-        # 保留请求参数
-        proxy_pass_request_headers on;
-        proxy_pass_request_body on;
+    }
+    
+    # 专用 API 桌接路由
+    location /nginx-api/ {
+        proxy_pass http://127.0.0.1:3000/nginx-api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Cookie $http_cookie;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
     }
             
 `;
@@ -141,7 +138,7 @@ function fixNginxApiRoutes(configPath) {
             proxy_set_header X-Real-IP $remote_addr;
         }`;
             
-            // 新的API路由配置
+            // 新的API路由配置 - 简化版
             const newApiRoute = `        # 管理平台的静态资源和API
         location ~ ^/(css|js|admin\\.html|login\\.html|register\\.html) {
             proxy_pass http://127.0.0.1:3000;
@@ -156,23 +153,13 @@ function fixNginxApiRoutes(configPath) {
             # 转发到管理平台
             proxy_pass http://127.0.0.1:3000;
             proxy_http_version 1.1;
-            
-            # 设置代理头信息
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-            
-            # 传递 cookie
             proxy_set_header Cookie $http_cookie;
-            
-            # 处理 WebSocket
             proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            
-            # 保留请求参数
-            proxy_pass_request_headers on;
-            proxy_pass_request_body on;
+            proxy_set_header Connection $connection_upgrade;
         }
         
         # 专用 API 桌接路由 - 特别处理 API 请求
@@ -205,28 +192,18 @@ function fixNginxApiRoutes(configPath) {
             // 如果没有找到匹配的旧配置，在位置直接插入
             if (!config.includes('# API 路由修复')) {
                 const apiFixBlock = `
-        # API 路由修复 - 专门处理 API 请求
+        # API 路由修复 - 在 server 块内添加 location 块
         location /api/ {
             # 转发到管理平台
             proxy_pass http://127.0.0.1:3000;
             proxy_http_version 1.1;
-            
-            # 设置代理头信息
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-            
-            # 传递 cookie
             proxy_set_header Cookie $http_cookie;
-            
-            # 处理 WebSocket
             proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            
-            # 保留请求参数
-            proxy_pass_request_headers on;
-            proxy_pass_request_body on;
+            proxy_set_header Connection $connection_upgrade;
         }
         
         # 专用 API 桌接路由 - 特别处理 API 请求

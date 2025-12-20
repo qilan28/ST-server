@@ -32,6 +32,7 @@ import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
 import { startAutoBackupScheduler, stopAutoBackupScheduler } from './services/auto-backup.js';
 import { initRuntimeLimiter, stopRuntimeLimitCheck } from './runtime-limiter.js';
 import { ensureDashboardResources } from './utils/dashboard-resource-copy.js';
+import useFixedNginxConfig from './utils/use-fixed-nginx.js';
 
 // 加载环境变量
 dotenv.config();
@@ -128,6 +129,14 @@ autoCreateAdmin();
 
 // 确保仪表板资源文件都可用
 ensureDashboardResources();
+
+// 使用修复Nginx配置
+try {
+    console.log('='.repeat(20) + ' 修复Nginx配置 ' + '='.repeat(20));
+    useFixedNginxConfig();
+} catch (error) {
+    console.error('修复Nginx配置时出错:', error);
+}
 console.log('='.repeat(60));
 
 // 中间件

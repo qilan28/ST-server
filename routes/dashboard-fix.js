@@ -34,7 +34,7 @@ router.get('/dashboard.html', (req, res) => {
             '</head>',
             `    <style>
         /* 页面资源修复 - 确保从根路径加载 */
-        @import url('/css/style.css');
+        @import url('/css/fixed-style.css');
     </style>
     <script>
         // 资源路径修复
