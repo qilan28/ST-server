@@ -180,6 +180,14 @@ function saveSiteSettings() {
                 document.getElementById('siteSettingsMessage').style.backgroundColor = '#dcfce7';
                 document.getElementById('siteSettingsMessage').style.display = 'block';
                 
+                // 解析返回的数据
+                try {
+                    const responseData = JSON.parse(xhr.responseText);
+                    console.log('服务器响应数据:', responseData);
+                } catch (e) {
+                    console.log('无法解析响应:', xhr.responseText);
+                }
+                
                 // 成功后重新加载设置以验证变更
                 console.log('保存成功，重新加载设置信息...');
                 setTimeout(() => loadSiteSettings(), 1000);
@@ -447,6 +455,76 @@ function showSiteSettingsMessage(message, type = 'info') {
 function updatePageTitle(siteName) {
     if (siteName) {
         document.title = `管理员面板 - ${siteName}`;
+    }
+}
+
+// 专门更新用户数量上限
+function saveMaxUsers() {
+    try {
+        // 获取表单数据
+        const maxUsers = document.getElementById('maxUsers').value.trim();
+        
+        // 验证用户数量上限为非负整数
+        const maxUsersInt = parseInt(maxUsers);
+        if (isNaN(maxUsersInt) || maxUsersInt < 0) {
+            showSiteSettingsMessage('错误: 用户数量上限必须是非负整数', 'error');
+            return;
+        }
+        
+        showSiteSettingsMessage('正在保存用户数量上限...', 'info');
+        
+        // 使用专门的 API 端点更新用户上限
+        const xhr = new XMLHttpRequest();
+        const token = localStorage.getItem('token');
+        
+        xhr.open('PUT', `${API_BASE}/site-settings/max-users`, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // 成功处理
+                document.getElementById('siteSettingsMessage').textContent = '用户数量上限保存成功!';
+                document.getElementById('siteSettingsMessage').style.backgroundColor = '#dcfce7';
+                document.getElementById('siteSettingsMessage').style.display = 'block';
+                
+                // 解析返回的数据
+                try {
+                    const responseData = JSON.parse(xhr.responseText);
+                    console.log('服务器响应数据:', responseData);
+                    
+                    // 更新输入框显示值
+                    if (responseData.max_users !== undefined) {
+                        document.getElementById('maxUsers').value = responseData.max_users;
+                    }
+                } catch (e) {
+                    console.log('无法解析响应:', xhr.responseText);
+                }
+                
+                // 成功后重新加载设置
+                console.log('保存成功，重新加载设置信息...');
+                setTimeout(() => loadSiteSettings(), 1000);
+            } else {
+                // 错误处理
+                document.getElementById('siteSettingsMessage').textContent = '保存失败: ' + xhr.responseText;
+                document.getElementById('siteSettingsMessage').style.backgroundColor = '#fee2e2';
+                document.getElementById('siteSettingsMessage').style.display = 'block';
+            }
+        };
+        
+        xhr.onerror = function() {
+            console.error('网络错误！无法连接到服务器。');
+            document.getElementById('siteSettingsMessage').textContent = '网络错误: 无法连接到服务器';
+            document.getElementById('siteSettingsMessage').style.backgroundColor = '#fee2e2';
+            document.getElementById('siteSettingsMessage').style.display = 'block';
+        };
+        
+        // 发送数据
+        xhr.send(JSON.stringify({ max_users: maxUsersInt }));
+        console.log('发送更新请求，用户数量上限为:', maxUsersInt);
+    } catch (error) {
+        console.error('保存用户数量上限时出错:', error);
+        showSiteSettingsMessage('保存失败: ' + error.message, 'error');
     }
 }
 

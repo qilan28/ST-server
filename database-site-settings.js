@@ -48,11 +48,26 @@ export const getSiteSettings = (db) => {
     try {
         const stmt = db.prepare('SELECT * FROM site_settings WHERE id = 1');
         const settings = stmt.get();
-        return settings || {
-            project_name: '公益云酒馆多开管理平台', 
-            site_name: 'SillyTavern 多开管理平台', 
-            favicon_path: '/favicon.ico',
-            max_users: 0
+        
+        if (!settings) {
+            return {
+                project_name: '公益云酒馆多开管理平台', 
+                site_name: 'SillyTavern 多开管理平台', 
+                favicon_path: '/favicon.ico',
+                max_users: 0
+            };
+        }
+        
+        // 确保 max_users 为数字类型
+        const parsedMaxUsers = settings.max_users !== undefined && settings.max_users !== null ? 
+            parseInt(settings.max_users, 10) : 0;
+        
+        console.log(`[Database] 获取到的 max_users 值: ${settings.max_users}, 类型: ${typeof settings.max_users}, 解析后: ${parsedMaxUsers}`);
+        
+        // 返回一个新对象，确保 max_users 是数字
+        return {
+            ...settings,
+            max_users: parsedMaxUsers
         };
     } catch (error) {
         console.error('[Database] 获取站点设置失败:', error);
@@ -127,13 +142,15 @@ export const updateSiteSettings = (db, projectName, siteName, faviconPath, maxUs
                 project_name = COALESCE(?, project_name),
                 site_name = COALESCE(?, site_name),
                 favicon_path = COALESCE(?, favicon_path),
-                max_users = CASE WHEN ? IS NOT NULL THEN ? ELSE max_users END,
+                max_users = ?,
                 updated_at = CURRENT_TIMESTAMP 
             WHERE id = 1
         `);
         
-        console.log(`[Database:${logId}] 执行 SQL 更新数据: parsedMaxUsers=${parsedMaxUsers}, 判断条件=${parsedMaxUsers !== undefined ? parsedMaxUsers : null}`);
-        const result = stmt.run(projectName, siteName, faviconPath, parsedMaxUsers !== undefined ? parsedMaxUsers : null, parsedMaxUsers);
+        // 确保我们始终有一个有效的 maxUsers 值来更新，即使它是 0
+        const finalMaxUsers = parsedMaxUsers !== undefined ? parsedMaxUsers : 0;
+        console.log(`[Database:${logId}] 执行 SQL 更新数据: finalMaxUsers=${finalMaxUsers}`);
+        const result = stmt.run(projectName, siteName, faviconPath, finalMaxUsers);
         console.log(`[Database:${logId}] 更新结果: changes=${result.changes}`);
         
         // 查询更新后的记录

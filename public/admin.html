@@ -179,7 +179,10 @@
                             <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
                                 用户数量限制
                             </label>
-                            <input type="number" id="maxUsers" class="form-input" placeholder="0" min="0">
+                            <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                                <input type="number" id="maxUsers" class="form-input" placeholder="0" min="0" style="flex-grow: 1;">
+                                <button type="button" id="saveMaxUsers" class="btn btn-primary" onclick="saveMaxUsers()" style="white-space: nowrap;">仅保存此项</button>
+                            </div>
                             <small style="display: block; margin-top: 5px; color: #718096;">
                                 最大允许注册的用户数量，设置为 0 表示无限制
                             </small>

@@ -141,32 +141,66 @@ router.put('/', authenticateToken, requireAdmin, (req, res) => {
         const currentSettings = db.prepare('SELECT * FROM site_settings WHERE id = 1').get();
         console.log(`[API:${requestId}] 当前设置:`, currentSettings || '无记录');
         
-        // 更新文本设置
-        console.log(`[API:${requestId}] 开始更新设置...`);
+        // 直接执行 SQL 更新
+        console.log(`[API:${requestId}] 开始执行 SQL 更新设置...`);
         console.log(`[API:${requestId}] max_users 参数: ${parsedMaxUsers !== undefined ? parsedMaxUsers : '未提供'}`);
-        const result = updateSiteSettings(db, project_name, site_name, null, parsedMaxUsers);
-        console.log(`[API:${requestId}] 更新结果:`, result);
         
-        // 检查是否更新成功
-        const updatedSettings = db.prepare('SELECT * FROM site_settings WHERE id = 1').get();
-        console.log(`[API:${requestId}] 更新后的设置:`, updatedSettings || '无记录');
-        
-        if (result) {
-            res.json({
-                success: true,
-                message: '网站设置更新成功',
-                data: {
-                    project_name: updatedSettings.project_name,
-                    site_name: updatedSettings.site_name,
-                    max_users: updatedSettings.max_users,
-                    updated_at: updatedSettings.updated_at
-                }
-            });
-        } else {
-            console.error(`[API:${requestId}] 更新失败或无变化`);
-            res.status(500).json({
+        try {
+            const maxUsersValue = parsedMaxUsers !== undefined ? parsedMaxUsers : 0;
+            
+            const stmt = db.prepare(`
+                UPDATE site_settings 
+                SET 
+                    project_name = COALESCE(?, project_name),
+                    site_name = COALESCE(?, site_name),
+                    max_users = ?,
+                    updated_at = CURRENT_TIMESTAMP 
+                WHERE id = 1
+            `);
+            
+            const updateResult = stmt.run(project_name, site_name, maxUsersValue);
+            console.log(`[API:${requestId}] 直接更新结果:`, updateResult);
+            
+            if (updateResult.changes === 0) {
+                // 如果没有记录被更新，则创建一条新记录
+                const insertStmt = db.prepare(`
+                    INSERT OR IGNORE INTO site_settings (id, project_name, site_name, favicon_path, max_users)
+                    VALUES (1, ?, ?, '/favicon.ico', ?)
+                `);
+                
+                const insertResult = insertStmt.run(project_name, site_name, maxUsersValue);
+                console.log(`[API:${requestId}] 插入新记录结果:`, insertResult);
+            }
+            
+            const result = true;
+            
+            // 检查是否更新成功
+            const updatedSettings = db.prepare('SELECT * FROM site_settings WHERE id = 1').get();
+            console.log(`[API:${requestId}] 更新后的设置:`, updatedSettings || '无记录');
+            
+            if (result) {
+                res.json({
+                    success: true,
+                    message: '网站设置更新成功',
+                    data: {
+                        project_name: updatedSettings.project_name,
+                        site_name: updatedSettings.site_name,
+                        max_users: updatedSettings.max_users,
+                        updated_at: updatedSettings.updated_at
+                    }
+                });
+            } else {
+                console.error(`[API:${requestId}] 更新失败或无变化`);
+                res.status(500).json({
+                    success: false,
+                    error: '网站设置更新失败或无变化'
+                });
+            }
+        } catch (error) {
+            console.error(`[API:${requestId}] 执行 SQL 更新设置失败:`, error);
+            return res.status(500).json({
                 success: false,
-                error: '网站设置更新失败或无变化'
+                error: '执行 SQL 更新设置失败: ' + error.message
             });
         }
     } catch (error) {
@@ -309,10 +343,44 @@ router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
         
         console.log(`[API:${requestId}] 最终解析后的 max_users 值: ${maxUsersInt} (类型: ${typeof maxUsersInt})`);
         
-        // 更新设置
-        console.log(`[API:${requestId}] 准备调用 updateSiteSettings 更新 max_users 为: ${maxUsersInt}`);
-        const result = updateSiteSettings(db, null, null, null, maxUsersInt);
-        console.log(`[API:${requestId}] 更新结果:`, result);
+        // 直接更新 max_users 值，不通过 updateSiteSettings 函数
+        console.log(`[API:${requestId}] 直接执行 SQL 更新 max_users 为: ${maxUsersInt}`);
+        
+        try {
+            const stmt = db.prepare(`
+                UPDATE site_settings 
+                SET max_users = ?, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = 1
+            `);
+            
+            const updateResult = stmt.run(maxUsersInt);
+            console.log(`[API:${requestId}] 直接更新结果:`, updateResult);
+            
+            if (updateResult.changes === 0) {
+                // 如果没有记录被更新，则创建一条新记录
+                const insertStmt = db.prepare(`
+                    INSERT OR IGNORE INTO site_settings (id, project_name, site_name, favicon_path, max_users)
+                    VALUES (1, '公益云酒馆多开管理平台', 'SillyTavern 多开管理平台', '/favicon.ico', ?)
+                `);
+                
+                const insertResult = insertStmt.run(maxUsersInt);
+                console.log(`[API:${requestId}] 插入新记录结果:`, insertResult);
+            }
+            
+            // 检查更新后的值
+            const checkStmt = db.prepare('SELECT max_users FROM site_settings WHERE id = 1');
+            const checkResult = checkStmt.get();
+            console.log(`[API:${requestId}] 检查更新后的 max_users 值:`, checkResult?.max_users);
+            
+            const result = true;
+        
+        } catch (error) {
+            console.error(`[API:${requestId}] 更新用户上限失败:`, error);
+            return res.status(500).json({
+                success: false,
+                error: '更新用户上限失败: ' + error.message
+            });
+        }
         
         if (result) {
             const updatedSettings = db.prepare('SELECT max_users FROM site_settings WHERE id = 1').get();
