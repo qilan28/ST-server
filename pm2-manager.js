@@ -7,6 +7,7 @@ import { getSafeRandomPort } from './utils/port-helper.js';
 import { recordInstanceStart, removeInstanceStartTime } from './runtime-limiter.js';
 import { generateNginxConfig } from './scripts/generate-nginx-config.js';
 import { reloadNginx } from './utils/nginx-reload.js';
+import { waitForServiceReady, checkPortOpen } from './utils/health-check.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -183,12 +184,43 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
                     console.error(`[Instance] 启动实例 ${username} 失败:`, err);
                     reject(err);
                 } else {
-                    console.log(`[Instance] 成功启动实例 ${username}`);
-                    // 更新状态并记录启动时间
-                    updateUserStatus(username, 'running');
-                    recordInstanceStart(username);
-                    console.log(`[Instance] 已记录用户 ${username} 的实例启动时间`);
-                    resolve({ apps, port });  // 返回应用和使用的端口
+                    console.log(`[Instance] PM2 报告实例 ${username} 启动成功，正在验证服务可用性...`);
+                    
+                    // 等待服务真正可用
+                    setTimeout(async () => {
+                        try {
+                            console.log(`[Instance] 等待端口 ${port} 上的服务启动...`);
+                            const isReady = await waitForServiceReady(port, 15, 3000); // 15次重试，每次等待3秒
+                            
+                            if (isReady) {
+                                console.log(`[Instance] 实例 ${username} 在端口 ${port} 已完全就绪`);
+                                // 更新状态并记录启动时间
+                                updateUserStatus(username, 'running');
+                                recordInstanceStart(username);
+                                console.log(`[Instance] 已记录用户 ${username} 的实例启动时间`);
+                                resolve({ apps, port });  // 返回应用和使用的端口
+                            } else {
+                                console.error(`[Instance] 实例 ${username} 启动超时，端口 ${port} 无响应`);
+                                // 尝试检查端口是否至少开放
+                                const portOpen = await checkPortOpen(port);
+                                if (portOpen) {
+                                    console.warn(`[Instance] 端口 ${port} 已开放但健康检查失败，仍然继续`);
+                                    updateUserStatus(username, 'running');
+                                    recordInstanceStart(username);
+                                    resolve({ apps, port });
+                                } else {
+                                    updateUserStatus(username, 'error');
+                                    reject(new Error(`实例启动失败：端口 ${port} 不可用`));
+                                }
+                            }
+                        } catch (healthError) {
+                            console.error(`[Instance] 健康检查出错:`, healthError);
+                            // 即使健康检查出错，也尝试继续
+                            updateUserStatus(username, 'running');
+                            recordInstanceStart(username);
+                            resolve({ apps, port });
+                        }
+                    }, 2000); // 给PM2一点时间来真正启动进程
                 }
             });
         });
@@ -357,6 +389,21 @@ export const restartInstance = async (username) => {
         console.log(`[Instance] 开始启动实例 ${username}, 原端口: ${user.port}...`);
         const result = await startInstance(username, user.port, user.st_dir, dataDir);
         console.log(`[Instance] 实例 ${username} 启动成功，端口: ${result.port}`);
+        
+        // 额外确认实例真正可用
+        console.log(`[Instance] 最终确认实例 ${username} 在端口 ${result.port} 是否可用...`);
+        try {
+            const finalCheck = await waitForServiceReady(result.port, 5, 2000); // 额外5次检查
+            if (!finalCheck) {
+                console.warn(`[Instance] 警告：实例 ${username} 可能还未完全启动`);
+                // 再给一些时间
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            } else {
+                console.log(`[Instance] 确认：实例 ${username} 已完全可用`);
+            }
+        } catch (checkError) {
+            console.warn(`[Instance] 最终检查出错，继续:`, checkError.message);
+        }
         
         // 总是在实例重启后重新生成和重载 Nginx 配置，确保路由正确
         try {

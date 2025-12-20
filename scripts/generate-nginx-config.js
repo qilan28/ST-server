@@ -44,7 +44,8 @@ async function generateNginxConfig() {
             upstreamServers += `
 # ${user.username} 的 SillyTavern 实例
 upstream st_${user.username} {
-    server 127.0.0.1:${user.port};
+    server 127.0.0.1:${user.port} max_fails=3 fail_timeout=30s;
+    # 添加健康检查和故障转移配置
 }
 `;
     });
@@ -185,10 +186,15 @@ upstream st_${user.username} {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         
-        # 超时设置
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+        # 增强的超时设置 - 给启动中的服务更多时间
+        proxy_connect_timeout 120s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
+        
+        # 重试配置
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_timeout 30s;
+        proxy_next_upstream_tries 3;
         
         # 启用缓冲以使用 sub_filter
         proxy_buffering on;
