@@ -198,12 +198,15 @@
             <div id="message" class="message"></div>
             
             <!-- 用户统计信息 -->
-            <div id="userStatsContainer" class="user-stats-container" style="margin-top: 20px; text-align: center; font-size: 14px; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                <div id="userStatsInfo">
-                    <span id="userCount">0</span> / <span id="maxUsers">0</span> 位用户
-                    <span id="registrationStatus" style="margin-left: 5px; font-size: 12px;">✔️ 可注册</span>
+            <div id="userStatsContainer" class="user-stats-container" style="margin-top: 20px; text-align: center; font-size: 14px; color: #4a5568; border-top: 1px solid #e2e8f0; background-color: #f7fafc; padding: 12px 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #2d3748; font-weight: 600;">用户注册状态</h3>
+                <div id="userStatsInfo" style="font-weight: 500;">
+                    当前注册用户: <span id="userCount" style="font-weight: 600; font-size: 16px; color: #3182ce;">0</span> / <span id="maxUsers" style="font-weight: 600; font-size: 16px; color: #3182ce;">0</span> 位
+                    <div style="margin-top: 8px;">
+                        <span id="registrationStatus" style="display: inline-block; margin-top: 5px; font-size: 13px; background-color: #e6fffa; padding: 3px 10px; border-radius: 20px; border: 1px solid #b2f5ea; font-weight: 500;">✔️ 可注册</span>
+                    </div>
                 </div>
-                <div id="userStatsLoading" style="display: none;">
+                <div id="userStatsLoading" style="display: none; padding: 10px 0;">
                     <span class="loading-spinner-small"></span> 加载用户数据中...
                 </div>
             </div>
@@ -219,6 +222,20 @@
 
     <script src="/js/auth.js"></script>
     <script src="/js/apply-site-settings.js"></script>
+    
+    <!-- 确保用户统计信息显示 -->
+    <script>
+        // 直接将用户统计容器设置为可见
+        document.getElementById('userStatsContainer').style.display = 'block';
+        
+        // 添加延迟加载，确保 API 可用
+        setTimeout(function() {
+            if (typeof loadUserStats === 'function') {
+                console.log('直接调用 loadUserStats');
+                loadUserStats();
+            }
+        }, 500);
+    </script>
     <script src="/js/fix-site-settings.js"></script>
     <script src="/js/friends-links.js"></script>
 </body>

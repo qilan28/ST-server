@@ -406,23 +406,55 @@ router.get('/user-stats', (req, res) => {
     const requestId = 'API:' + Math.random().toString(36).substring(2, 10);
     console.log(`[${requestId}] 接收到获取用户统计信息请求`);
     
+    // 添加 CORS 头部确保跨域请求可以正常工作
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.header('Pragma', 'no-cache');
+    res.header('Expires', '0');
+    
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    
     try {
         // 获取用户数量（不包括管理员）
+        console.log(`[${requestId}] 正在查询普通用户数量...`);
         const countStmt = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = "user"');
         const { count } = countStmt.get();
+        console.log(`[${requestId}] 普通用户数量查询结果:`, count);
         
         // 获取用户上限设置
+        console.log(`[${requestId}] 正在获取站点设置...`);
         const settings = getSiteSettings(db);
-        const max_users = settings.max_users || 0;
+        console.log(`[${requestId}] 详细站点设置:`, settings);
         
+        // 确保 max_users 始终是一个合法的数字
+        let max_users = 0;
+        if (settings.max_users !== undefined && settings.max_users !== null) {
+            const parsedValue = parseInt(settings.max_users, 10);
+            if (!isNaN(parsedValue) && parsedValue >= 0) {
+                max_users = parsedValue;
+            }
+        }
+        
+        console.log(`[${requestId}] 处理后的 max_users 值:`, max_users, '原始值:', settings.max_users, '类型:', typeof settings.max_users);
         console.log(`[${requestId}] 当前用户数: ${count}, 最大允许用户数: ${max_users}`);
         
-        res.json({
+        // 确定是否允许注册
+        const registration_allowed = max_users === 0 || count < max_users;
+        console.log(`[${requestId}] 是否允许注册: ${registration_allowed}`);
+        
+        const response = {
             success: true,
             user_count: count,
             max_users: max_users,
-            registration_allowed: max_users === 0 || count < max_users
-        });
+            registration_allowed: registration_allowed
+        };
+        
+        console.log(`[${requestId}] 返回数据:`, response);
+        res.json(response);
     } catch (error) {
         console.error(`[${requestId}] 获取用户统计信息失败:`, error);
         res.status(500).json({

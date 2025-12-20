@@ -326,56 +326,107 @@ function togglePasswordVisibility(inputId, toggleElement) {
 }
 
 // 加载用户数量信息
-async function loadUserStats() {
-    try {
-        // 显示加载状态
-        document.getElementById('userStatsInfo').style.display = 'none';
-        document.getElementById('userStatsLoading').style.display = 'block';
-        
-        const response = await fetch(`${API_BASE}/site-settings/user-stats`);
-        if (!response.ok) {
-            console.error('获取用户统计信息失败:', response.status);
-            document.getElementById('userStatsContainer').style.display = 'none';
-            return;
-        }
-        
-        const data = await response.json();
-        console.log('获取到用户统计信息:', data);
-        
-        if (data.success) {
-            // 更新显示
-            document.getElementById('userCount').textContent = data.user_count;
-            
-            // 如果没有限制，显示为“无限”
-            const maxUsersEl = document.getElementById('maxUsers');
-            if (data.max_users === 0) {
-                maxUsersEl.textContent = '无限';
-            } else {
-                maxUsersEl.textContent = data.max_users;
-            }
-            
-            // 更新注册状态
-            const statusEl = document.getElementById('registrationStatus');
-            if (data.registration_allowed) {
-                statusEl.textContent = '✔️ 可注册';
-                statusEl.style.color = '#15803d'; // 绿色
-            } else {
-                statusEl.textContent = '❌ 已关闭注册';
-                statusEl.style.color = '#b91c1c'; // 红色
-            }
-            
-            // 显示信息
-            document.getElementById('userStatsInfo').style.display = 'block';
-        } else {
-            // 错误处理
-            document.getElementById('userStatsContainer').style.display = 'none';
-        }
-    } catch (error) {
-        console.error('加载用户统计信息失败:', error);
-        document.getElementById('userStatsContainer').style.display = 'none';
-    } finally {
-        document.getElementById('userStatsLoading').style.display = 'none';
+function loadUserStats() {
+    console.log('开始请求用户数量信息...');
+    
+    // 直接显示用户统计容器
+    const userStatsContainer = document.getElementById('userStatsContainer');
+    if (userStatsContainer) {
+        userStatsContainer.style.display = 'block';
     }
+    
+    // 显示加载状态
+    const userStatsInfo = document.getElementById('userStatsInfo');
+    const userStatsLoading = document.getElementById('userStatsLoading');
+    
+    if (userStatsInfo && userStatsLoading) {
+        userStatsInfo.style.display = 'none';
+        userStatsLoading.style.display = 'block';
+    }
+    
+    // 发起请求
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/site-settings/user-stats?_t=' + new Date().getTime(), true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+        console.log('收到响应:', xhr.status, xhr.responseText);
+        
+        // 隐藏加载提示
+        if (userStatsLoading) {
+            userStatsLoading.style.display = 'none';
+        }
+        
+        // 如果响应成功
+        if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+                const data = JSON.parse(xhr.responseText);
+                console.log('解析的用户统计数据:', data);
+                
+                if (data && data.success) {
+                    // 获取元素
+                    const userCountEl = document.getElementById('userCount');
+                    const maxUsersEl = document.getElementById('maxUsers');
+                    const statusEl = document.getElementById('registrationStatus');
+                    
+                    // 设置用户数量
+                    if (userCountEl) {
+                        userCountEl.textContent = data.user_count;
+                    }
+                    
+                    // 设置最大用户数量
+                    if (maxUsersEl) {
+                        maxUsersEl.textContent = data.max_users === 0 ? '无限' : data.max_users;
+                    }
+                    
+                    // 设置注册状态
+                    if (statusEl) {
+                        if (data.registration_allowed) {
+                            statusEl.textContent = '✔️ 可注册';
+                            statusEl.style.color = '#15803d'; // 绿色
+                        } else {
+                            statusEl.textContent = '❌ 已关闭注册';
+                            statusEl.style.color = '#b91c1c'; // 红色
+                        }
+                    }
+                    
+                    // 显示用户统计信息
+                    if (userStatsInfo) {
+                        userStatsInfo.style.display = 'block';
+                    }
+                } else {
+                    console.error('响应不包含有效数据:', data);
+                    if (userStatsContainer) {
+                        userStatsContainer.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('解析响应数据失败:', error);
+                if (userStatsContainer) {
+                    userStatsContainer.style.display = 'none';
+                }
+            }
+        } else {
+            console.error('获取用户统计信息失败:', xhr.status);
+            if (userStatsContainer) {
+                userStatsContainer.style.display = 'none';
+            }
+        }
+    };
+    
+    xhr.onerror = function() {
+        console.error('请求发生错误');
+        if (userStatsLoading) {
+            userStatsLoading.style.display = 'none';
+        }
+        if (userStatsContainer) {
+            userStatsContainer.style.display = 'none';
+        }
+    };
+    
+    // 发送请求
+    xhr.send();
+    console.log('已发送请求到 /api/site-settings/user-stats');
 }
 
 // 初始化页面
@@ -385,6 +436,29 @@ function initPage() {
     
     // 加载用户数量信息
     loadUserStats();
+}
+
+// 确保用户统计信息加载
+function ensureUserStatsLoaded() {
+    console.log('确保用户统计信息加载...');
+    
+    // 直接显示用户统计容器
+    const userStatsContainer = document.getElementById('userStatsContainer');
+    if (userStatsContainer) {
+        userStatsContainer.style.display = 'block';
+    }
+    
+    // 尝试加载用户统计信息
+    loadUserStats();
+    
+    // 如果加载失败，5秒后重试
+    setTimeout(() => {
+        const userStatsInfo = document.getElementById('userStatsInfo');
+        if (userStatsInfo && userStatsInfo.style.display === 'none') {
+            console.log('用户统计信息加载可能失败，重试...');
+            loadUserStats();
+        }
+    }, 5000);
 }
 
 // 检查是否已登录
@@ -401,3 +475,16 @@ function checkAuth() {
 
 // 页面加载时检查登录状态
 checkAuth();
+
+// 页面加载完成后确保用户统计信息加载
+// 这是一个等待页面完全加载完工的备用方案
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('页面DOM加载完成，确保用户统计信息加载...');
+    ensureUserStatsLoaded();
+});
+
+// 页面完全加载后再次试图加载用户统计信息
+window.onload = function() {
+    console.log('页面完全加载完成，再次确保用户统计信息加载...');
+    setTimeout(() => ensureUserStatsLoaded(), 500);
+};
