@@ -421,9 +421,45 @@ router.get('/user-stats', (req, res) => {
     try {
         // 获取用户数量（不包括管理员）
         console.log(`[${requestId}] 正在查询普通用户数量...`);
-        const countStmt = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = "user"');
-        const { count } = countStmt.get();
-        console.log(`[${requestId}] 普通用户数量查询结果:`, count);
+        
+        // 首先检查表结构，以确保我们的查询是安全的
+        let hasRoleColumn = false;
+        let count = 0;
+        
+        try {
+            // 首先检查 users 表是否存在
+            const tableCheckStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+            const tableExists = tableCheckStmt.get();
+            
+            if (!tableExists) {
+                console.log(`[${requestId}] users 表不存在，返回默认值`);
+                count = 0;
+            } else {
+                // 检查users表结构
+                const checkStmt = db.prepare("PRAGMA table_info(users)");
+                const columns = checkStmt.all();
+                hasRoleColumn = columns.some(col => col.name === 'role');
+                console.log(`[${requestId}] 检查到 users 表${hasRoleColumn ? '有' : '没有'} role 列`);
+                
+                // 如果有role列，使用role过滤查询
+                if (hasRoleColumn) {
+                    const countStmt = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'user'");
+                    const result = countStmt.get();
+                    count = result ? result.count : 0;
+                } else {
+                    // 没有role列，则查询所有用户
+                    const countStmt = db.prepare("SELECT COUNT(*) as count FROM users");
+                    const result = countStmt.get();
+                    count = result ? result.count : 0;
+                }
+            }
+            
+            console.log(`[${requestId}] 普通用户数量查询结果:`, count);
+        } catch (countError) {
+            console.error(`[${requestId}] 查询用户数量时出错:`, countError);
+            // 出错时默认为0个用户
+            count = 0;
+        }
         
         // 获取用户上限设置
         console.log(`[${requestId}] 正在获取站点设置...`);
