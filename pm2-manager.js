@@ -400,8 +400,9 @@ export const restartInstance = async (username) => {
         // 总是在实例重启后重新生成和重载 Nginx 配置，确保路由正确
         try {
             console.log(`[Instance] 重启后重新生成 Nginx 配置以确保路由正确...`);
-            const { generateNginxConfig } = await import('./scripts/generate-nginx-config.js');
-            await generateNginxConfig();
+            // 使用简化的配置生成器，避免语法错误
+            const { generateSimpleNginxConfig } = await import('./scripts/generate-simple-nginx-config.js');
+            await generateSimpleNginxConfig();
             
             console.log(`[Instance] 强制重载 Nginx 以应用新配置...`);
             // 使用强制模式重载 Nginx，跳过配置测试和其他检查

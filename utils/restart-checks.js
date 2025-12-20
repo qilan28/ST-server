@@ -90,10 +90,15 @@ export async function performRestartVerification() {
     const issues = [];
     let success = true;
     
-    // 重新应用 Nginx 配置
+    // 重新生成并应用 Nginx 配置
     try {
-        console.log('[验证] 重新加载 Nginx 配置...');
-        const reloadResult = await reloadNginx();
+        console.log('[验证] 重新生成并加载 Nginx 配置...');
+        
+        // 使用简化的配置生成器
+        const { generateSimpleNginxConfig } = await import('../scripts/generate-simple-nginx-config.js');
+        await generateSimpleNginxConfig();
+        
+        const reloadResult = await reloadNginx(null, true); // 强制重载
         
         if (!reloadResult.success) {
             issues.push(`Nginx 重载失败: ${reloadResult.error}`);
