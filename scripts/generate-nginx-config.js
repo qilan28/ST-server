@@ -107,8 +107,48 @@ upstream st_${user.username} {
             proxy_pass http://st_manager;
         }`;
     
+    // 生成静态文件的全局救援块 - 最高优先级
+    let globalStaticRescue = `
+    # 全局静态文件救援 - 最高优先级
+    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        # 通过 referer 判断应该转发到哪个用户实例
+`;    
+    
+    // 添加每个用户的 referer 检查
+    users.forEach(user => {
+        globalStaticRescue += `        if ($http_referer ~* "/${user.username}/st/") {
+            # 重写路径并转发到用户实例
+            rewrite ^/(.*)$ /$1 break;
+            proxy_pass http://st_${user.username};
+            
+            # 添加调试信息
+            add_header X-Debug-User "${user.username}" always;
+            add_header X-Debug-Source "static-rescue" always;
+            add_header X-Debug-Path $uri always;
+            
+            # 禁用缓存确保每次重启后都能获取最新文件
+            expires -1;
+            add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
+            
+            # 必要的代理头
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+`;
+    });
+    
+    // 添加默认转发
+    globalStaticRescue += `
+        # 如果没有匹配的 referer，尝试使用 cookie
+        proxy_pass http://st_manager;
+        add_header X-Debug-Source "static-rescue-default" always;
+    }
+    `;
+    
     // 生成 location 块
     let locationBlocks = '';
+    locationBlocks += globalStaticRescue;
     users.forEach(user => {
         // 访问控制指令（如果启用）
         const accessControl = ENABLE_ACCESS_CONTROL ? `

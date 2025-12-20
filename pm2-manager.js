@@ -364,13 +364,28 @@ export const restartInstance = async (username) => {
             const { generateNginxConfig } = await import('./scripts/generate-nginx-config.js');
             await generateNginxConfig();
             
-            console.log(`[Instance] 重载 Nginx 以应用新配置...`);
-            // 再次尝试重载 Nginx，以保证配置生效
-            const reloadResult = await reloadNginx();
+            console.log(`[Instance] 强制重载 Nginx 以应用新配置...`);
+            // 使用强制模式重载 Nginx，跳过配置测试和其他检查
+            const reloadResult = await reloadNginx(null, true);
             if (reloadResult.success) {
                 console.log(`[Instance] Nginx 配置重载成功，方法: ${reloadResult.method}`);
             } else {
                 console.warn(`[Instance] Nginx 重载返回错误: ${reloadResult.error}`);
+                console.log(`[Instance] 尝试备用方法重载 Nginx...`);
+                
+                try {
+                    // 如果失败，尝试直接调用命令重载
+                    const { exec } = await import('child_process');
+                    exec('nginx -s reload', (err, stdout, stderr) => {
+                        if (err) {
+                            console.warn(`[Instance] 备用方法也失败:`, err);
+                        } else {
+                            console.log(`[Instance] 备用方法重载成功`);
+                        }
+                    });
+                } catch (directError) {
+                    console.warn(`[Instance] 备用重载失败:`, directError.message);
+                }
             }
             
             // 给 Nginx 一点时间来应用新配置

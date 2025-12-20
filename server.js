@@ -19,8 +19,9 @@ import siteSettingsRoutes from './routes/site-settings.js';
 import friendsRoutes from './routes/friends.js';
 import runtimeLimiterRoutes from './routes/runtime-limiter.js';
 import { protectPage } from './middleware/page-auth.js';
+import { staticFallbackMiddleware } from './middleware/static-fallback.js';
 import './database.js';
-import { findUserByUsername, createAdminUser } from './database.js';
+import { findUserByUsername, createAdminUser, getAllUsers } from './database.js';
 import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
 import { startAutoBackupScheduler, stopAutoBackupScheduler } from './services/auto-backup.js';
 import { initRuntimeLimiter, stopRuntimeLimitCheck } from './runtime-limiter.js';
@@ -128,8 +129,49 @@ app.use(express.urlencoded({ extended: true }));
 // 应用页面保护中间件（必须在静态文件服务之前）
 app.use(protectPage);
 
-// 静态文件服务
-app.use(express.static(path.join(__dirname, 'public')));
+// 增强的静态文件服务
+// 首先强制设置一些关键的缓存控制头
+app.use((req, res, next) => {
+    // 对静态资源应用特殊的缓存控制
+    const staticFileExt = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot'];
+    if (staticFileExt.some(ext => req.path.endsWith(ext))) {
+        // 对静态资源禁用缓存，确保重启后能获得最新版本
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+    next();
+});
+
+// 主目录静态文件服务
+app.use(express.static(path.join(__dirname, 'public'), { 
+    etag: false,
+    maxAge: '1h'
+}));
+
+// 初始化静态文件回退路径
+const staticFallbackPaths = [path.join(__dirname, 'public')];
+
+// 添加所有用户的 SillyTavern 目录作为回退路径
+try {
+    // 获取所有用户
+    const users = getAllUsers();
+    for (const user of users) {
+        if (user.st_dir && fs.existsSync(user.st_dir)) {
+            const stPublicDir = path.join(user.st_dir, 'public');
+            if (fs.existsSync(stPublicDir)) {
+                console.log(`[静态文件回退] 添加用户 ${user.username} 的 SillyTavern 目录: ${stPublicDir}`);
+                staticFallbackPaths.push(stPublicDir);
+            }
+        }
+    }
+    console.log(`[静态文件回退] 总计 ${staticFallbackPaths.length} 个回退路径`);
+} catch (error) {
+    console.error(`[静态文件回退] 初始化错误:`, error);
+}
+
+// 注册静态文件回退中间件
+app.use(staticFallbackMiddleware({ fallbackPaths: staticFallbackPaths }));
 
 // API路由
 app.use('/api/auth', authRoutes);
