@@ -67,7 +67,7 @@ const connectPM2 = () => {
 const disconnectPM2 = () => {
     try {
         if (pm2Connected) {
-            console.log('[PM2] 断开连接');
+            // console.log('[PM2] 断开连接');
             pm2.disconnect();
             pm2Connected = false;
             return true;
@@ -282,6 +282,26 @@ export const restartInstance = async (username) => {
     
     console.log(`[Instance] 开始重启用户 ${username} 的实例...`);
     
+    // 引入重启前检查工具
+    let performRestartHealthCheck;
+    try {
+        const restartChecks = await import('./utils/restart-checks.js');
+        performRestartHealthCheck = restartChecks.performRestartHealthCheck;
+        
+        // 如果成功加载，执行重启前检查
+        if (typeof performRestartHealthCheck === 'function') {
+            console.log(`[Instance] 执行重启前检查...`);
+            const checkResult = await performRestartHealthCheck();
+            if (!checkResult.success) {
+                console.warn(`[Instance] 重启前检查发现问题: ${checkResult.issues.join('; ')}`);
+                // 不阻止重启，但记录问题
+            }
+        }
+    } catch (error) {
+        // 如果加载失败或检查失败，不阻止重启
+        console.warn(`[Instance] 重启前检查失败: ${error.message}`);
+    }
+    
     try {
         // 获取用户信息，用于后续启动实例
         const { findUserByUsername } = await import('./database.js');
@@ -325,9 +345,9 @@ export const restartInstance = async (username) => {
             }
         }
         
-        // 等待短暂停确保实例完全停止
-        console.log(`[Instance] 等待短暂停确保实例完全停止...`);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // 等待足够的时间确保实例完全停止并释放资源
+        console.log(`[Instance] 等待足够时间确保实例完全停止并释放资源...`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         // 获取数据目录
         const dataDir = path.join(user.data_dir, 'st-data');
@@ -338,19 +358,41 @@ export const restartInstance = async (username) => {
         const result = await startInstance(username, user.port, user.st_dir, dataDir);
         console.log(`[Instance] 实例 ${username} 启动成功，端口: ${result.port}`);
         
-        // 检查端口是否变更，如果未在 startInstance 中重载 Nginx，这里再次确认
-        if (result.port !== user.port) {
-            try {
-                console.log(`[Instance] 确保端口变更后的 Nginx 配置已更新...`);
-                // 再次尝试重载 Nginx，以保证配置生效
-                const reloadResult = await reloadNginx();
-                if (reloadResult.success) {
-                    console.log(`[Instance] Nginx 配置再次重载成功，方法: ${reloadResult.method}`);
-                }
-            } catch (nginxError) {
-                console.warn(`[Instance] 重启后重载 Nginx 失败:`, nginxError.message);
-                // 不影响实例重启结果
+        // 总是在实例重启后重新生成和重载 Nginx 配置，确保路由正确
+        try {
+            console.log(`[Instance] 重启后重新生成 Nginx 配置以确保路由正确...`);
+            const { generateNginxConfig } = await import('./scripts/generate-nginx-config.js');
+            await generateNginxConfig();
+            
+            console.log(`[Instance] 重载 Nginx 以应用新配置...`);
+            // 再次尝试重载 Nginx，以保证配置生效
+            const reloadResult = await reloadNginx();
+            if (reloadResult.success) {
+                console.log(`[Instance] Nginx 配置重载成功，方法: ${reloadResult.method}`);
+            } else {
+                console.warn(`[Instance] Nginx 重载返回错误: ${reloadResult.error}`);
             }
+            
+            // 给 Nginx 一点时间来应用新配置
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 执行重启后验证
+            try {
+                const restartChecks = await import('./utils/restart-checks.js');
+                if (typeof restartChecks.performRestartVerification === 'function') {
+                    console.log(`[Instance] 执行重启后验证...`);
+                    const verifyResult = await restartChecks.performRestartVerification();
+                    if (!verifyResult.success) {
+                        console.warn(`[Instance] 重启后验证发现问题: ${verifyResult.issues.join('; ')}`);
+                        // 在日志中记录问题，但仍然继续
+                    }
+                }
+            } catch (verifyError) {
+                console.warn(`[Instance] 重启后验证失败:`, verifyError.message);
+            }
+        } catch (nginxError) {
+            console.warn(`[Instance] 重启后更新 Nginx 配置失败:`, nginxError.message);
+            // 不影响实例重启结果
         }
         
         return result;

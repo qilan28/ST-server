@@ -150,13 +150,36 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 404处理
+// 增强的 404 处理
 app.use((req, res) => {
+    // 如果是 API 请求
     if (req.path.startsWith('/api/')) {
+        // 返回 JSON错误
         res.status(404).json({ error: 'API endpoint not found' });
-    } else {
-        res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
+        return;
     }
+    
+    // 判断是否是静态资源请求
+    const staticFileExtensions = ['.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot'];
+    const isStaticFile = staticFileExtensions.some(ext => req.path.endsWith(ext));
+    
+    if (isStaticFile) {
+        // 检查该文件是否真实存在
+        const requestedFile = path.join(__dirname, 'public', req.path);
+        
+        // 如果文件存在，直接提供
+        if (fs.existsSync(requestedFile)) {
+            console.log(`[静态文件] 找到遗失的文件: ${req.path}`);
+            return res.sendFile(requestedFile);
+        }
+        
+        // 注意: 我们允许 404 静态文件真正 404，但这样客户端可以处理重试
+        console.log(`[静态文件] 未找到文件: ${req.path}`);
+        return res.status(404).send(`File not found: ${req.path}`);
+    }
+    
+    // 其它请求重定向到首页
+    res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // 错误处理
