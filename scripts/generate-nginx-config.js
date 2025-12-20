@@ -44,8 +44,7 @@ async function generateNginxConfig() {
             upstreamServers += `
 # ${user.username} 的 SillyTavern 实例
 upstream st_${user.username} {
-    server 127.0.0.1:${user.port} max_fails=3 fail_timeout=30s;
-    # 添加健康检查和故障转移配置
+    server 127.0.0.1:${user.port};
 }
 `;
     });
@@ -70,12 +69,8 @@ upstream st_${user.username} {
 `;
     });
     
-    // 生成增强的 Cookie 救援模式 location 块
-    // 扩展匹配模式以捕获更多的静态资源请求
-    let rescueMode = `location ~ ^/(api|locales|lib|css|style|styles|scripts|js|img|images|assets|public|data|uploads|fonts|icons|csrf-token|version|node_modules|script\.js|thumbnail|static|\.css|\.js|\.png|\.jpg|\.svg|\.woff|\.woff2|\.ttf|\.ico) {
-            # 启用日志以追踪重定向
-            #access_log /var/log/nginx/rescue_access.log;
-            #error_log /var/log/nginx/rescue_error.log debug;
+    // 生成 Cookie 救援模式 location 块
+    let rescueMode = `location ~ ^/(api|locales|lib|css|scripts|img|assets|public|data|uploads|fonts|icons|csrf-token|version|node_modules|script\\.js|thumbnail) {
             
 `;
     
@@ -98,55 +93,12 @@ upstream st_${user.username} {
     });
     
     rescueMode += `
-            # 添加对 Origin 和特定已知问题的处理
-            if ($http_origin ~* "(.*)/([^/]+)/st/") {
-                set $user_context $2;
-                rewrite ^(.*)$ /$user_context/st$1 last;
-            }
-            
-            # 最后的默认路由 - 如果没有任何匹配转发给管理端
+            # 默认转发给管理端
             proxy_pass http://st_manager;
         }`;
     
-    // 生成静态文件的全局救援块 - 最高优先级
-    let globalStaticRescue = `
-    # 全局静态文件救援 - 最高优先级`;
-    
-    // 为每个用户生成独立的静态文件location块
-    users.forEach(user => {
-        globalStaticRescue += `
-    location ~* ^/${user.username}/st/.*\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        rewrite ^/${user.username}/st/(.*)$ /$1 break;
-        proxy_pass http://st_${user.username};
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        
-        # 添加调试信息
-        add_header X-Debug-User "${user.username}" always;
-        add_header X-Debug-Source "static-rescue" always;
-        
-        # 禁用缓存确保每次重启后都能获取最新文件
-        expires -1;
-        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
-    }`;
-    });
-    
-    // 添加通用静态文件fallback
-    globalStaticRescue += `
-    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        # 尝试转发到管理端
-        proxy_pass http://st_manager;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        add_header X-Debug-Source "static-rescue-default" always;
-    }
-    `;
-    
     // 生成 location 块
     let locationBlocks = '';
-    locationBlocks += globalStaticRescue;
     users.forEach(user => {
         // 访问控制指令（如果启用）
         const accessControl = ENABLE_ACCESS_CONTROL ? `
@@ -183,15 +135,10 @@ upstream st_${user.username} {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         
-        # 增强的超时设置 - 给启动中的服务更多时间
-        proxy_connect_timeout 120s;
-        proxy_send_timeout 120s;
-        proxy_read_timeout 120s;
-        
-        # 重试配置
-        proxy_next_upstream error timeout http_502 http_503 http_504;
-        proxy_next_upstream_timeout 30s;
-        proxy_next_upstream_tries 3;
+        # 超时设置
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
         
         # 启用缓冲以使用 sub_filter
         proxy_buffering on;
@@ -267,8 +214,8 @@ upstream st_${user.username} {
         proxy_cache_bypass $http_upgrade;
     }
     
-    # ${user.username} - 静态资源专门处理（优化性能并防止 404）
-    location ~ ^/${user.username}/st/(scripts|css|lib|img|images|assets|public|data|uploads|locales|style|styles|js|node_modules|fonts|icons|static)/ {
+    # ${user.username} - 静态资源专门处理（优化性能）
+    location ~ ^/${user.username}/st/(scripts|css|lib|img|assets|public|data|uploads|locales)/ {
         rewrite ^/${user.username}/st/(.*)$ /$1 break;
         proxy_pass http://st_${user.username};
         proxy_http_version 1.1;
@@ -281,48 +228,13 @@ upstream st_${user.username} {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Original-URI $request_uri;
         
-        # 对静态资源使用更长的超时时间
-        proxy_connect_timeout 30s;
-        proxy_send_timeout 30s;
-        proxy_read_timeout 30s;
+        # 启用缓存
+        expires 7d;
+        add_header Cache-Control "public, immutable";
         
-        # 启用缓存但使用更适合重启的缓存设置
-        expires 1h;
-        add_header Cache-Control "public, max-age=3600";
-        
-        # 开启缓冲以处理不稳定连接
-        proxy_buffering on;
-        proxy_buffer_size 4k;
-        proxy_buffers 8 4k;
-        
-        # 添加错误处理，对于 404 重试下一个上游服务器
-        proxy_next_upstream error timeout http_404;
-        proxy_next_upstream_tries 2;
-    }
-    
-    # ${user.username} - 文件后缀匹配（防止静态资源 404）
-    location ~ ^/${user.username}/st/.*\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|json)$ {
-        rewrite ^/${user.username}/st/(.*)$ /$1 break;
-        proxy_pass http://st_${user.username};
-        proxy_http_version 1.1;
-        
-        # 设置 Cookie 标记用户上下文
-        add_header Set-Cookie "st_context=${user.username}; Path=/; Max-Age=86400; SameSite=Lax";
-        
-        # 必要的代理头
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        
-        # 重启后防止缓存过时的文件
-        proxy_cache_bypass $http_pragma $http_authorization;
-        add_header X-Cache-Status $upstream_cache_status;
-        
-        # 启用缓存但使用更适合重启的缓存设置
-        expires 10m;
-        add_header Cache-Control "public, must-revalidate";
+        # 关闭缓冲提高性能
+        proxy_buffering off;
     }
 `;
     });

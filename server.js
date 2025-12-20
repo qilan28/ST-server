@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
-import crypto from 'crypto';
 import authRoutes from './routes/auth.js';
 import authCheckRoutes from './routes/auth-check.js';
 import instanceRoutes from './routes/instance.js';
@@ -174,15 +173,6 @@ try {
 
 // 注册静态文件回退中间件
 app.use(staticFallbackMiddleware({ fallbackPaths: staticFallbackPaths }));
-
-// CSRF Token端点 - 为前端兼容性提供
-app.get('/csrf-token', (req, res) => {
-    // 生成简单的随机token（兼容性考虑，不做实际CSRF保护）
-    const token = crypto.randomBytes(32).toString('hex');
-    res.json({
-        token: token
-    });
-});
 
 // API路由
 app.use('/api/auth', authRoutes);

@@ -59,15 +59,41 @@ router.post('/register', async (req, res) => {
         // 检查用户数量上限
         const settings = getSiteSettings(db);
         if (settings.max_users > 0) {
-            // 获取当前用户数量（不包括管理员）
-            const countStmt = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = "user"');
-            const { count } = countStmt.get();
-            
-            if (count >= settings.max_users) {
-                return res.status(403).json({ 
-                    error: '用户数量已达上限，暂停注册', 
-                    message: `当前用户数: ${count}, 最大允许用户数: ${settings.max_users}` 
-                });
+            try {
+                // 获取当前用户数量（不包括管理员）
+                // 首先检查 users 表是否存在以及 role 列是否存在
+                const tableCheckStmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+                const tableExists = tableCheckStmt.get();
+                
+                let count = 0;
+                if (tableExists) {
+                    // 检查 role 列是否存在
+                    const columnCheckStmt = db.prepare("PRAGMA table_info(users)");
+                    const columns = columnCheckStmt.all();
+                    const hasRoleColumn = columns.some(col => col.name === 'role');
+                    
+                    if (hasRoleColumn) {
+                        // 使用单引号而不是双引号
+                        const countStmt = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'user'");
+                        const result = countStmt.get();
+                        count = result ? result.count : 0;
+                    } else {
+                        // 没有 role 列，查询所有用户
+                        const countStmt = db.prepare("SELECT COUNT(*) as count FROM users");
+                        const result = countStmt.get();
+                        count = result ? result.count : 0;
+                    }
+                }
+                
+                if (count >= settings.max_users) {
+                    return res.status(403).json({ 
+                        error: '用户数量已达上限，暂停注册', 
+                        message: `当前用户数: ${count}, 最大允许用户数: ${settings.max_users}` 
+                    });
+                }
+            } catch (error) {
+                console.error('检查用户数量时出错:', error);
+                // 出错时允许继续注册，避免阻塞用户
             }
         }
         

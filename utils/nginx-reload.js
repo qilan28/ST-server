@@ -57,9 +57,8 @@ export async function testNginxConfig(configPath) {
 /**
  * 重载 Nginx 配置
  * @param {string} configPath - Nginx 配置文件路径（可选）
- * @param {boolean} forceReload - 是否强制重载（跳过配置测试）
  */
-export async function reloadNginx(configPath = null, forceReload = false) {
+export async function reloadNginx(configPath = null) {
     try {
         const confPath = configPath || getNginxConfigPath();
         
@@ -73,67 +72,33 @@ export async function reloadNginx(configPath = null, forceReload = false) {
             };
         }
         
-        // 在重载前备份当前配置文件
-        const backupPath = `${confPath}.bak`;
-        try {
-            fs.copyFileSync(confPath, backupPath);
-            console.log(`[Nginx] 配置文件已备份到: ${backupPath}`);
-        } catch (backupErr) {
-            console.warn(`[Nginx] 无法备份配置文件: ${backupErr.message}`);
-        }
-        
         // 检测操作系统
         const isWindows = os.platform() === 'win32';
         
-        // Windows环境下增强的模拟重载
+        // Windows环境下模拟重载
         if (isWindows) {
             console.log('[Nginx] Windows环境下模拟重载操作');
             console.log('[Nginx] 配置文件已生成: ' + confPath);
             
-            // 尝试获取本地Nginx服务情况
-            try {
-                const { stdout } = await execPromise('tasklist /FI "IMAGENAME eq nginx.exe" /FO CSV /NH');
-                if (stdout.includes('nginx.exe')) {
-                    console.log('[Nginx] Windows上检测到Nginx服务已运行');
-                    console.log('[Nginx] 尝试发送重载信号...');
-                    try {
-                        await execPromise('nginx -s reload');
-                        return {
-                            success: true,
-                            method: 'windows_reload_signal',
-                            message: 'Windows环境下成功发送重载信号'
-                        };
-                    } catch (reloadErr) {
-                        console.warn('[Nginx] Windows重载信号失败:', reloadErr.message);
-                    }
-                }
-            } catch (checkErr) {
-                console.warn('[Nginx] 检查Windows Nginx状态失败:', checkErr.message);
-            }
-            
-            // 默认返回模拟成功
+            // Windows下仅生成配置文件，不进行实际重载
             return {
                 success: true,
                 method: 'windows_simulation',
-                message: '在Windows环境下生成了Nginx配置文件，并尝试了重载'
+                message: '在Windows环境下生成了Nginx配置文件，但没有进行实际重载操作'
             };
         }
         
-        // Linux环境下继续尝试测试配置（除非强制重载）
-        if (!forceReload) {
-            try {
-                const testResult = await testNginxConfig(confPath);
-                if (!testResult.success) {
-                    return { 
-                        success: false, 
-                        error: '配置测试失败: ' + testResult.error 
-                    };
-                }
-            } catch (testError) {
-                console.log('[Nginx] 配置测试跳过: ' + testError.message);
+        // Linux环境下继续尝试测试配置
+        try {
+            const testResult = await testNginxConfig(confPath);
+            if (!testResult.success) {
+                return { 
+                    success: false, 
+                    error: '配置测试失败: ' + testResult.error 
+                };
             }
-        } else {
-            console.log('[Nginx] 强制模式：跳过配置测试');
+        } catch (testError) {
+            console.log('[Nginx] 配置测试跳过: ' + testError.message);
         }
         
         console.log('[Nginx] 正在重载配置...');

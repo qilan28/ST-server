@@ -7,8 +7,6 @@ import { getSafeRandomPort } from './utils/port-helper.js';
 import { recordInstanceStart, removeInstanceStartTime } from './runtime-limiter.js';
 import { generateNginxConfig } from './scripts/generate-nginx-config.js';
 import { reloadNginx } from './utils/nginx-reload.js';
-import { waitForServiceReady, checkPortOpen } from './utils/health-check.js';
-import { waitForPort, quickPortCheck } from './utils/simple-health-check.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -162,7 +160,7 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
             const timeoutId = setTimeout(() => {
                 disconnectPM2();
                 reject(new Error('PM2 start operation timed out'));
-            }, 15000); // 15秒超时
+            }, 10000); // 10秒超时
             
             pm2.start({
                 name: `st-${username}`,
@@ -185,34 +183,12 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
                     console.error(`[Instance] 启动实例 ${username} 失败:`, err);
                     reject(err);
                 } else {
-                    console.log(`[Instance] PM2 报告实例 ${username} 启动成功，正在验证服务可用性...`);
-                    
-                    // 等待服务真正可用
-                    setTimeout(async () => {
-                        try {
-                            console.log(`[Instance] 等待端口 ${port} 上的服务启动...`);
-                            // 使用简单快速的端口检查
-                            const portReady = await waitForPort(port, 10, 1500); // 10次重试，每次等待1.5秒
-                            
-                            if (portReady) {
-                                console.log(`[Instance] 实例 ${username} 在端口 ${port} 已启动`);
-                                updateUserStatus(username, 'running');
-                                recordInstanceStart(username);
-                                console.log(`[Instance] 已记录用户 ${username} 的实例启动时间`);
-                                resolve({ apps, port });
-                            } else {
-                                console.error(`[Instance] 实例 ${username} 启动失败，端口 ${port} 未开放`);
-                                updateUserStatus(username, 'error');
-                                reject(new Error(`实例启动失败：端口 ${port} 不可用`));
-                            }
-                        } catch (healthError) {
-                            console.error(`[Instance] 健康检查出错:`, healthError);
-                            // 即使健康检查出错，也尝试继续
-                            updateUserStatus(username, 'running');
-                            recordInstanceStart(username);
-                            resolve({ apps, port });
-                        }
-                    }, 2000); // 给PM2一点时间来真正启动进程
+                    console.log(`[Instance] 成功启动实例 ${username}`);
+                    // 更新状态并记录启动时间
+                    updateUserStatus(username, 'running');
+                    recordInstanceStart(username);
+                    console.log(`[Instance] 已记录用户 ${username} 的实例启动时间`);
+                    resolve({ apps, port });  // 返回应用和使用的端口
                 }
             });
         });
@@ -306,26 +282,6 @@ export const restartInstance = async (username) => {
     
     console.log(`[Instance] 开始重启用户 ${username} 的实例...`);
     
-    // 引入重启前检查工具
-    let performRestartHealthCheck;
-    try {
-        const restartChecks = await import('./utils/restart-checks.js');
-        performRestartHealthCheck = restartChecks.performRestartHealthCheck;
-        
-        // 如果成功加载，执行重启前检查
-        if (typeof performRestartHealthCheck === 'function') {
-            console.log(`[Instance] 执行重启前检查...`);
-            const checkResult = await performRestartHealthCheck();
-            if (!checkResult.success) {
-                console.warn(`[Instance] 重启前检查发现问题: ${checkResult.issues.join('; ')}`);
-                // 不阻止重启，但记录问题
-            }
-        }
-    } catch (error) {
-        // 如果加载失败或检查失败，不阻止重启
-        console.warn(`[Instance] 重启前检查失败: ${error.message}`);
-    }
-    
     try {
         // 获取用户信息，用于后续启动实例
         const { findUserByUsername } = await import('./database.js');
@@ -369,9 +325,9 @@ export const restartInstance = async (username) => {
             }
         }
         
-        // 等待足够的时间确保实例完全停止并释放资源
-        console.log(`[Instance] 等待足够时间确保实例完全停止并释放资源...`);
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // 等待短暂停确保实例完全停止
+        console.log(`[Instance] 等待短暂停确保实例完全停止...`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         // 获取数据目录
         const dataDir = path.join(user.data_dir, 'st-data');
@@ -382,192 +338,19 @@ export const restartInstance = async (username) => {
         const result = await startInstance(username, user.port, user.st_dir, dataDir);
         console.log(`[Instance] 实例 ${username} 启动成功，端口: ${result.port}`);
         
-        // 额外确认实例真正可用
-        console.log(`[Instance] 最终确认实例 ${username} 在端口 ${result.port} 是否可用...`);
-        try {
-            const finalCheck = await quickPortCheck(result.port); // 快速端口检查
-            if (!finalCheck) {
-                console.warn(`[Instance] 警告：实例 ${username} 可能还未完全启动`);
-                // 再给一些时间
-                await new Promise(resolve => setTimeout(resolve, 3000));
-            } else {
-                console.log(`[Instance] 确认：实例 ${username} 已完全可用`);
-            }
-        } catch (checkError) {
-            console.warn(`[Instance] 最终检查出错，继续:`, checkError.message);
-        }
-        
-        // 总是在实例重启后重新生成和重载 Nginx 配置，确保路由正确
-        try {
-            console.log(`[Instance] 重启后重新生成 Nginx 配置以确保路由正确...`);
-            // 使用API修复方法，确保管理平台静态文件正常
+        // 检查端口是否变更，如果未在 startInstance 中重载 Nginx，这里再次确认
+        if (result.port !== user.port) {
             try {
-                const { default: nginxFixAPI } = await import('./routes/nginx-fix.js');
-                // 模拟调用修复API的逻辑
-                const fs = await import('fs');
-                const path = await import('path');
-                const { getAllUsers } = await import('./database.js');
-                
-                console.log(`[Instance] 使用启动修复逻辑重新生成配置...`);
-                const users = getAllUsers();
-                const activeUsers = users.filter(user => {
-                    if (user.role === 'admin') return false;
-                    if (!user.port || user.port === 0) return false;
-                    return true;
-                });
-                
-                // [复用启动修复的逻辑 - 生成完整配置]
-                let upstreams = '';
-                activeUsers.forEach(user => {
-                    upstreams += `\nupstream st_${user.username} {\n    server 127.0.0.1:${user.port};\n}\n`;
-                });
-                
-                let locations = '';
-                activeUsers.forEach(user => {
-                    locations += `
-        location /${user.username}/st {
-            return 301 /${user.username}/st/;
-        }
-        
-        location /${user.username}/st/ {
-            rewrite ^/${user.username}/st/(.*)$ /$1 break;
-            proxy_pass http://st_${user.username};
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection $connection_upgrade;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_connect_timeout 120s;
-            proxy_send_timeout 120s;
-            proxy_read_timeout 120s;
-        }
-`;
-                });
-                
-                let staticRescue = `
-        # 管理平台静态文件 - 最高优先级
-        location ~ ^/(css|js|img|images|assets|fonts)/ {
-            proxy_pass http://st_manager;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        }
-        
-        location ~* ^/(style\.css|table-fix\.css|favicon\.ico)$ {
-            proxy_pass http://st_manager;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        }
-        
-        location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|json)$ {`;
-                
-                activeUsers.forEach(user => {
-                    staticRescue += `
-            if ($http_referer ~* "/${user.username}/st") {
-                proxy_pass http://st_${user.username};
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            }`;
-                });
-
-                staticRescue += `
-            proxy_pass http://st_manager;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        }`;
-                
-                const nginxConfig = `worker_processes auto;
-pid /run/nginx.pid;
-
-events { worker_connections 768; }
-
-http {
-    map $http_upgrade $connection_upgrade { default upgrade; '' close; }
-    sendfile on; tcp_nopush on; tcp_nodelay on; keepalive_timeout 65;
-    types_hash_max_size 2048; client_max_body_size 100M;
-    include /etc/nginx/mime.types; default_type application/octet-stream;
-    access_log /var/log/nginx/access.log; error_log /var/log/nginx/error.log;
-    gzip on; gzip_vary on; gzip_proxied any; gzip_comp_level 6;
-    gzip_types text/plain text/css text/xml text/javascript application/json application/javascript application/xml+rss application/rss+xml font/truetype font/opentype application/vnd.ms-fontobject image/svg+xml;
-
-    upstream st_manager { server 127.0.0.1:3000; }
-${upstreams}
-    
-    server {
-        listen 80; server_name localhost;
-        
-        location / {
-            proxy_pass http://st_manager; proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme; proxy_cache_bypass $http_upgrade;
-            proxy_connect_timeout 60s; proxy_send_timeout 60s; proxy_read_timeout 60s;
-        }
-${staticRescue}
-${locations}
-    }
-}`;
-
-                const outputPath = path.join(__dirname, 'nginx', 'nginx.conf');
-                fs.writeFileSync(outputPath, nginxConfig, 'utf-8');
-                console.log(`[Instance] 完整配置已写入: ${outputPath}`);
-                
-            } catch (configError) {
-                console.warn(`[Instance] 使用备用配置生成:`, configError.message);
-                const { generateSimpleNginxConfig } = await import('./scripts/generate-simple-nginx-config.js');
-                await generateSimpleNginxConfig();
-            }
-            
-            console.log(`[Instance] 强制重载 Nginx 以应用新配置...`);
-            // 使用强制模式重载 Nginx，跳过配置测试和其他检查
-            const reloadResult = await reloadNginx(null, true);
-            if (reloadResult.success) {
-                console.log(`[Instance] Nginx 配置重载成功，方法: ${reloadResult.method}`);
-            } else {
-                console.warn(`[Instance] Nginx 重载返回错误: ${reloadResult.error}`);
-                console.log(`[Instance] 尝试备用方法重载 Nginx...`);
-                
-                try {
-                    // 如果失败，尝试直接调用命令重载
-                    const { exec } = await import('child_process');
-                    exec('nginx -s reload', (err, stdout, stderr) => {
-                        if (err) {
-                            console.warn(`[Instance] 备用方法也失败:`, err);
-                        } else {
-                            console.log(`[Instance] 备用方法重载成功`);
-                        }
-                    });
-                } catch (directError) {
-                    console.warn(`[Instance] 备用重载失败:`, directError.message);
+                console.log(`[Instance] 确保端口变更后的 Nginx 配置已更新...`);
+                // 再次尝试重载 Nginx，以保证配置生效
+                const reloadResult = await reloadNginx();
+                if (reloadResult.success) {
+                    console.log(`[Instance] Nginx 配置再次重载成功，方法: ${reloadResult.method}`);
                 }
+            } catch (nginxError) {
+                console.warn(`[Instance] 重启后重载 Nginx 失败:`, nginxError.message);
+                // 不影响实例重启结果
             }
-            
-            // 给 Nginx 一点时间来应用新配置
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // 执行重启后验证
-            try {
-                const restartChecks = await import('./utils/restart-checks.js');
-                if (typeof restartChecks.performRestartVerification === 'function') {
-                    console.log(`[Instance] 执行重启后验证...`);
-                    const verifyResult = await restartChecks.performRestartVerification();
-                    if (!verifyResult.success) {
-                        console.warn(`[Instance] 重启后验证发现问题: ${verifyResult.issues.join('; ')}`);
-                        // 在日志中记录问题，但仍然继续
-                    }
-                }
-            } catch (verifyError) {
-                console.warn(`[Instance] 重启后验证失败:`, verifyError.message);
-            }
-        } catch (nginxError) {
-            console.warn(`[Instance] 重启后更新 Nginx 配置失败:`, nginxError.message);
-            // 不影响实例重启结果
         }
         
         return result;
