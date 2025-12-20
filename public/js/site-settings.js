@@ -5,6 +5,7 @@
 
 // 加载站点设置
 async function loadSiteSettings() {
+    console.log('开始请求加载站点设置...');
     try {
         console.log('开始加载站点设置...');
         
@@ -72,8 +73,17 @@ async function loadSiteSettings() {
             siteNameInput.value = data.settings.site_name || '';
             console.log('设置网站名称为:', siteNameInput.value);
             
-            maxUsersInput.value = data.settings.max_users !== undefined ? data.settings.max_users : 0;
-            console.log('设置用户数量上限为:', maxUsersInput.value);
+            // 确保 max_users 值正确加载和显示
+            const rawMaxUsers = data.settings.max_users;
+            console.log('原始 max_users 值:', rawMaxUsers, '类型:', typeof rawMaxUsers);
+            
+            // 将值转换为整数
+            const parsedMaxUsers = rawMaxUsers !== undefined && rawMaxUsers !== null ? parseInt(rawMaxUsers, 10) : 0;
+            console.log('解析后的 max_users 值:', parsedMaxUsers);
+            
+            // 设置到输入框
+            maxUsersInput.value = parsedMaxUsers;
+            console.log('设置用户数量上限输入框为:', maxUsersInput.value);
             
             // 验证设置的值是否生效
             setTimeout(() => {
@@ -93,7 +103,9 @@ async function loadSiteSettings() {
             // 使用DOM API直接设置值以确保它生效
             document.querySelector('#projectName').setAttribute('value', data.settings.project_name || '');
             document.querySelector('#siteName').setAttribute('value', data.settings.site_name || '');
-            document.querySelector('#maxUsers').setAttribute('value', data.settings.max_users !== undefined ? data.settings.max_users : 0);
+            const maxUsersValue = data.settings.max_users !== undefined && data.settings.max_users !== null ? parseInt(data.settings.max_users, 10) : 0;
+            document.querySelector('#maxUsers').setAttribute('value', maxUsersValue);
+            console.log('设置 max_users 属性为:', maxUsersValue);
             
             // 更新页面标题
             updatePageTitle(data.settings.site_name);
@@ -167,6 +179,10 @@ function saveSiteSettings() {
                 document.getElementById('siteSettingsMessage').textContent = '站点设置保存成功!';
                 document.getElementById('siteSettingsMessage').style.backgroundColor = '#dcfce7';
                 document.getElementById('siteSettingsMessage').style.display = 'block';
+                
+                // 成功后重新加载设置以验证变更
+                console.log('保存成功，重新加载设置信息...');
+                setTimeout(() => loadSiteSettings(), 1000);
             } else {
                 // 错误处理
                 document.getElementById('siteSettingsMessage').textContent = '保存失败: ' + xhr.responseText;

@@ -106,7 +106,20 @@ export const updateSiteSettings = (db, projectName, siteName, faviconPath, maxUs
         
         // 更新记录
         console.log(`[Database:${logId}] 执行更新操作...`);
-        console.log(`[Database:${logId}] 参数: maxUsers=${maxUsers !== undefined ? maxUsers : '未提供'}`);
+        console.log(`[Database:${logId}] 参数: maxUsers=${maxUsers !== undefined ? maxUsers : '未提供'} (类型: ${typeof maxUsers})`);
+        
+        // 确保 maxUsers 是一个有效的整数
+        let parsedMaxUsers = maxUsers;
+        if (maxUsers !== undefined) {
+            if (typeof maxUsers !== 'number') {
+                parsedMaxUsers = parseInt(maxUsers, 10);
+                if (isNaN(parsedMaxUsers)) {
+                    console.error(`[Database:${logId}] maxUsers 值无法解析为整数: ${maxUsers}`);
+                    parsedMaxUsers = 0; // 默认设置为 0 (无限)
+                }
+                console.log(`[Database:${logId}] 将 maxUsers 从 ${maxUsers} 解析为 ${parsedMaxUsers}`);
+            }
+        }
         
         const stmt = db.prepare(`
             UPDATE site_settings 
@@ -119,7 +132,8 @@ export const updateSiteSettings = (db, projectName, siteName, faviconPath, maxUs
             WHERE id = 1
         `);
         
-        const result = stmt.run(projectName, siteName, faviconPath, maxUsers !== undefined ? maxUsers : null, maxUsers);
+        console.log(`[Database:${logId}] 执行 SQL 更新数据: parsedMaxUsers=${parsedMaxUsers}, 判断条件=${parsedMaxUsers !== undefined ? parsedMaxUsers : null}`);
+        const result = stmt.run(projectName, siteName, faviconPath, parsedMaxUsers !== undefined ? parsedMaxUsers : null, parsedMaxUsers);
         console.log(`[Database:${logId}] 更新结果: changes=${result.changes}`);
         
         // 查询更新后的记录

@@ -649,10 +649,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => {
                         loadAutoBackupConfig();
                         setTimeout(() => {
-                            // 加载运行时长限制配置
-                            if (typeof loadRuntimeLimitConfig === 'function') {
-                                loadRuntimeLimitConfig();
+                            // 加载站点设置
+                            if (typeof loadSiteSettings === 'function') {
+                                console.log('从 admin.js 中调用加载站点设置...');
+                                loadSiteSettings();
+                            } else {
+                                console.error('找不到 loadSiteSettings 函数');
                             }
+                            setTimeout(() => {
+                                // 加载运行时长限制配置
+                                if (typeof loadRuntimeLimitConfig === 'function') {
+                                    loadRuntimeLimitConfig();
+                                }
+                            }, 300);
                         }, 300);
                     }, 300);
                 }, 300);

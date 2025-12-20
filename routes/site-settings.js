@@ -109,7 +109,21 @@ router.put('/', authenticateToken, requireAdmin, (req, res) => {
             });
         }
         
-        console.log(`[API:${requestId}] 解析数据:`, { project_name, site_name });
+        // 处理 max_users 参数
+        let parsedMaxUsers;
+        if (max_users !== undefined) {
+            parsedMaxUsers = parseInt(max_users, 10);
+            if (isNaN(parsedMaxUsers) || parsedMaxUsers < 0) {
+                console.error(`[API:${requestId}] 无效的 max_users 值: ${max_users}`);
+                return res.status(400).json({
+                    success: false,
+                    error: 'max_users 必须是非负整数'
+                });
+            }
+            console.log(`[API:${requestId}] 解析后的 max_users 值: ${parsedMaxUsers}`);
+        }
+        
+        console.log(`[API:${requestId}] 解析数据:`, { project_name, site_name, max_users: parsedMaxUsers });
         
         // 先测试数据库连接
         try {
@@ -129,8 +143,8 @@ router.put('/', authenticateToken, requireAdmin, (req, res) => {
         
         // 更新文本设置
         console.log(`[API:${requestId}] 开始更新设置...`);
-        console.log(`[API:${requestId}] max_users 参数: ${max_users !== undefined ? max_users : '未提供'}`);
-        const result = updateSiteSettings(db, project_name, site_name, null, max_users !== undefined ? parseInt(max_users) : undefined);
+        console.log(`[API:${requestId}] max_users 参数: ${parsedMaxUsers !== undefined ? parsedMaxUsers : '未提供'}`);
+        const result = updateSiteSettings(db, project_name, site_name, null, parsedMaxUsers);
         console.log(`[API:${requestId}] 更新结果:`, result);
         
         // 检查是否更新成功
@@ -263,6 +277,8 @@ router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
     try {
         const { max_users } = req.body;
         
+        console.log(`[API:${requestId}] 收到的 max_users 原始值:`, max_users, '类型:', typeof max_users);
+        
         // 参数验证
         if (max_users === undefined) {
             console.error(`[API:${requestId}] 缺少必要参数 max_users`);
@@ -272,7 +288,17 @@ router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
             });
         }
         
-        const maxUsersInt = parseInt(max_users);
+        // 尝试使用不同方式来确保正确解析数字
+        let maxUsersInt;
+        if (typeof max_users === 'number') {
+            maxUsersInt = max_users;
+            console.log(`[API:${requestId}] max_users 已经是数字类型: ${maxUsersInt}`);
+        } else {
+            // 尝试使用 parseInt 解析
+            maxUsersInt = parseInt(max_users, 10);
+            console.log(`[API:${requestId}] 解析字符串 max_users '${max_users}' 为数字: ${maxUsersInt}`);
+        }
+        
         if (isNaN(maxUsersInt) || maxUsersInt < 0) {
             console.error(`[API:${requestId}] 无效的 max_users 值: ${max_users}`);
             return res.status(400).json({
@@ -281,9 +307,10 @@ router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
             });
         }
         
-        console.log(`[API:${requestId}] 解析后的 max_users 值: ${maxUsersInt}`);
+        console.log(`[API:${requestId}] 最终解析后的 max_users 值: ${maxUsersInt} (类型: ${typeof maxUsersInt})`);
         
         // 更新设置
+        console.log(`[API:${requestId}] 准备调用 updateSiteSettings 更新 max_users 为: ${maxUsersInt}`);
         const result = updateSiteSettings(db, null, null, null, maxUsersInt);
         console.log(`[API:${requestId}] 更新结果:`, result);
         
