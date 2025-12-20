@@ -61,6 +61,31 @@ router.post('/fix-static-files', async (req, res) => {
 `;
         });
         
+        // 生成静态文件救援块
+        let staticRescue = `
+        # 静态文件救援 - 根据referer头判断应该转发到哪个用户
+        location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|json)$ {`;
+        
+        // 为每个用户添加referer检查
+        activeUsers.forEach(user => {
+            staticRescue += `
+            if ($http_referer ~* "/${user.username}/st") {
+                proxy_pass http://st_${user.username};
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }`;
+        });
+
+        staticRescue += `
+            
+            # 如果没有匹配的referer，返回到管理平台
+            proxy_pass http://st_manager;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }`;
+        
         // 完整的nginx配置
         const nginxConfig = `worker_processes auto;
 pid /run/nginx.pid;
@@ -119,6 +144,7 @@ ${upstreams}
             proxy_send_timeout 60s;
             proxy_read_timeout 60s;
         }
+${staticRescue}
 ${locations}
     }
 }`;
