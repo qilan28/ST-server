@@ -160,8 +160,15 @@
                             <input type="text" id="registerUsername" name="username" required 
                                   placeholder="请输入QQ账号" minlength="5" maxlength="13" pattern="[0-9]+" oninput="updateQQAvatar()">
                         </div>
+                        <small class="form-tip">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 8v4"></path>
+                                <path d="M12 16h.01"></path>
+                            </svg>
+                            5-13个字符，仅限数字
+                        </small>
                     </div>
-                    <small class="form-tip">5-13个字符，仅限数字</small>
                     <!-- QQ头像预览 -->
                     <div class="form-group" style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
                         <div id="qqAvatarContainer" style="display: none; margin-top: 10px;">
@@ -184,8 +191,15 @@
                                 </svg>
                             </span>
                         </div>
+                        <small class="form-tip">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 8v4"></path>
+                                <path d="M12 16h.01"></path>
+                            </svg>
+                            至少6个字符
+                        </small>
                     </div>
-                    <small class="form-tip">至少6个字符</small>
                     <div class="form-group modern-input">
                         <div class="input-container password-container styled-input">
                             <span class="input-icon lock-icon">

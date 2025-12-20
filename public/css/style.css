@@ -1158,13 +1158,19 @@ body {
 
 /* 表单提示文本 */
 .form-tip {
-    display: block;
-    margin-top: 6px;
-    margin-bottom: 16px;
-    color: #6B7280;
-    font-size: 0.85rem;
-    padding-left: 57px; /* 与输入框对齐 */
-    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    color: #64748b;
+    margin-top: 4px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    padding-left: 4px;
+}
+
+.form-tip svg {
+    color: #667eea;
+    margin-right: 6px;
+    flex-shrink: 0;
 }
 
 .input-container {
@@ -1356,7 +1362,7 @@ input:checked + .slider:before {
     }
     
     .form-tip {
-        padding-left: 50px;
+        padding-left: 0;
     }
     
     .modern-input input {
@@ -1771,8 +1777,8 @@ input:checked + .slider:before {
     }
     
     .form-tip {
-        padding-left: 42px;
-        font-size: 0.8rem;
+        padding-left: 0;
+        font-size: 12px;
         margin-top: 4px;
         margin-bottom: 12px;
     }
