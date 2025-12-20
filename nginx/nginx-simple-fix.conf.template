@@ -42,6 +42,9 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
         }
 
         # 管理平台的静态资源和API
@@ -50,6 +53,9 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
         }
 
         # =========================================================
@@ -60,6 +66,9 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
             
             # 添加WebSocket支持
             proxy_http_version 1.1;
@@ -79,6 +88,9 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
             
             # 添加WebSocket支持
             proxy_http_version 1.1;
@@ -98,6 +110,9 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
             
             # 添加WebSocket支持
             proxy_http_version 1.1;
@@ -121,6 +136,9 @@ http {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
             
             # 确保保留请求参数
             proxy_pass_request_headers on;
@@ -161,6 +179,9 @@ http {
             # 代理头配置
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
             
             # 替换HTML标题
             sub_filter '<title>SillyTavern</title>' '<title>公益云酒馆多开管理平台</title>';
