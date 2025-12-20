@@ -19,6 +19,8 @@ import siteSettingsRoutes from './routes/site-settings.js';
 import friendsRoutes from './routes/friends.js';
 import runtimeLimiterRoutes from './routes/runtime-limiter.js';
 import nginxFixRoutes from './routes/nginx-fix.js';
+import nginxApiFixRoutes from './routes/nginx-api-fix.js';
+import apiProxyRoutes from './routes/api-proxy.js';
 import debugHeadersRoutes from './routes/debug-headers.js';
 import dashboardFixRoutes from './routes/dashboard-fix.js';
 import { protectPage } from './middleware/page-auth.js';
@@ -214,8 +216,12 @@ app.use('/api/proxy', proxyRoutes);
 app.use('/api/site-settings', siteSettingsRoutes);
 app.use('/api/runtime-limit', runtimeLimiterRoutes);
 app.use('/api/nginx-fix', nginxFixRoutes);
+app.use('/api/nginx-api-fix', nginxApiFixRoutes);
 app.use('/api/debug', debugHeadersRoutes); // 调试路由
 app.use('/', friendsRoutes); // 友情链接路由（包含公开和管理员路由）
+
+// API 请求代理路由 - 必须放在所有其他 API 路由后面
+app.use('/api', apiProxyRoutes);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

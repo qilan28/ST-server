@@ -101,11 +101,53 @@ router.get('/dashboard.html', (req, res) => {
 </head>`
         );
         
+        // 添加API请求修复脚本
+        const apiFixScript = `
+    <script>
+        // API请求修复脚本 - 确保API请求正确发送
+        (function() {
+            const originalFetch = window.fetch;
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            const currentHost = window.location.host;
+            const isProxiedRequest = currentHost.includes('7092') || window.location.pathname.includes('/st/');
+            
+            // 拦截fetch请求
+            window.fetch = function(url, options) {
+                if (isProxiedRequest) {
+                    // 处理相对URL
+                    if (url.startsWith('/api/') || url.includes('/api/')) {
+                        // 确保使用完整的URL
+                        const baseUrl = window.location.origin;
+                        const fullUrl = url.startsWith('/') ? baseUrl + url : baseUrl + '/' + url;
+                        console.log('[API修复] Fetch请求重定向:', url, '->', fullUrl);
+                        return originalFetch(fullUrl, options);
+                    }
+                }
+                return originalFetch(url, options);
+            };
+            
+            // 拦截XHR请求
+            XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+                if (isProxiedRequest && (url.startsWith('/api/') || url.includes('/api/'))) {
+                    // 处理相对URL
+                    const baseUrl = window.location.origin;
+                    const fullUrl = url.startsWith('/') ? baseUrl + url : baseUrl + '/' + url;
+                    console.log('[API修复] XHR请求重定向:', url, '->', fullUrl);
+                    return originalXHROpen.call(this, method, fullUrl, async, user, password);
+                }
+                return originalXHROpen.call(this, method, url, async, user, password);
+            };
+            
+            console.log('[API修复] 请求拦截已启用', { host: currentHost, isProxied: isProxiedRequest });
+        })();
+    </script>
+`;
+        
         // 添加特殊的调试信息
         dashboardContent = dashboardContent.replace(
             '<body>',
             `<body>
-    <!-- 仪表板资源修复 v1.0 已应用 -->`
+    <!-- 仪表板资源修复 v1.1 已应用 -->${apiFixScript}`
         );
         
         // 设置响应头，禁用缓存
