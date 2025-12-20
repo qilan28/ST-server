@@ -61,9 +61,25 @@ router.post('/fix-static-files', async (req, res) => {
 `;
         });
         
-        // 生成静态文件救援块
+        // 生成管理平台静态文件处理块 - 优先级最高
         let staticRescue = `
-        # 静态文件救援 - 根据referer头判断应该转发到哪个用户
+        # 管理平台静态文件 - 最高优先级
+        location ~ ^/(css|js|img|images|assets|fonts)/ {
+            proxy_pass http://st_manager;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        
+        # 管理平台根目录静态文件
+        location ~* ^/(style\.css|table-fix\.css|favicon\.ico)$ {
+            proxy_pass http://st_manager;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        
+        # 用户实例静态文件救援 - 根据referer头判断应该转发到哪个用户
         location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|json)$ {`;
         
         // 为每个用户添加referer检查
