@@ -346,6 +346,8 @@ router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
         // 直接更新 max_users 值，不通过 updateSiteSettings 函数
         console.log(`[API:${requestId}] 直接执行 SQL 更新 max_users 为: ${maxUsersInt}`);
         
+        let updatedMaxUsers = null;
+        
         try {
             const stmt = db.prepare(`
                 UPDATE site_settings 
@@ -370,9 +372,8 @@ router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
             // 检查更新后的值
             const checkStmt = db.prepare('SELECT max_users FROM site_settings WHERE id = 1');
             const checkResult = checkStmt.get();
-            console.log(`[API:${requestId}] 检查更新后的 max_users 值:`, checkResult?.max_users);
-            
-            const result = true;
+            updatedMaxUsers = checkResult?.max_users;
+            console.log(`[API:${requestId}] 检查更新后的 max_users 值:`, updatedMaxUsers);
         
         } catch (error) {
             console.error(`[API:${requestId}] 更新用户上限失败:`, error);
@@ -382,22 +383,15 @@ router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
             });
         }
         
-        if (result) {
-            const updatedSettings = db.prepare('SELECT max_users FROM site_settings WHERE id = 1').get();
-            console.log(`[API:${requestId}] 更新后的用户上限:`, updatedSettings?.max_users);
-            
-            res.json({
-                success: true,
-                message: '用户数量上限更新成功',
-                max_users: updatedSettings?.max_users
-            });
-        } else {
-            console.error(`[API:${requestId}] 更新失败或无变化`);
-            res.status(500).json({
-                success: false,
-                error: '用户数量上限更新失败或无变化'
-            });
-        }
+        // 更新成功后返回响应
+        const updatedSettings = db.prepare('SELECT max_users FROM site_settings WHERE id = 1').get();
+        console.log(`[API:${requestId}] 更新后的用户上限:`, updatedSettings?.max_users);
+        
+        res.json({
+            success: true,
+            message: '用户数量上限更新成功',
+            max_users: updatedSettings?.max_users
+        });
     } catch (error) {
         console.error(`[API:${requestId}] 更新用户上限设置失败:`, error);
         res.status(500).json({
