@@ -403,9 +403,6 @@ router.put('/max-users', authenticateToken, requireAdmin, (req, res) => {
 
 // 获取用户数量信息 - 公开API，无需验证
 router.get('/user-stats', (req, res) => {
-    const requestId = 'API:' + Math.random().toString(36).substring(2, 10);
-    console.log(`[${requestId}] 接收到获取用户统计信息请求`);
-    
     // 添加 CORS 头部确保跨域请求可以正常工作
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -420,11 +417,8 @@ router.get('/user-stats', (req, res) => {
     
     try {
         // 获取用户数量（不包括管理员）
-        console.log(`[${requestId}] 正在查询普通用户数量...`);
-        
-        // 首先检查表结构，以确保我们的查询是安全的
-        let hasRoleColumn = false;
         let count = 0;
+        let hasRoleColumn = false;
         
         try {
             // 首先检查 users 表是否存在
@@ -432,14 +426,12 @@ router.get('/user-stats', (req, res) => {
             const tableExists = tableCheckStmt.get();
             
             if (!tableExists) {
-                console.log(`[${requestId}] users 表不存在，返回默认值`);
                 count = 0;
             } else {
                 // 检查users表结构
                 const checkStmt = db.prepare("PRAGMA table_info(users)");
                 const columns = checkStmt.all();
                 hasRoleColumn = columns.some(col => col.name === 'role');
-                console.log(`[${requestId}] 检查到 users 表${hasRoleColumn ? '有' : '没有'} role 列`);
                 
                 // 如果有role列，使用role过滤查询
                 if (hasRoleColumn) {
@@ -453,18 +445,13 @@ router.get('/user-stats', (req, res) => {
                     count = result ? result.count : 0;
                 }
             }
-            
-            console.log(`[${requestId}] 普通用户数量查询结果:`, count);
         } catch (countError) {
-            console.error(`[${requestId}] 查询用户数量时出错:`, countError);
             // 出错时默认为0个用户
             count = 0;
         }
         
         // 获取用户上限设置
-        console.log(`[${requestId}] 正在获取站点设置...`);
         const settings = getSiteSettings(db);
-        console.log(`[${requestId}] 详细站点设置:`, settings);
         
         // 确保 max_users 始终是一个合法的数字
         let max_users = 0;
@@ -475,24 +462,16 @@ router.get('/user-stats', (req, res) => {
             }
         }
         
-        console.log(`[${requestId}] 处理后的 max_users 值:`, max_users, '原始值:', settings.max_users, '类型:', typeof settings.max_users);
-        console.log(`[${requestId}] 当前用户数: ${count}, 最大允许用户数: ${max_users}`);
-        
         // 确定是否允许注册
         const registration_allowed = max_users === 0 || count < max_users;
-        console.log(`[${requestId}] 是否允许注册: ${registration_allowed}`);
         
-        const response = {
+        res.json({
             success: true,
             user_count: count,
             max_users: max_users,
             registration_allowed: registration_allowed
-        };
-        
-        console.log(`[${requestId}] 返回数据:`, response);
-        res.json(response);
+        });
     } catch (error) {
-        console.error(`[${requestId}] 获取用户统计信息失败:`, error);
         res.status(500).json({
             success: false,
             error: '获取用户统计信息失败: ' + error.message

@@ -327,8 +327,6 @@ function togglePasswordVisibility(inputId, toggleElement) {
 
 // 加载用户数量信息
 function loadUserStats() {
-    console.log('开始请求用户数量信息...');
-    
     // 直接显示用户统计容器
     const userStatsContainer = document.getElementById('userStatsContainer');
     if (userStatsContainer) {
@@ -350,8 +348,6 @@ function loadUserStats() {
     xhr.setRequestHeader('Content-Type', 'application/json');
     
     xhr.onload = function() {
-        console.log('收到响应:', xhr.status, xhr.responseText);
-        
         // 隐藏加载提示
         if (userStatsLoading) {
             userStatsLoading.style.display = 'none';
@@ -361,7 +357,6 @@ function loadUserStats() {
         if (xhr.status >= 200 && xhr.status < 300) {
             try {
                 const data = JSON.parse(xhr.responseText);
-                console.log('解析的用户统计数据:', data);
                 
                 if (data && data.success) {
                     // 获取元素
@@ -395,19 +390,16 @@ function loadUserStats() {
                         userStatsInfo.style.display = 'block';
                     }
                 } else {
-                    console.error('响应不包含有效数据:', data);
                     if (userStatsContainer) {
                         userStatsContainer.style.display = 'none';
                     }
                 }
             } catch (error) {
-                console.error('解析响应数据失败:', error);
                 if (userStatsContainer) {
                     userStatsContainer.style.display = 'none';
                 }
             }
         } else {
-            console.error('获取用户统计信息失败:', xhr.status);
             if (userStatsContainer) {
                 userStatsContainer.style.display = 'none';
             }
@@ -415,7 +407,6 @@ function loadUserStats() {
     };
     
     xhr.onerror = function() {
-        console.error('请求发生错误');
         if (userStatsLoading) {
             userStatsLoading.style.display = 'none';
         }
@@ -426,7 +417,6 @@ function loadUserStats() {
     
     // 发送请求
     xhr.send();
-    console.log('已发送请求到 /api/site-settings/user-stats');
 }
 
 // 初始化页面
@@ -440,8 +430,6 @@ function initPage() {
 
 // 确保用户统计信息加载
 function ensureUserStatsLoaded() {
-    console.log('确保用户统计信息加载...');
-    
     // 直接显示用户统计容器
     const userStatsContainer = document.getElementById('userStatsContainer');
     if (userStatsContainer) {
@@ -455,7 +443,6 @@ function ensureUserStatsLoaded() {
     setTimeout(() => {
         const userStatsInfo = document.getElementById('userStatsInfo');
         if (userStatsInfo && userStatsInfo.style.display === 'none') {
-            console.log('用户统计信息加载可能失败，重试...');
             loadUserStats();
         }
     }, 5000);
@@ -479,12 +466,10 @@ checkAuth();
 // 页面加载完成后确保用户统计信息加载
 // 这是一个等待页面完全加载完工的备用方案
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面DOM加载完成，确保用户统计信息加载...');
     ensureUserStatsLoaded();
 });
 
 // 页面完全加载后再次试图加载用户统计信息
 window.onload = function() {
-    console.log('页面完全加载完成，再次确保用户统计信息加载...');
     setTimeout(() => ensureUserStatsLoaded(), 500);
 };

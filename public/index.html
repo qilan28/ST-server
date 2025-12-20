@@ -231,7 +231,6 @@
         // 添加延迟加载，确保 API 可用
         setTimeout(function() {
             if (typeof loadUserStats === 'function') {
-                console.log('直接调用 loadUserStats');
                 loadUserStats();
             }
         }, 500);
