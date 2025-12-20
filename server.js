@@ -20,6 +20,7 @@ import friendsRoutes from './routes/friends.js';
 import runtimeLimiterRoutes from './routes/runtime-limiter.js';
 import nginxFixRoutes from './routes/nginx-fix.js';
 import debugHeadersRoutes from './routes/debug-headers.js';
+import dashboardFixRoutes from './routes/dashboard-fix.js';
 import { protectPage } from './middleware/page-auth.js';
 import { staticFallbackMiddleware } from './middleware/static-fallback.js';
 import './database.js';
@@ -27,6 +28,7 @@ import { findUserByUsername, createAdminUser, getAllUsers } from './database.js'
 import { getAdminConfig, clearAdminPassword } from './utils/config-manager.js';
 import { startAutoBackupScheduler, stopAutoBackupScheduler } from './services/auto-backup.js';
 import { initRuntimeLimiter, stopRuntimeLimitCheck } from './runtime-limiter.js';
+import { ensureDashboardResources } from './utils/dashboard-resource-copy.js';
 
 // 加载环境变量
 dotenv.config();
@@ -120,6 +122,9 @@ async function autoCreateAdmin() {
 // 调用自动创建管理员
 console.log('='.repeat(60));
 autoCreateAdmin();
+
+// 确保仪表板资源文件都可用
+ensureDashboardResources();
 console.log('='.repeat(60));
 
 // 中间件
@@ -127,6 +132,9 @@ app.use(cors({ credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 注册仪表板修复路由（必须在页面保护之前）
+app.use(dashboardFixRoutes);
 
 // 应用页面保护中间件（必须在静态文件服务之前）
 app.use(protectPage);
