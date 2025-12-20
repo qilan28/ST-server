@@ -1201,13 +1201,38 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #94a3b8;
+    color: #667eea;
     z-index: 1;
+}
+
+.styled-input {
+    border: 1px solid #dde1e7;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #ffffff;
+    padding: 0;
+    box-shadow: none;
+    transition: all 0.3s ease;
+    height: 44px;
+    margin-bottom: 15px;
+}
+
+.styled-input:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }
 
 .username-container input,
 .password-container input {
     padding-left: 40px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    height: 42px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    font-size: 15px !important;
+    color: #333 !important;
 }
 
 /* 密码输入框特殊样式 */
@@ -1218,7 +1243,7 @@ body {
 
 .password-toggle {
     cursor: pointer;
-    color: #6B7280;
+    color: #94a3b8;
     padding: 0 12px;
     position: absolute;
     right: 0;
@@ -1228,16 +1253,16 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 2;
-    background: rgba(255,255,255,0.5);
+    background: transparent;
+    transition: color 0.3s ease;
 }
 
 .password-toggle:hover {
     color: var(--primary-color);
-    background-color: rgba(102, 126, 234, 0.04);
 }
 
 .password-toggle:active {
-    background-color: rgba(102, 126, 234, 0.1);
+    color: var(--primary-color);
 }
 
 .password-toggle svg {
