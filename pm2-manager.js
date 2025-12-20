@@ -400,9 +400,129 @@ export const restartInstance = async (username) => {
         // 总是在实例重启后重新生成和重载 Nginx 配置，确保路由正确
         try {
             console.log(`[Instance] 重启后重新生成 Nginx 配置以确保路由正确...`);
-            // 使用简化的配置生成器，避免语法错误
-            const { generateSimpleNginxConfig } = await import('./scripts/generate-simple-nginx-config.js');
-            await generateSimpleNginxConfig();
+            // 使用API修复方法，确保管理平台静态文件正常
+            try {
+                const { default: nginxFixAPI } = await import('./routes/nginx-fix.js');
+                // 模拟调用修复API的逻辑
+                const fs = await import('fs');
+                const path = await import('path');
+                const { getAllUsers } = await import('./database.js');
+                
+                console.log(`[Instance] 使用启动修复逻辑重新生成配置...`);
+                const users = getAllUsers();
+                const activeUsers = users.filter(user => {
+                    if (user.role === 'admin') return false;
+                    if (!user.port || user.port === 0) return false;
+                    return true;
+                });
+                
+                // [复用启动修复的逻辑 - 生成完整配置]
+                let upstreams = '';
+                activeUsers.forEach(user => {
+                    upstreams += `\nupstream st_${user.username} {\n    server 127.0.0.1:${user.port};\n}\n`;
+                });
+                
+                let locations = '';
+                activeUsers.forEach(user => {
+                    locations += `
+        location /${user.username}/st {
+            return 301 /${user.username}/st/;
+        }
+        
+        location /${user.username}/st/ {
+            rewrite ^/${user.username}/st/(.*)$ /$1 break;
+            proxy_pass http://st_${user.username};
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_connect_timeout 120s;
+            proxy_send_timeout 120s;
+            proxy_read_timeout 120s;
+        }
+`;
+                });
+                
+                let staticRescue = `
+        # 管理平台静态文件 - 最高优先级
+        location ~ ^/(css|js|img|images|assets|fonts)/ {
+            proxy_pass http://st_manager;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        
+        location ~* ^/(style\.css|table-fix\.css|favicon\.ico)$ {
+            proxy_pass http://st_manager;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+        
+        location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map|json)$ {`;
+                
+                activeUsers.forEach(user => {
+                    staticRescue += `
+            if ($http_referer ~* "/${user.username}/st") {
+                proxy_pass http://st_${user.username};
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            }`;
+                });
+
+                staticRescue += `
+            proxy_pass http://st_manager;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }`;
+                
+                const nginxConfig = `worker_processes auto;
+pid /run/nginx.pid;
+
+events { worker_connections 768; }
+
+http {
+    map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+    sendfile on; tcp_nopush on; tcp_nodelay on; keepalive_timeout 65;
+    types_hash_max_size 2048; client_max_body_size 100M;
+    include /etc/nginx/mime.types; default_type application/octet-stream;
+    access_log /var/log/nginx/access.log; error_log /var/log/nginx/error.log;
+    gzip on; gzip_vary on; gzip_proxied any; gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml text/javascript application/json application/javascript application/xml+rss application/rss+xml font/truetype font/opentype application/vnd.ms-fontobject image/svg+xml;
+
+    upstream st_manager { server 127.0.0.1:3000; }
+${upstreams}
+    
+    server {
+        listen 80; server_name localhost;
+        
+        location / {
+            proxy_pass http://st_manager; proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme; proxy_cache_bypass $http_upgrade;
+            proxy_connect_timeout 60s; proxy_send_timeout 60s; proxy_read_timeout 60s;
+        }
+${staticRescue}
+${locations}
+    }
+}`;
+
+                const outputPath = path.join(__dirname, 'nginx', 'nginx.conf');
+                fs.writeFileSync(outputPath, nginxConfig, 'utf-8');
+                console.log(`[Instance] 完整配置已写入: ${outputPath}`);
+                
+            } catch (configError) {
+                console.warn(`[Instance] 使用备用配置生成:`, configError.message);
+                const { generateSimpleNginxConfig } = await import('./scripts/generate-simple-nginx-config.js');
+                await generateSimpleNginxConfig();
+            }
             
             console.log(`[Instance] 强制重载 Nginx 以应用新配置...`);
             // 使用强制模式重载 Nginx，跳过配置测试和其他检查
