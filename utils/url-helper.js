@@ -11,46 +11,7 @@ export function generateAccessUrl(username, port) {
     let mainUrl = ''; // 主访问地址
     let alternativeUrls = []; // 备用访问地址列表
     
-    // 只使用 Nginx 配置，忽略转发服务器配置
-    // 注释掉下面代码，不再使用实例转发配置
-    /*
-    try {
-        const forwardingConfig = getForwardingConfig();
-        
-        // 如果启用了转发
-        if (forwardingConfig.enabled === 1) {
-            // 获取活跃的转发服务器
-            const servers = getActiveForwardingServers();
-            
-            // 生成所有服务器的访问地址
-            if (servers && servers.length > 0) {
-                servers.forEach((server, index) => {
-                    const hasProtocol = /^https?:\/\//i.test(server.address);
-                    const address = hasProtocol ? server.address : `http://${server.address}`;
-                    const url = `${address}:${forwardingConfig.main_port}/${username}/st/`;
-                    
-                    if (index === 0) {
-                        mainUrl = url; // 第一个作为主地址
-                    } else {
-                        alternativeUrls.push(url); // 其余作为备用地址
-                    }
-                });
-                
-                // 如果有转发服务器，直接返回结果
-                if (mainUrl) {
-                    return {
-                        mainUrl,
-                        alternativeUrls
-                    };
-                }
-            }
-        }
-    } catch (error) {
-        console.error('获取转发配置失败:', error.message);
-    }
-    */
-    
-    // 默认回退到原有的 Nginx 配置
+    // 首先设置主地址为 Nginx 配置
     const nginxConfig = getNginxConfig();
     
     if (nginxConfig.enabled) {
@@ -62,10 +23,37 @@ export function generateAccessUrl(username, port) {
         mainUrl = `http://localhost:${port}`;
     }
     
-    // 只返回 Nginx 配置生成的地址，不包含备用地址
+    // 然后获取转发服务器地址作为备用地址
+    try {
+        const forwardingConfig = getForwardingConfig();
+        
+        // 如果启用了转发
+        if (forwardingConfig.enabled === 1) {
+            // 获取活跃的转发服务器
+            const servers = getActiveForwardingServers();
+            
+            // 生成转发服务器的访问地址作为备用地址
+            if (servers && servers.length > 0) {
+                servers.forEach(server => {
+                    const hasProtocol = /^https?:\/\//i.test(server.address);
+                    const address = hasProtocol ? server.address : `http://${server.address}`;
+                    const url = `${address}:${forwardingConfig.main_port}/${username}/st/`;
+                    
+                    // 如果该地址与主地址不同，则添加为备用地址
+                    if (url !== mainUrl) {
+                        alternativeUrls.push(url);
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('获取转发配置失败:', error.message);
+    }
+    
+    // 返回主访问地址和备用地址列表
     return {
         mainUrl,
-        alternativeUrls: [] // 空数组，不提供备用地址
+        alternativeUrls
     };
 }
 
