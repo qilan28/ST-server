@@ -125,13 +125,17 @@ router.post('/start', async (req, res) => {
         // 导入 generateAccessUrl 函数
         const { generateAccessUrl } = await import('../utils/url-helper.js');
         
+        // 获取多个访问地址
+        const accessUrls = generateAccessUrl(username, actualPort);
+        
         res.json({
             success: true,
             message: 'Instance started successfully',
             port: actualPort, // 返回实际使用的端口
             originalPort: user.port, // 返回原始端口
             portChanged: actualPort !== user.port, // 指示端口是否发生变化
-            accessUrl: generateAccessUrl(username, actualPort)
+            accessUrl: accessUrls.mainUrl, // 为了兼容性保留一个主地址
+            accessUrls: accessUrls // 新增字段，包含主地址和备用地址列表
         });
     } catch (error) {
         console.error('[API] 启动实例错误:', error);
@@ -231,13 +235,17 @@ router.post('/restart', async (req, res) => {
         // 导入 generateAccessUrl 函数
         const { generateAccessUrl } = await import('../utils/url-helper.js');
         
+        // 获取多个访问地址
+        const accessUrls = generateAccessUrl(username, actualPort);
+        
         res.json({
             success: true,
             message: 'Instance restarted successfully',
             port: actualPort, // 返回实际使用的端口
             originalPort: originalPort, // 返回原始端口
             portChanged: actualPort !== originalPort, // 指示端口是否发生变化
-            accessUrl: generateAccessUrl(username, actualPort)
+            accessUrl: accessUrls.mainUrl, // 为了兼容性保留一个主地址
+            accessUrls: accessUrls // 新增字段，包含主地址和备用地址列表
         });
     } catch (error) {
         console.error('[API] 重启实例错误:', error);

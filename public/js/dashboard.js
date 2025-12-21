@@ -359,29 +359,64 @@ async function loadUserInfo() {
                 }
             }
             
+            // 获取主访问地址
             const accessUrl = data.accessUrl;
             const accessLink = document.getElementById('accessUrl');
             accessLink.textContent = accessUrl;
             accessLink.href = accessUrl;
-            accessLink.title = accessUrl; // 悬停显示完整URL
+            accessLink.title = accessUrl; // 浮动显示完整URL
             
-            // 点击访问地址
-            accessLink.onclick = function(e) {
-                e.preventDefault();
+            // 添加点击处理函数
+            accessLink.onclick = createUrlClickHandler(accessUrl);
+            
+            // 处理备用地址
+            const alternativeUrlsContainer = document.getElementById('alternativeUrls');
+            alternativeUrlsContainer.innerHTML = ''; // 清空现有地址
+            
+            // 检查是否有新格式的多访问地址
+            if (data.accessUrls && data.accessUrls.alternativeUrls && data.accessUrls.alternativeUrls.length > 0) {
+                // 添加备用地址标签
+                const alternativesLabel = document.createElement('div');
+                alternativesLabel.className = 'alternative-label';
+                alternativesLabel.textContent = '备用地址：';
+                alternativeUrlsContainer.appendChild(alternativesLabel);
                 
-                const token = localStorage.getItem('token');
-                
-                // 检查 token
-                if (!token) {
-                    alert('登录状态已失效，请重新登录');
-                    window.location.href = '/';
-                    return;
-                }
-                
-                // 使用中转页面打开，确保 Cookie 被正确设置
-                const redirectUrl = `/redirect-with-auth.html?url=${encodeURIComponent(accessUrl)}`;
-                window.open(redirectUrl, '_blank');
-            };
+                // 为每个备用地址创建链接
+                data.accessUrls.alternativeUrls.forEach((url, index) => {
+                    const linkContainer = document.createElement('div');
+                    linkContainer.className = 'alternative-url-item';
+                    
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.textContent = url;
+                    link.title = url;
+                    link.className = 'access-link';
+                    link.onclick = createUrlClickHandler(url);
+                    
+                    linkContainer.appendChild(link);
+                    alternativeUrlsContainer.appendChild(linkContainer);
+                });
+            }
+            
+            // 创建链接点击处理函数
+            function createUrlClickHandler(url) {
+                return function(e) {
+                    e.preventDefault();
+                    
+                    const token = localStorage.getItem('token');
+                    
+                    // 检查 token
+                    if (!token) {
+                        alert('登录状态已失效，请重新登录');
+                        window.location.href = '/';
+                        return;
+                    }
+                    
+                    // 使用中转页面打开，确保 Cookie 被正确设置
+                    const redirectUrl = `/redirect-with-auth.html?url=${encodeURIComponent(url)}`;
+                    window.open(redirectUrl, '_blank');
+                };
+            }
             
             // 更新版本管理区域
             updateVersionInfo(data);

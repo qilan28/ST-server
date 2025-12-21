@@ -13,6 +13,31 @@
     <!-- 权限验证脚本 (必须放在最前面) -->
     <script src="/js/auth-check.js"></script>
     <script src="/js/apply-site-settings.js"></script>
+    
+    <!-- 多访问地址样式 -->
+    <style>
+        .alternative-urls {
+            margin-top: 10px;
+        }
+        
+        .alternative-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+            margin-top: 8px;
+        }
+        
+        .alternative-url-item {
+            margin: 5px 0;
+            padding-left: 10px;
+            border-left: 2px solid #e2e8f0;
+        }
+        
+        .alternative-url-item a {
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+    </style>
     <script src="/js/fix-site-settings.js"></script>
 </head>
 <body>
@@ -83,8 +108,15 @@
                     </div>
                     <div class="info-item">
                         <span class="label">访问地址：</span>
-                        <span class="value">
-                            <a id="accessUrl" href="#" target="_blank" class="access-link">-</a>
+                        <span class="value" id="accessUrlsContainer">
+                            <!-- 主访问地址 -->
+                            <div>
+                                <a id="accessUrl" href="#" target="_blank" class="access-link">-</a>
+                            </div>
+                            <!-- 备用访问地址列表 -->
+                            <div id="alternativeUrls" class="alternative-urls">
+                                <!-- 备用地址将在JS中动态生成 -->
+                            </div>
                         </span>
                     </div>
                     <div class="info-item">
