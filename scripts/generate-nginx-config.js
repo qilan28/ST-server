@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getNginxConfig } from '../utils/config-manager.js';
-import { getMainForwardPort, getAllInstances } from '../utils/instance-manager.js';
+import { getForwardingConfig, getActiveForwardingServers } from '../database-instance-forwarding.js';
 // 避免循环依赖，使用动态导入
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,7 +23,14 @@ async function generateNginxConfig() {
         const MANAGER_PORT = process.env.PORT || 3000;
         const ENABLE_ACCESS_CONTROL = nginxConfig.enableAccessControl !== false; // 默认启用
         
+        // 读取实例转发配置
+        const forwardingConfig = getForwardingConfig();
+        const FORWARDING_ENABLED = forwardingConfig.enabled === 1;
+        const FORWARDING_MAIN_PORT = forwardingConfig.main_port || 7091;
+        const forwardingServers = FORWARDING_ENABLED ? getActiveForwardingServers() : [];
+        
         console.log(`域名: ${MAIN_DOMAIN}, 端口: ${NGINX_PORT}`);
+        console.log(`实例转发: ${FORWARDING_ENABLED ? '启用' : '禁用'}, 主端口: ${FORWARDING_MAIN_PORT}, 转发服务器数量: ${forwardingServers.length}`);
         
         // 读取所有用户（排除管理员和没有端口的用户）
         // 使用动态导入避免循环依赖
@@ -39,55 +46,16 @@ async function generateNginxConfig() {
         
         console.log(`找到 ${users.length} 个普通用户需要配置`);
         
-        // 获取实例配置
-        const mainPort = getMainForwardPort();
-        const instances = getAllInstances();
-        console.log(`主转发端口: ${mainPort}, 实例数量: ${instances.length}`);
-        
         // 生成 upstream 块
         let upstreamServers = '';
-        
-        // 添加主转发upstream
-        upstreamServers += `
-# 主转发地址
-upstream st_main {
-    server 127.0.0.1:${mainPort};
-}
-`;
-        
-        // 添加每个额外实例的upstream
-        instances.forEach((instance, index) => {
-            const instanceId = instance.id;
-            const address = instance.address;
-            // 从地址中解析主机名和端口
-            let host = '127.0.0.1';
-            let port = 7092;
-            
-            try {
-                const url = new URL(address);
-                host = url.hostname;
-                port = url.port || (url.protocol === 'https:' ? 443 : 80);
-                
-                upstreamServers += `
-# 实例 ${index + 1}: ${address}
-upstream st_instance_${instanceId} {
-    server ${host}:${port};
-}
-`;
-            } catch (error) {
-                console.error(`解析实例地址失败 ${address}:`, error);
-            }
-        });
-        
-        // 为所有用户添加upstream，但实际上都指向同一个本地端口
         users.forEach(user => {
             upstreamServers += `
-# ${user.username} 的 SillyTavern 实例 - 转发到主转发端口
+# ${user.username} 的 SillyTavern 实例
 upstream st_${user.username} {
-    server 127.0.0.1:${mainPort};
+    server 127.0.0.1:${user.port};
 }
 `;
-        });
+    });
     
     // 生成认证检查的内部 location 块
     let authCheckLocations = '';
@@ -137,6 +105,107 @@ upstream st_${user.username} {
             proxy_pass http://st_manager;
         }`;
     
+    // 用户名到端口的映射
+    let userPortMappings = `# 用户到端口映射
+map $user $user_port {
+    default 0; # 默认无效端口
+`;
+    users.forEach(user => {
+        userPortMappings += `    ${user.username} ${user.port};
+`;
+    });
+    userPortMappings += `}
+`;
+
+    // 生成外部转发配置
+    let externalForwardingConfig = '';
+    if (FORWARDING_ENABLED && forwardingServers.length > 0) {
+        // 主转发服务器配置
+        externalForwardingConfig += `
+# =================================================
+# 外部实例转发配置 - 主转发端口 ${FORWARDING_MAIN_PORT}
+# =================================================
+${userPortMappings}
+server {
+    listen ${FORWARDING_MAIN_PORT};
+    server_name _;
+
+    # 所有实例路径的通用处理
+    location ~ ^/([^/]+)/st/(.*)$ {
+        # 提取用户名并设置变量
+        set $user $1;
+        
+        # 检查映射端口是否有效
+        if ($user_port = 0) {
+            return 404 "User not found or invalid instance";
+        }
+        
+        # 转发到相应实例
+        proxy_pass http://127.0.0.1:$user_port/$2;
+        
+        # 代理设置
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket 支持
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+
+    # 默认响应 404
+    location / {
+        return 404;
+    }
+}
+`;
+
+        // 每个外部转发服务器配置
+        forwardingServers.forEach(server => {
+            externalForwardingConfig += `
+# =================================================
+# 外部转发服务器 ${server.address}:${server.port}
+# =================================================
+server {
+    listen ${server.port};
+    server_name ${server.address};
+
+    # 所有实例路径的通用处理
+    location ~ ^/([^/]+)/st/(.*)$ {
+        # 提取用户名并设置变量
+        set $user $1;
+        
+        # 检查映射端口是否有效
+        if ($user_port = 0) {
+            return 404 "User not found or invalid instance";
+        }
+        
+        # 转发到相应实例
+        proxy_pass http://127.0.0.1:$user_port/$2;
+        
+        # 代理设置
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket 支持
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+
+    # 默认响应 404
+    location / {
+        return 404;
+    }
+}
+`;
+        });
+    }
+
     // 生成 location 块
     let locationBlocks = '';
     users.forEach(user => {
@@ -250,9 +319,6 @@ upstream st_${user.username} {
         # 处理重定向
         proxy_redirect / /${user.username}/st/;
         
-        # Cookie控制 - 在请求头中添加标识用户的Cookie
-        proxy_set_header Cookie "st_user_context=${user.username}; $http_cookie";
-        
         # 缓存控制
         proxy_cache_bypass $http_upgrade;
     }
@@ -294,6 +360,12 @@ upstream st_${user.username} {
     template = template.replace(/server_name localhost;/g, `server_name ${MAIN_DOMAIN};`);
     template = template.replace(/listen 80;/g, `listen ${NGINX_PORT};`);
     
+    // 添加外部转发配置
+    if (FORWARDING_ENABLED && externalForwardingConfig) {
+        // 将外部转发配置添加到模板结尾
+        template += '\n' + externalForwardingConfig;
+    }
+    
     // 写入生成的配置文件
     const outputPath = path.join(__dirname, '../nginx/nginx.conf');
     fs.writeFileSync(outputPath, template, 'utf-8');
@@ -325,17 +397,19 @@ upstream st_${user.username} {
         const exampleUser = users[0];
         console.log(`   主站: http://${MAIN_DOMAIN}:${NGINX_PORT}/`);
         console.log(`   ${exampleUser.username} 的 ST: http://${MAIN_DOMAIN}:${NGINX_PORT}/${exampleUser.username}/st/`);
-    }
-    
-    // 实例地址示例
-    if (instances.length > 0) {
-        console.log('🔧 实例转发设置：');
-        console.log(`   主转发端口: ${mainPort}`);
-        instances.forEach((instance, index) => {
-            console.log(`   实例 ${index + 1}: ${instance.address}`);
-        });
-    } else {
-        console.log('⚠️ 没有配置任何实例地址!');
+        
+        // 添加外部转发访问地址示例
+        if (FORWARDING_ENABLED) {
+            console.log(`\n外部转发访问地址示例:`);
+            console.log(`   主转发地址: http://localhost:${FORWARDING_MAIN_PORT}/${exampleUser.username}/st/`);
+            
+            // 如果有外部服务器
+            if (forwardingServers.length > 0) {
+                forwardingServers.forEach(server => {
+                    console.log(`   转发服务器 ${server.address}: http://${server.address}:${server.port}/${exampleUser.username}/st/`);
+                });
+            }
+        }
     }
     console.log();
     

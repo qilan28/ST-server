@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="/css/table-fix.css">
     <link rel="stylesheet" href="/css/loading.css">
     <link rel="stylesheet" href="/css/admin-runtime-limit.css">
-    <link rel="stylesheet" href="/css/admin-instances.css">
     <!-- 权限验证脚本 (必须放在最前面) -->
     <script src="/js/auth-check.js"></script>
     
@@ -392,6 +391,85 @@
                         <button id="testNginxConfigBtn" onclick="testNginxConfig()" class="btn btn-secondary">测试配置</button>
                     </div>
                 </div>
+                
+                <!-- 实例转发配置 -->
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;" class="forwarding-settings">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🔄 实例转发配置</h3>
+                    <div id="forwardingConfigMessage" class="message" style="margin-bottom: 10px; display: none;"></div>
+                    <div class="loading-indicator" style="margin-bottom: 10px; display: none; text-align: center; padding: 10px; background: #f7fafc; border-radius: 4px;">
+                        <div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(102, 126, 234, 0.3); border-radius: 50%; border-top-color: #667eea; animation: spin 1s linear infinite; margin-right: 8px;"></div>
+                        正在加载实例转发配置...
+                    </div>
+                    
+                    <!-- 基本设置 -->
+                    <div style="display: grid; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                启用实例转发
+                            </label>
+                            <label class="switch">
+                                <input type="checkbox" id="forwardingEnabled">
+                                <span class="slider"></span>
+                            </label>
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                启用后，可通过 http://IP:端口/用户名/st/ 访问用户实例
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                主转发端口
+                            </label>
+                            <input type="number" id="mainForwardingPort" class="form-input" placeholder="例如：7091" min="1000" max="65535">
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                建议使用不常用的端口，默认为 7091
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- 服务器列表 -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 15px; color: #1e40af;">📋 转发服务器列表</h4>
+                            <button id="addServerBtn" class="btn btn-sm btn-primary" style="font-size: 12px; padding: 4px 8px;">添加服务器</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="users-table" id="forwardingServersTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>服务器地址</th>
+                                        <th>端口</th>
+                                        <th>状态</th>
+                                        <th>添加时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="forwardingServersTableBody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 30px;">加载中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 访问示例 -->
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 15px; color: #1e40af;">💡 访问示例</h4>
+                        <div id="forwardingExampleText">
+                            <p style="margin: 5px 0; font-family: monospace;">http://localhost:7091/用户名/st/</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 按钮组 -->
+                    <div style="display: flex; gap: 10px;">
+                        <button id="saveForwardingConfigBtn" class="btn btn-primary">保存配置</button>
+                        <button id="refreshForwardingListBtn" class="btn btn-secondary">刷新列表</button>
+                        <button id="generateForwardingNginxBtn" class="btn btn-secondary">重新生成配置</button>
+                    </div>
+                </div>
             </div>
 
             <!-- 用户管理 -->
@@ -532,68 +610,6 @@
                 </div>
             </div>
 
-            <!-- 实例配置管理 -->
-            <div class="users-card">
-                <h2>🌐 实例配置管理</h2>
-                <div id="instancesMessage" class="message" style="display: none;"></div>
-                
-                <!-- 实例配置区域 -->
-                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;" class="instances-settings">
-                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🔄 主转发端口配置</h3>
-                    <div class="loading-indicator" style="margin-bottom: 10px; display: none; text-align: center; padding: 10px; background: #f7fafc; border-radius: 4px;">
-                        <div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(102, 126, 234, 0.3); border-radius: 50%; border-top-color: #667eea; animation: spin 1s linear infinite; margin-right: 8px;"></div>
-                        正在加载实例配置...
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
-                            主转发端口
-                        </label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="number" id="mainForwardPort" class="form-input" placeholder="例如：7091" min="1" max="65535" style="flex-grow: 1;">
-                            <button id="saveMainPortBtn" class="btn btn-primary">保存端口</button>
-                        </div>
-                        <small style="display: block; margin-top: 5px; color: #718096;">
-                            设置主转发端口，所有用户的SillyTavern请求将通过此端口转发
-                        </small>
-                    </div>
-                    
-                    <h3 style="margin-top: 20px; color: #2d3748; font-size: 16px;">🔌 实例地址管理</h3>
-                    
-                    <!-- 添加实例表单 -->
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
-                            添加实例地址
-                        </label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="instanceAddress" class="form-input" placeholder="例如：http://8.210.210.211:7092" style="flex-grow: 1;">
-                            <button id="addInstanceBtn" class="btn btn-primary">添加</button>
-                        </div>
-                        <small style="display: block; margin-top: 5px; color: #718096;">
-                            添加后，用户访问地址将根据用户名动态生成，如：http://域名:端口/用户名/st/
-                        </small>
-                    </div>
-                    
-                    <!-- 实例列表 -->
-                    <div class="table-container">
-                        <table class="users-table">
-                            <thead>
-                                <tr>
-                                    <th width="50">#</th>
-                                    <th>实例地址</th>
-                                    <th width="100">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="instancesList">
-                                <tr>
-                                    <td colspan="3" style="text-align: center; padding: 30px;">加载中...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
             <!-- 自动备份配置 -->
             <div class="users-card">
                 <h2>⏰ 自动备份配置</h2>
@@ -727,6 +743,34 @@
             </div>
         </div>
     </div>
+    
+    <!-- 添加服务器模态框 -->
+    <div id="serverModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 id="serverModalTitle">添加转发服务器</h2>
+            <form id="serverForm" onsubmit="handleServerSubmit(event)">
+                <input type="hidden" id="serverId">
+                <div class="form-group">
+                    <label for="serverAddress">服务器地址 *</label>
+                    <input type="text" id="serverAddress" class="form-input" required placeholder="例如：example.com 或 IP地址">
+                </div>
+                <div class="form-group">
+                    <label for="serverPort">端口 *</label>
+                    <input type="number" id="serverPort" class="form-input" required placeholder="例如：7092" min="1" max="65535">
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="serverIsActive" checked>
+                        <span>启用状态</span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" onclick="closeServerModal()" class="btn btn-secondary">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- 协议检测与修复工具，放在最前面 -->
     <script src="/js/protocol-helper.js"></script>
@@ -749,8 +793,8 @@
     <!-- Nginx配置相关脚本 -->
     <script src="/js/nginx-templates.js"></script>
     <script src="/js/admin-nginx.js"></script>
-    <!-- 实例管理脚本 -->
-    <script src="/js/admin-instances.js"></script>
+    <!-- 实例转发相关脚本 -->
+    <script src="/js/admin-forwarding.js"></script>
     <!-- 新增修复脚本 -->
     <script src="/js/admin-fixes.js"></script>
     <!-- 运行时长限制脚本 -->

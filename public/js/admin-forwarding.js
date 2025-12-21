@@ -1,0 +1,437 @@
+/**
+ * 实例转发管理 JavaScript
+ */
+
+// 全局变量
+let forwardingConfig = {
+    enabled: false,
+    main_port: 7091
+};
+
+let forwardingServers = [];
+let isLoading = false;
+
+// DOM 加载完成后初始化
+document.addEventListener('DOMContentLoaded', () => {
+    // 绑定事件
+    document.getElementById('saveForwardingConfigBtn').addEventListener('click', saveForwardingConfig);
+    document.getElementById('refreshForwardingListBtn').addEventListener('click', loadForwardingServers);
+    document.getElementById('generateForwardingNginxBtn').addEventListener('click', generateNginxConfig);
+    document.getElementById('addServerBtn').addEventListener('click', showAddServerModal);
+    document.getElementById('serverForm').addEventListener('submit', handleServerSubmit);
+    
+    // 加载配置
+    loadForwardingConfig();
+    loadForwardingServers();
+});
+
+// 加载转发配置
+function loadForwardingConfig() {
+    showLoading(true);
+    
+    fetch('/api/instance-forwarding/config', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('获取配置失败，HTTP 状态码: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            forwardingConfig = data.config;
+            updateForwardingConfigUI();
+        } else {
+            showMessage('error', '获取配置失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        showMessage('error', '获取配置出错: ' + error.message);
+    });
+}
+
+// 更新转发配置 UI
+function updateForwardingConfigUI() {
+    // 更新配置字段
+    document.getElementById('forwardingEnabled').checked = forwardingConfig.enabled === 1;
+    document.getElementById('mainForwardingPort').value = forwardingConfig.main_port;
+    
+    // 更新访问示例
+    const exampleText = document.getElementById('forwardingExampleText');
+    if (forwardingConfig.enabled === 1) {
+        exampleText.innerHTML = `
+            <p style="margin: 5px 0; font-family: monospace;">http://localhost:${forwardingConfig.main_port}/用户名/st/</p>
+            <p style="margin: 5px 0; color: #718096;">* 可以用实际IP地址或域名替换 localhost</p>
+        `;
+    } else {
+        exampleText.innerHTML = `
+            <p style="margin: 5px 0; color: #718096;">转发功能已禁用</p>
+        `;
+    }
+}
+
+// 保存转发配置
+function saveForwardingConfig() {
+    const enabled = document.getElementById('forwardingEnabled').checked;
+    const mainPort = parseInt(document.getElementById('mainForwardingPort').value) || 7091;
+    
+    if (mainPort < 1000 || mainPort > 65535) {
+        showMessage('error', '端口必须在 1000-65535 之间');
+        return;
+    }
+    
+    showLoading(true);
+    
+    fetch('/api/instance-forwarding/config', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
+        body: JSON.stringify({
+            enabled: enabled,
+            main_port: mainPort
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('保存配置失败，HTTP 状态码: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            forwardingConfig = data.config;
+            updateForwardingConfigUI();
+            showMessage('success', '配置已保存');
+        } else {
+            showMessage('error', '保存配置失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        showMessage('error', '保存配置出错: ' + error.message);
+    });
+}
+
+// 加载转发服务器列表
+function loadForwardingServers() {
+    showLoading(true);
+    
+    fetch('/api/instance-forwarding/servers', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('获取服务器列表失败，HTTP 状态码: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            forwardingServers = data.servers;
+            updateServersTable();
+        } else {
+            showMessage('error', '获取服务器列表失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        showMessage('error', '获取服务器列表出错: ' + error.message);
+    });
+}
+
+// 更新服务器表格
+function updateServersTable() {
+    const tableBody = document.getElementById('forwardingServersTableBody');
+    
+    // 清空表格
+    tableBody.innerHTML = '';
+    
+    // 如果没有服务器，显示空消息
+    if (!forwardingServers || forwardingServers.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 30px;">暂无转发服务器</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // 添加服务器行
+    forwardingServers.forEach(server => {
+        const row = document.createElement('tr');
+        
+        // 创建日期
+        const createdAt = new Date(server.created_at);
+        const dateString = createdAt.toLocaleDateString() + ' ' + createdAt.toLocaleTimeString();
+        
+        row.innerHTML = `
+            <td>${server.id}</td>
+            <td>${server.address}</td>
+            <td>${server.port}</td>
+            <td>
+                <span class="status-badge ${server.is_active ? 'status-running' : 'status-stopped'}">
+                    ${server.is_active ? '启用' : '禁用'}
+                </span>
+            </td>
+            <td>${dateString}</td>
+            <td>
+                <div class="action-buttons">
+                    <button onclick="editServer(${server.id})" class="btn btn-sm btn-primary">编辑</button>
+                    <button onclick="toggleServer(${server.id})" class="btn btn-sm ${server.is_active ? 'btn-warning' : 'btn-success'}">
+                        ${server.is_active ? '禁用' : '启用'}
+                    </button>
+                    <button onclick="deleteServer(${server.id})" class="btn btn-sm btn-danger">删除</button>
+                </div>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+// 显示添加服务器模态框
+function showAddServerModal() {
+    // 清空表单
+    document.getElementById('serverId').value = '';
+    document.getElementById('serverAddress').value = '';
+    document.getElementById('serverPort').value = '';
+    document.getElementById('serverIsActive').checked = true;
+    
+    // 更新标题
+    document.getElementById('serverModalTitle').textContent = '添加转发服务器';
+    
+    // 显示模态框
+    document.getElementById('serverModal').style.display = 'block';
+}
+
+// 编辑服务器
+function editServer(id) {
+    const server = forwardingServers.find(s => s.id === id);
+    if (!server) {
+        showMessage('error', '找不到指定的服务器');
+        return;
+    }
+    
+    // 填充表单
+    document.getElementById('serverId').value = server.id;
+    document.getElementById('serverAddress').value = server.address;
+    document.getElementById('serverPort').value = server.port;
+    document.getElementById('serverIsActive').checked = server.is_active === 1;
+    
+    // 更新标题
+    document.getElementById('serverModalTitle').textContent = '编辑转发服务器';
+    
+    // 显示模态框
+    document.getElementById('serverModal').style.display = 'block';
+}
+
+// 关闭服务器模态框
+function closeServerModal() {
+    document.getElementById('serverModal').style.display = 'none';
+}
+
+// 处理服务器表单提交
+function handleServerSubmit(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('serverId').value.trim();
+    const address = document.getElementById('serverAddress').value.trim();
+    const port = parseInt(document.getElementById('serverPort').value) || 7092;
+    const isActive = document.getElementById('serverIsActive').checked;
+    
+    if (!address) {
+        showMessage('error', '请输入服务器地址');
+        return;
+    }
+    
+    if (port < 1 || port > 65535) {
+        showMessage('error', '端口必须在 1-65535 之间');
+        return;
+    }
+    
+    // 关闭模态框
+    closeServerModal();
+    
+    showLoading(true);
+    
+    // 如果有ID，则更新，否则添加
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/instance-forwarding/servers/${id}` : '/api/instance-forwarding/servers';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
+        body: JSON.stringify({
+            address: address,
+            port: port,
+            is_active: isActive
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('操作失败，HTTP 状态码: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            showMessage('success', id ? '服务器已更新' : '服务器已添加');
+            loadForwardingServers(); // 重新加载列表
+        } else {
+            showMessage('error', '操作失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        showMessage('error', '操作出错: ' + error.message);
+    });
+}
+
+// 切换服务器状态
+function toggleServer(id) {
+    showLoading(true);
+    
+    fetch(`/api/instance-forwarding/servers/${id}/toggle`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('切换状态失败，HTTP 状态码: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            showMessage('success', '服务器状态已切换');
+            loadForwardingServers(); // 重新加载列表
+        } else {
+            showMessage('error', '切换状态失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        showMessage('error', '切换状态出错: ' + error.message);
+    });
+}
+
+// 删除服务器
+function deleteServer(id) {
+    if (!confirm('确定要删除此转发服务器吗？')) {
+        return;
+    }
+    
+    showLoading(true);
+    
+    fetch(`/api/instance-forwarding/servers/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('删除失败，HTTP 状态码: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            showMessage('success', '服务器已删除');
+            loadForwardingServers(); // 重新加载列表
+        } else {
+            showMessage('error', '删除失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        showMessage('error', '删除出错: ' + error.message);
+    });
+}
+
+// 重新生成Nginx配置
+function generateNginxConfig() {
+    showLoading(true);
+    
+    fetch('/api/config/nginx/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + localStorage.getItem('token')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('生成配置失败，HTTP 状态码: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        showLoading(false);
+        if (data.success) {
+            showMessage('success', 'Nginx 配置已重新生成');
+        } else {
+            showMessage('error', '生成配置失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showLoading(false);
+        showMessage('error', '生成配置出错: ' + error.message);
+    });
+}
+
+// 显示消息
+function showMessage(type, message) {
+    const messageElement = document.getElementById('forwardingConfigMessage');
+    messageElement.textContent = message;
+    messageElement.className = 'message';
+    
+    if (type === 'success') {
+        messageElement.classList.add('success');
+    } else if (type === 'error') {
+        messageElement.classList.add('error');
+    } else {
+        messageElement.classList.add('info');
+    }
+    
+    messageElement.style.display = 'block';
+    
+    // 设置自动消失
+    setTimeout(() => {
+        messageElement.style.display = 'none';
+    }, 5000);
+}
+
+// 显示加载指示器
+function showLoading(show) {
+    isLoading = show;
+    const loadingIndicator = document.querySelector('.forwarding-settings .loading-indicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = show ? 'block' : 'none';
+    }
+}

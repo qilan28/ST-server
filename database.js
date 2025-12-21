@@ -5,6 +5,7 @@ import fs from 'fs';
 import { createSiteSettingsTable } from './database-site-settings.js';
 import { createFriendsLinkTable } from './database-friends.js';
 import { createRuntimeLimitTable } from './runtime-limiter.js';
+import { createInstanceForwardingConfigTable } from './database-instance-forwarding.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -192,6 +193,14 @@ export const initDatabase = () => {
             console.log('[Database] ✅ 运行时长限制表已初始化');
         } catch (error) {
             console.error('[Database] ❌ 创建运行时长限制表失败:', error);
+        }
+        
+        // 创建实例转发配置表
+        try {
+            createInstanceForwardingConfigTable();
+            console.log('[Database] ✅ 实例转发配置表已初始化');
+        } catch (error) {
+            console.error('[Database] ❌ 创建实例转发配置表失败:', error);
         }
         
         // 创建站点设置表并测试写入

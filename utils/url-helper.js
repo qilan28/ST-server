@@ -1,5 +1,4 @@
 import { getNginxConfig } from './config-manager.js';
-import { getMainForwardPort, getAllInstances } from './instance-manager.js';
 
 /**
  * 生成用户的 SillyTavern 访问地址
@@ -18,25 +17,6 @@ export function generateAccessUrl(username, port) {
         // 直接端口模式：http://localhost:端口
         return `http://localhost:${port}`;
     }
-}
-
-/**
- * 为指定用户生成指定实例的访问地址
- * @param {string} username - 用户名
- * @param {string} instanceId - 实例ID（可选）
- * @returns {string} 访问地址
- */
-export function generateInstanceAccessUrl(username, instanceId) {
-    const nginxConfig = getNginxConfig();
-    
-    if (!nginxConfig.enabled) {
-        return null;
-    }
-    
-    const portPart = nginxConfig.port === 80 ? '' : `:${nginxConfig.port}`;
-    const domain = nginxConfig.domain || 'localhost';
-    
-    return `http://${domain}${portPart}/${username}/st/`;
 }
 
 /**
