@@ -13,6 +13,8 @@ const DEFAULT_CONFIG = {
         enabled: false,
         domain: 'localhost',
         port: 80,
+        https: false,
+        cloudflare_tunnel_domain: '', // Cloudflare Tunnel 域名
         enableAccessControl: false  // 默认禁用访问控制，任何人都能访问
     },
     system: {

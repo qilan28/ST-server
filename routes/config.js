@@ -36,7 +36,7 @@ router.get('/nginx', (req, res) => {
 // 更新 Nginx 配置
 router.put('/nginx', (req, res) => {
     try {
-        const { enabled, domain, port } = req.body;
+        const { enabled, domain, port, https, cloudflare_tunnel_domain, enableAccessControl } = req.body;
         
         // 验证参数
         if (enabled !== undefined && typeof enabled !== 'boolean') {
@@ -53,11 +53,28 @@ router.put('/nginx', (req, res) => {
                 return res.status(400).json({ error: 'port must be between 1 and 65535' });
             }
         }
+
+        if (https !== undefined && typeof https !== 'boolean') {
+            return res.status(400).json({ error: 'https must be a boolean' });
+        }
+
+        if (cloudflare_tunnel_domain !== undefined && 
+            cloudflare_tunnel_domain !== '' && 
+            typeof cloudflare_tunnel_domain !== 'string') {
+            return res.status(400).json({ error: 'cloudflare_tunnel_domain must be a string' });
+        }
+
+        if (enableAccessControl !== undefined && typeof enableAccessControl !== 'boolean') {
+            return res.status(400).json({ error: 'enableAccessControl must be a boolean' });
+        }
         
         const nginxConfig = {};
         if (enabled !== undefined) nginxConfig.enabled = enabled;
         if (domain !== undefined) nginxConfig.domain = domain.trim();
         if (port !== undefined) nginxConfig.port = parseInt(port);
+        if (https !== undefined) nginxConfig.https = https;
+        if (cloudflare_tunnel_domain !== undefined) nginxConfig.cloudflare_tunnel_domain = cloudflare_tunnel_domain.trim();
+        if (enableAccessControl !== undefined) nginxConfig.enableAccessControl = enableAccessControl;
         
         const success = updateNginxConfig(nginxConfig);
         

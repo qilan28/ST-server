@@ -325,6 +325,29 @@
                                 默认 HTTP 端口为 80，HTTPS 端口为 443
                             </small>
                         </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                Cloudflare 隧道域名
+                            </label>
+                            <input type="text" id="cloudflareEnabled" class="form-input" placeholder="例如：your-tunnel.trycloudflare.com">
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                如果使用 Cloudflare Tunnels，请输入隧道域名，否则留空
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                访问控制
+                            </label>
+                            <label class="switch">
+                                <input type="checkbox" id="nginxAccessControl">
+                                <span class="slider"></span>
+                            </label>
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                启用后，用户只能访问自己的实例
+                            </small>
+                        </div>
                     </div>
                     
                     <!-- 高级设置 -->
