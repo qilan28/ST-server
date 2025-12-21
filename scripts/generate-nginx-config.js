@@ -82,6 +82,7 @@ upstream st_${user.username} {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header Host $http_host;
             proxy_set_header Cookie $http_cookie;
+            # 不要在这里添加 proxy_pass_request_headers
         }
         
 `;

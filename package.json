@@ -26,7 +26,9 @@
     "fix-nginx-restart": "node scripts/fix-nginx-restart-issue.js",
     "reset-pm2": "node scripts/reset-pm2.js",
     "fix-instances": "node reset-instances.js",
-    "ensure-nginx": "node scripts/ensure-nginx-config.js"
+    "ensure-nginx": "node scripts/ensure-nginx-config.js",
+    "fix-nginx-duplicate": "node fix-nginx-duplicate.js",
+    "check-nginx": "node scripts/check-nginx-config.js"
   },
   "keywords": [
     "sillytavern",

@@ -341,10 +341,21 @@ A:
 
 **快速解决：**
 1. 登录管理员面板检查用户状态
-2. 如果显示"已停止"，点击启动按钮
+2. 如果显示“已停止”，点击启动按钮
 3. 如果实例已运行，运行 `npm run deploy-nginx` 部署配置
 
 详细解决方案请查看 **[QUICK-FIX.md](./QUICK-FIX.md)**
+
+### Q: 访问用户实例出现 400 Bad Request 错误？
+A: 
+如果出现“The plain HTTP request was sent to HTTPS port”错误，或“proxy_pass_request_headers directive is duplicate”错误，请试试以下方法：
+
+**快速解决：**
+1. 运行 `npm run fix-nginx-duplicate` 修复重复指令问题
+2. 运行 `npm run fix-nginx-400` 修复 SSL 配置问题
+3. 重启 Nginx: `nginx -c /root/ST-server/nginx/nginx.conf`
+
+详细解决方案请查看 **[NGINX-CONFIG-FIX.md](./NGINX-CONFIG-FIX.md)**
 
 ### Q: 遇到 "SyntaxError: Unexpected token '?'" 错误？
 A: 

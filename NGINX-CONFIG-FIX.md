@@ -6,7 +6,8 @@
 
 1. **Nginx 配置未正确加载**：导致用户实例无法通过子路径访问
 2. **400 Bad Request 错误**：出现 "The plain HTTP request was sent to HTTPS port" 错误提示
-3. **每次重启需要手动执行 `nginx -c` 命令**：操作繁琐且容易遗忘
+3. **Nginx 配置重复指令**：出现 "proxy_pass_request_headers directive is duplicate" 错误
+4. **每次重启需要手动执行 `nginx -c` 命令**：操作繁琐且容易遗忘
 
 ## 自动修复工具
 
@@ -21,6 +22,9 @@ npm run ensure-nginx
 # 修复 400 Bad Request 错误
 npm run fix-nginx-400
 
+# 修复 Nginx 配置重复指令错误
+npm run fix-nginx-duplicate
+
 # 如果重启前先停止 PM2 实例
 npm run reset-pm2
 npm run ensure-nginx
@@ -29,10 +33,14 @@ npm start
 
 ### Windows 用户
 
-双击运行 `fix-nginx-all.bat` 批处理文件，这将：
-1. 重新生成 Nginx 配置
-2. 确保使用正确的配置文件
-3. 重启服务器
+可以使用以下批处理文件：
+
+- **`fix-nginx-all.bat`**：全面修复，包含：
+  1. 重新生成 Nginx 配置
+  2. 确保使用正确的配置文件
+  3. 重启服务器
+
+- **`fix-nginx-duplicate.bat`**：专门修复配置重复指令问题
 
 ## 手动修复步骤
 
@@ -64,6 +72,18 @@ grep "listen.*ssl" /root/ST-server/nginx/nginx.conf
 sed -i 's/listen \([0-9]*\) ssl;/listen \1;/g' /root/ST-server/nginx/nginx.conf
 ```
 
+### 4. 检查和修复重复指令问题
+
+如果遇到 "proxy_pass_request_headers directive is duplicate" 错误，运行我们的修复工具：
+
+```bash
+# 检查 Nginx 配置是否有重复指令
+npm run check-nginx
+
+# 自动修复重复指令问题
+npm run fix-nginx-duplicate
+```
+
 ### 4. 测试配置
 
 ```bash
@@ -77,6 +97,8 @@ nginx -t -c /root/ST-server/nginx/nginx.conf
 1. **启动脚本自动化**：服务器启动时会自动检查并加载正确的 Nginx 配置
 2. **实例管理集成**：启动和重启实例时会自动确保 Nginx 使用正确配置
 3. **端口变更处理**：当实例端口变更时，会自动重载 Nginx 配置
+4. **配置错误检测**：自动检测并修复配置文件中的重复指令问题
+5. **错误防护机制**：生成配置时避免产生重复指令
 
 ## 验证修复是否成功
 
