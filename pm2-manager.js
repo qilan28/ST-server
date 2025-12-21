@@ -1,4 +1,5 @@
 import pm2 from 'pm2';
+import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -16,6 +17,7 @@ let pm2Connected = false;
 
 // 连接到PM2
 const connectPM2 = () => {
+    console.log('[PM2] 尝试连接到 PM2...');
     return new Promise((resolve, reject) => {
         try {
             // 如果已经连接，直接返回
@@ -96,107 +98,191 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
         throw new Error(`SillyTavern server script not found: ${stServerPath}`);
     }
     
+    // 检查文件是否有执行权限
+    try {
+        // 检查文件权限
+        const stats = fs.statSync(stServerPath);
+        console.log(`[Instance] server.js 文件权限: ${stats.mode.toString(8)}`);
+    } catch (error) {
+        console.warn(`[Instance] 无法检查文件权限: ${error.message}`);
+    }
+    
     // 先检查实例是否已存在，如果存在则先停止
     try {
         const status = await getInstanceStatus(username);
         if (status && status.status === 'online') {
             console.log(`[Instance] 实例 ${username} 已经在运行，先停止再重启`);
             await stopInstance(username);
-            // 等待一秒确保进程完全停止
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 等待两秒确保进程完全停止
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
     } catch (error) {
         console.log(`[Instance] 检查实例状态时出错，忽略并继续:`, error);
+        
+        // 尝试强制删除可能存在的进程
+        try {
+            await forcefullyDeleteProcess(`st-${username}`);
+        } catch (deleteError) {
+            console.log(`[Instance] 强制删除进程失败，继续: ${deleteError.message}`);
+        }
     }
     
-    try {
-        // 连接PM2
+    // 启动尝试次数
+    let startAttempts = 0;
+    const maxStartAttempts = 2;
+    
+    while (startAttempts <= maxStartAttempts) {
+        startAttempts++;
+        console.log(`[Instance] 启动尝试 ${startAttempts}/${maxStartAttempts + 1}`);
+        
         try {
-            console.log(`[Instance] 连接PM2...`);
-            await connectPM2();
-            console.log(`[Instance] PM2连接成功`);
-        } catch (error) {
-            console.error(`[Instance] PM2连接失败:`, error);
-            throw new Error(`Failed to connect to PM2: ${error.message}`);
-        }
-        
-        // 获取随机可用端口
-        console.log(`[Instance] 为用户 ${username} 分配随机端口...`);
-        const port = await getSafeRandomPort(originalPort, 3001, 9000);
-        console.log(`[Instance] 用户 ${username} 分配到端口: ${port} (原端口: ${originalPort})`);
-        
-        // 更新数据库中的端口
-        if (port !== originalPort) {
-            await updateUserPort(username, port);
-            console.log(`[Instance] 已更新用户 ${username} 的端口为 ${port}`);
-            
-            // 重新生成 Nginx 配置并重载
+            // 连接PM2
             try {
-                console.log(`[Instance] 由于端口变更，重新生成 Nginx 配置...`);
-                await generateNginxConfig();
-                console.log(`[Instance] 尝试重载 Nginx...`);
-                const reloadResult = await reloadNginx();
-                if (reloadResult.success) {
-                    console.log(`[Instance] Nginx 配置重载成功，方法: ${reloadResult.method}`);
-                } else {
-                    console.warn(`[Instance] Nginx 重载失败: ${reloadResult.error}，可能需要手动重载`);
+                console.log(`[Instance] 连接PM2...`);
+                await connectPM2();
+                console.log(`[Instance] PM2连接成功`);
+            } catch (error) {
+                console.error(`[Instance] PM2连接失败:`, error);
+                
+                if (startAttempts <= maxStartAttempts) {
+                    console.log(`[Instance] 等待 3 秒后重试...`);
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    continue;
                 }
-            } catch (nginxError) {
-                console.error(`[Instance] Nginx 配置更新失败:`, nginxError);
-                // 继续启动实例，不要因为 Nginx 问题中断
+                
+                throw new Error(`Failed to connect to PM2: ${error.message}`);
+            }
+            
+            // 获取随机可用端口
+            console.log(`[Instance] 为用户 ${username} 分配随机端口...`);
+            const port = await getSafeRandomPort(originalPort, 3001, 9000);
+            console.log(`[Instance] 用户 ${username} 分配到端口: ${port} (原端口: ${originalPort})`);
+            
+            // 更新数据库中的端口
+            if (port !== originalPort) {
+                await updateUserPort(username, port);
+                console.log(`[Instance] 已更新用户 ${username} 的端口为 ${port}`);
+                
+                // 重新生成 Nginx 配置并重载
+                try {
+                    console.log(`[Instance] 由于端口变更，重新生成 Nginx 配置...`);
+                    await generateNginxConfig();
+                    console.log(`[Instance] 尝试重载 Nginx...`);
+                    const reloadResult = await reloadNginx();
+                    if (reloadResult.success) {
+                        console.log(`[Instance] Nginx 配置重载成功，方法: ${reloadResult.method}`);
+                    } else {
+                        console.warn(`[Instance] Nginx 重载失败: ${reloadResult.error}，可能需要手动重载`);
+                    }
+                } catch (nginxError) {
+                    console.error(`[Instance] Nginx 配置更新失败:`, nginxError);
+                    // 继续启动实例，不要因为 Nginx 问题中断
+                }
+            }
+            
+            // 创建数据目录（如果不存在）
+            if (!fs.existsSync(dataDir)) {
+                fs.mkdirSync(dataDir, { recursive: true });
+                console.log(`[Instance] 创建数据目录: ${dataDir}`);
+                
+                // 设置数据目录权限
+                try {
+                    fs.chmodSync(dataDir, 0o755);
+                } catch (chmodError) {
+                    console.warn(`[Instance] 设置数据目录权限失败: ${chmodError.message}`);
+                }
+            }
+            
+            // 获取 Node.js 可执行文件路径
+            const nodePath = process.execPath || 'node';
+            console.log(`[Instance] 使用 Node.js 路径: ${nodePath}`);
+            
+            return new Promise((resolve, reject) => {
+                console.log(`[Instance] 准备启动 SillyTavern 实例，端口 ${port}`);
+                
+                // 使用超时保护
+                const timeoutId = setTimeout(() => {
+                    disconnectPM2();
+                    reject(new Error('PM2 start operation timed out'));
+                }, 15000); // 增加到15秒超时
+                
+                // 构建启动配置
+                const startConfig = {
+                    name: `st-${username}`,
+                    script: stServerPath,
+                    args: `--port ${port} --dataRoot ${dataDir}`,
+                    cwd: stDir,
+                    interpreter: nodePath, // 使用完整路径
+                    env: {
+                        NODE_ENV: 'production',
+                        PORT: port.toString()
+                    },
+                    max_memory_restart: '500M',
+                    error_file: path.join(__dirname, 'logs', `${username}-error.log`),
+                    out_file: path.join(__dirname, 'logs', `${username}-out.log`),
+                    time: true,
+                    autorestart: true,
+                    restart_delay: 3000, // 重启延迟
+                    kill_timeout: 5000,  // 等待进程退出的时间
+                    wait_ready: false    // 不等待ready信号
+                };
+                
+                // 记录完整的启动配置
+                console.log(`[Instance] PM2 启动配置:`, JSON.stringify(startConfig, null, 2));
+                
+                // 启动实例
+                pm2.start(startConfig, (err, apps) => {
+                    clearTimeout(timeoutId);
+                    
+                    if (err) {
+                        console.error(`[Instance] 启动实例 ${username} 失败:`, err);
+                        disconnectPM2();
+                        
+                        if (startAttempts <= maxStartAttempts) {
+                            console.log(`[Instance] 启动失败，将在下一次循环重试`);
+                            reject(err);
+                        } else {
+                            reject(err);
+                        }
+                    } else {
+                        console.log(`[Instance] 成功启动实例 ${username}`);
+                        // 更新状态并记录启动时间
+                        updateUserStatus(username, 'running');
+                        recordInstanceStart(username);
+                        console.log(`[Instance] 已记录用户 ${username} 的实例启动时间`);
+                        
+                        // 不要立即断开连接，先检查实例状态
+                        setTimeout(() => {
+                            pm2.describe(`st-${username}`, (descErr, procDesc) => {
+                                disconnectPM2();
+                                
+                                if (descErr || !procDesc || procDesc.length === 0) {
+                                    console.warn(`[Instance] 无法验证实例启动状态: ${descErr?.message}`);
+                                } else {
+                                    const proc = procDesc[0];
+                                    console.log(`[Instance] 实例状态检查: ${proc.pm2_env.status}, 进程ID: ${proc.pid}`);
+                                }
+                                
+                                resolve({ apps, port });
+                            });
+                        }, 2000);
+                    }
+                });
+            });
+        } catch (error) {
+            console.error(`[Instance] 启动实例 ${username} 尝试 ${startAttempts} 失败:`, error);
+            disconnectPM2();
+            
+            if (startAttempts <= maxStartAttempts) {
+                console.log(`[Instance] 等待 3 秒后重试...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            } else {
+                throw new Error(`无法启动实例 (已尝试 ${startAttempts} 次): ${error.message}`);
             }
         }
-        
-        // 创建数据目录（如果不存在）
-        if (!fs.existsSync(dataDir)) {
-            fs.mkdirSync(dataDir, { recursive: true });
-            console.log(`[Instance] 创建数据目录: ${dataDir}`);
-        }
-        
-        return new Promise((resolve, reject) => {
-            console.log(`[Instance] 准备启动 SillyTavern 实例，端口 ${port}`);
-            
-            // 使用超时保护
-            const timeoutId = setTimeout(() => {
-                disconnectPM2();
-                reject(new Error('PM2 start operation timed out'));
-            }, 10000); // 10秒超时
-            
-            pm2.start({
-                name: `st-${username}`,
-                script: stServerPath,
-                args: `--port ${port} --dataRoot ${dataDir}`,
-                cwd: stDir,
-                interpreter: 'node',
-                env: {
-                    NODE_ENV: 'production'
-                },
-                max_memory_restart: '500M',
-                error_file: path.join(__dirname, 'logs', `${username}-error.log`),
-                out_file: path.join(__dirname, 'logs', `${username}-out.log`),
-                time: true
-            }, (err, apps) => {
-                clearTimeout(timeoutId);
-                disconnectPM2();
-                
-                if (err) {
-                    console.error(`[Instance] 启动实例 ${username} 失败:`, err);
-                    reject(err);
-                } else {
-                    console.log(`[Instance] 成功启动实例 ${username}`);
-                    // 更新状态并记录启动时间
-                    updateUserStatus(username, 'running');
-                    recordInstanceStart(username);
-                    console.log(`[Instance] 已记录用户 ${username} 的实例启动时间`);
-                    resolve({ apps, port });  // 返回应用和使用的端口
-                }
-            });
-        });
-    } catch (error) {
-        console.error(`[Instance] 启动实例 ${username} 时出错:`, error);
-        disconnectPM2();
-        throw new Error(`Failed to start instance: ${error.message}`);
     }
+    
+    throw new Error(`启动实例失败，已达到最大重试次数 (${maxStartAttempts + 1})`);
 };
 
 // 停止实例
@@ -361,6 +447,91 @@ export const restartInstance = async (username) => {
 };
 
 // 删除实例
+// 强制删除进程
+async function forcefullyDeleteProcess(processName) {
+    try {
+        console.log(`[Instance] 尝试强制删除进程: ${processName}`);
+        
+        // 连接到PM2
+        await connectPM2();
+        
+        return new Promise((resolve, reject) => {
+            // 先尝试正常删除
+            pm2.delete(processName, (err) => {
+                if (err) {
+                    console.warn(`[Instance] 正常删除进程 ${processName} 失败:`, err.message);
+                    
+                    // 使用 pm2 jlist 获取所有进程详情
+                    exec('pm2 jlist', (jlistErr, stdout) => {
+                        if (jlistErr) {
+                            disconnectPM2();
+                            return reject(new Error(`无法获取进程列表: ${jlistErr.message}`));
+                        }
+                        
+                        try {
+                            const processes = JSON.parse(stdout);
+                            const targetProcess = processes.find(p => p.name === processName);
+                            
+                            if (targetProcess) {
+                                console.log(`[Instance] 找到目标进程 ${processName}, PID=${targetProcess.pid}`);
+                                
+                                // 在Windows上使用 taskkill 命令强制终止进程
+                                if (process.platform === 'win32' && targetProcess.pid) {
+                                    exec(`taskkill /F /PID ${targetProcess.pid}`, (killErr) => {
+                                        if (killErr) {
+                                            console.warn(`[Instance] 强制终止进程失败: ${killErr.message}`);
+                                        } else {
+                                            console.log(`[Instance] 已强制终止进程 PID=${targetProcess.pid}`);
+                                        }
+                                        
+                                        // 再次尝试删除
+                                        pm2.delete(processName, (deleteErr) => {
+                                            disconnectPM2();
+                                            if (deleteErr) {
+                                                console.warn(`[Instance] 二次删除失败: ${deleteErr.message}`);
+                                                reject(new Error(`无法完全清理进程: ${deleteErr.message}`));
+                                            } else {
+                                                console.log(`[Instance] 已成功删除进程 ${processName}`);
+                                                resolve(true);
+                                            }
+                                        });
+                                    });
+                                } else {
+                                    // 非Windows或无PID，直接尝试再次删除
+                                    pm2.delete(processName, (deleteErr) => {
+                                        disconnectPM2();
+                                        if (deleteErr) {
+                                            console.warn(`[Instance] 二次删除失败: ${deleteErr.message}`);
+                                            reject(new Error(`无法完全清理进程: ${deleteErr.message}`));
+                                        } else {
+                                            console.log(`[Instance] 已成功删除进程 ${processName}`);
+                                            resolve(true);
+                                        }
+                                    });
+                                }
+                            } else {
+                                disconnectPM2();
+                                console.log(`[Instance] 未找到进程 ${processName}，可能已不存在`);
+                                resolve(true);
+                            }
+                        } catch (parseErr) {
+                            disconnectPM2();
+                            reject(new Error(`解析进程列表失败: ${parseErr.message}`));
+                        }
+                    });
+                } else {
+                    disconnectPM2();
+                    console.log(`[Instance] 已成功删除进程 ${processName}`);
+                    resolve(true);
+                }
+            });
+        });
+    } catch (error) {
+        disconnectPM2();
+        throw error;
+    }
+}
+
 export const deleteInstance = async (username) => {
     try {
         await connectPM2();

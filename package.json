@@ -24,7 +24,8 @@
     "disable-access-control": "node scripts/disable-access-control.js",
     "fix-nginx-400": "sudo bash scripts/fix-nginx-400.sh",
     "fix-nginx-restart": "node scripts/fix-nginx-restart-issue.js",
-    "reset-pm2": "node scripts/reset-pm2.js"
+    "reset-pm2": "node scripts/reset-pm2.js",
+    "fix-instances": "node reset-instances.js"
   },
   "keywords": [
     "sillytavern",
