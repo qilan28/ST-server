@@ -331,10 +331,16 @@ server {
     template = template.replace(/server_name localhost;/g, `server_name ${MAIN_DOMAIN};`);
     template = template.replace(/listen 80;/g, `listen ${NGINX_PORT};`);
     
-    // 添加外部转发配置
+    // 添加外部转发配置 - 确保其位于http块内
     if (FORWARDING_ENABLED && externalForwardingConfig) {
-        // 将外部转发配置添加到模板结尾
-        template += '\n' + externalForwardingConfig;
+        // 将模板分割为两部分，找到HTTP块的结束位置
+        const httpEndPos = template.lastIndexOf('}')
+        if (httpEndPos !== -1) {
+            // 插入外部转发配置到HTTP块内
+            template = template.substring(0, httpEndPos) + 
+                     externalForwardingConfig +
+                     template.substring(httpEndPos);
+        }
     }
     
     // 写入生成的配置文件
