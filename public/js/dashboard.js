@@ -554,8 +554,13 @@ async function handleStart() {
                 showMessage('实例启动成功！', 'success');
             }
             console.log('[Instance] 启动成功，刷新用户信息和状态');
+            
+            // 先将状态设为已启动，立即更新UI
+            updateStatusUI('running');
+            
+            // 开始快速状态检查（每秒1次，检查5次）
             await loadUserInfo();
-            await loadInstanceStatus();
+            startFastStatusCheck();
         } else {
             console.error('[Instance] 启动失败:', data);
             showMessage(data.error || '启动失败，服务器返回错误');
@@ -708,6 +713,28 @@ function startStatusCheck() {
     
     // 每5秒检查一次
     statusCheckInterval = setInterval(loadInstanceStatus, 5000);
+}
+
+// 开始快速状态检查（在实例启动后调用）
+function startFastStatusCheck() {
+    // 停止正在运行的检查
+    stopStatusCheck();
+    
+    // 先立即执行一次
+    loadInstanceStatus();
+    
+    // 然后快速检查（每秒1次），检查共5次
+    let checkCount = 0;
+    statusCheckInterval = setInterval(() => {
+        loadInstanceStatus();
+        checkCount++;
+        
+        if (checkCount >= 5) {
+            // 5次快速检查后恢复正常间隔
+            stopStatusCheck();
+            startStatusCheck();
+        }
+    }, 1000);
 }
 
 // 停止状态检查
