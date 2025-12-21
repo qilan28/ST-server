@@ -18,6 +18,7 @@ import proxyRoutes from './routes/proxy.js';
 import siteSettingsRoutes from './routes/site-settings.js';
 import friendsRoutes from './routes/friends.js';
 import runtimeLimiterRoutes from './routes/runtime-limiter.js';
+import instancesRoutes from './routes/instances.js';
 import { protectPage } from './middleware/page-auth.js';
 import './database.js';
 import { findUserByUsername, createAdminUser } from './database.js';
@@ -143,6 +144,7 @@ app.use('/api/backup', backupRoutes);
 app.use('/api/proxy', proxyRoutes);
 app.use('/api/site-settings', siteSettingsRoutes);
 app.use('/api/runtime-limit', runtimeLimiterRoutes);
+app.use('/api/instances', instancesRoutes);
 app.use('/', friendsRoutes); // 友情链接路由（包含公开和管理员路由）
 
 // 健康检查

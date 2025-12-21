@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/auto-fix-nginx-title.js && node server.js",
+    "start-forward": "node forward-server.js",
     "dev": "node --watch server.js",
     "setup": "node setup.js",
     "create-admin": "node scripts/create-admin.js",
@@ -51,6 +52,7 @@
     "extract-zip": "^2.0.1",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "http-proxy-middleware": "^2.0.6"
   }
 }

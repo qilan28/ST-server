@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/css/table-fix.css">
     <link rel="stylesheet" href="/css/loading.css">
     <link rel="stylesheet" href="/css/admin-runtime-limit.css">
+    <link rel="stylesheet" href="/css/admin-instances.css">
     <!-- 权限验证脚本 (必须放在最前面) -->
     <script src="/js/auth-check.js"></script>
     
@@ -531,6 +532,68 @@
                 </div>
             </div>
 
+            <!-- 实例配置管理 -->
+            <div class="users-card">
+                <h2>🌐 实例配置管理</h2>
+                <div id="instancesMessage" class="message" style="display: none;"></div>
+                
+                <!-- 实例配置区域 -->
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;" class="instances-settings">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🔄 主转发端口配置</h3>
+                    <div class="loading-indicator" style="margin-bottom: 10px; display: none; text-align: center; padding: 10px; background: #f7fafc; border-radius: 4px;">
+                        <div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(102, 126, 234, 0.3); border-radius: 50%; border-top-color: #667eea; animation: spin 1s linear infinite; margin-right: 8px;"></div>
+                        正在加载实例配置...
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                            主转发端口
+                        </label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="mainForwardPort" class="form-input" placeholder="例如：7091" min="1" max="65535" style="flex-grow: 1;">
+                            <button id="saveMainPortBtn" class="btn btn-primary">保存端口</button>
+                        </div>
+                        <small style="display: block; margin-top: 5px; color: #718096;">
+                            设置主转发端口，所有用户的SillyTavern请求将通过此端口转发
+                        </small>
+                    </div>
+                    
+                    <h3 style="margin-top: 20px; color: #2d3748; font-size: 16px;">🔌 实例地址管理</h3>
+                    
+                    <!-- 添加实例表单 -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                            添加实例地址
+                        </label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="instanceAddress" class="form-input" placeholder="例如：http://8.210.210.211:7092" style="flex-grow: 1;">
+                            <button id="addInstanceBtn" class="btn btn-primary">添加</button>
+                        </div>
+                        <small style="display: block; margin-top: 5px; color: #718096;">
+                            添加后，用户访问地址将根据用户名动态生成，如：http://域名:端口/用户名/st/
+                        </small>
+                    </div>
+                    
+                    <!-- 实例列表 -->
+                    <div class="table-container">
+                        <table class="users-table">
+                            <thead>
+                                <tr>
+                                    <th width="50">#</th>
+                                    <th>实例地址</th>
+                                    <th width="100">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="instancesList">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; padding: 30px;">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
             <!-- 自动备份配置 -->
             <div class="users-card">
                 <h2>⏰ 自动备份配置</h2>
@@ -686,6 +749,8 @@
     <!-- Nginx配置相关脚本 -->
     <script src="/js/nginx-templates.js"></script>
     <script src="/js/admin-nginx.js"></script>
+    <!-- 实例管理脚本 -->
+    <script src="/js/admin-instances.js"></script>
     <!-- 新增修复脚本 -->
     <script src="/js/admin-fixes.js"></script>
     <!-- 运行时长限制脚本 -->

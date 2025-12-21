@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getNginxConfig } from '../utils/config-manager.js';
+import { getMainForwardPort, getAllInstances } from '../utils/instance-manager.js';
 // 避免循环依赖，使用动态导入
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,16 +39,55 @@ async function generateNginxConfig() {
         
         console.log(`找到 ${users.length} 个普通用户需要配置`);
         
+        // 获取实例配置
+        const mainPort = getMainForwardPort();
+        const instances = getAllInstances();
+        console.log(`主转发端口: ${mainPort}, 实例数量: ${instances.length}`);
+        
         // 生成 upstream 块
         let upstreamServers = '';
-        users.forEach(user => {
-            upstreamServers += `
-# ${user.username} 的 SillyTavern 实例
-upstream st_${user.username} {
-    server 127.0.0.1:${user.port};
+        
+        // 添加主转发upstream
+        upstreamServers += `
+# 主转发地址
+upstream st_main {
+    server 127.0.0.1:${mainPort};
 }
 `;
-    });
+        
+        // 添加每个额外实例的upstream
+        instances.forEach((instance, index) => {
+            const instanceId = instance.id;
+            const address = instance.address;
+            // 从地址中解析主机名和端口
+            let host = '127.0.0.1';
+            let port = 7092;
+            
+            try {
+                const url = new URL(address);
+                host = url.hostname;
+                port = url.port || (url.protocol === 'https:' ? 443 : 80);
+                
+                upstreamServers += `
+# 实例 ${index + 1}: ${address}
+upstream st_instance_${instanceId} {
+    server ${host}:${port};
+}
+`;
+            } catch (error) {
+                console.error(`解析实例地址失败 ${address}:`, error);
+            }
+        });
+        
+        // 为所有用户添加upstream，但实际上都指向同一个本地端口
+        users.forEach(user => {
+            upstreamServers += `
+# ${user.username} 的 SillyTavern 实例 - 转发到主转发端口
+upstream st_${user.username} {
+    server 127.0.0.1:${mainPort};
+}
+`;
+        });
     
     // 生成认证检查的内部 location 块
     let authCheckLocations = '';
@@ -210,6 +250,9 @@ upstream st_${user.username} {
         # 处理重定向
         proxy_redirect / /${user.username}/st/;
         
+        # Cookie控制 - 在请求头中添加标识用户的Cookie
+        proxy_set_header Cookie "st_user_context=${user.username}; $http_cookie";
+        
         # 缓存控制
         proxy_cache_bypass $http_upgrade;
     }
@@ -282,6 +325,17 @@ upstream st_${user.username} {
         const exampleUser = users[0];
         console.log(`   主站: http://${MAIN_DOMAIN}:${NGINX_PORT}/`);
         console.log(`   ${exampleUser.username} 的 ST: http://${MAIN_DOMAIN}:${NGINX_PORT}/${exampleUser.username}/st/`);
+    }
+    
+    // 实例地址示例
+    if (instances.length > 0) {
+        console.log('🔧 实例转发设置：');
+        console.log(`   主转发端口: ${mainPort}`);
+        instances.forEach((instance, index) => {
+            console.log(`   实例 ${index + 1}: ${instance.address}`);
+        });
+    } else {
+        console.log('⚠️ 没有配置任何实例地址!');
     }
     console.log();
     
