@@ -5,7 +5,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node scripts/auto-fix-nginx-title.js && node server.js",
+    "start": "node scripts/auto-fix-nginx-title.js && node scripts/ensure-nginx-config.js && node server.js",
     "dev": "node --watch server.js",
     "setup": "node setup.js",
     "create-admin": "node scripts/create-admin.js",
@@ -25,7 +25,8 @@
     "fix-nginx-400": "sudo bash scripts/fix-nginx-400.sh",
     "fix-nginx-restart": "node scripts/fix-nginx-restart-issue.js",
     "reset-pm2": "node scripts/reset-pm2.js",
-    "fix-instances": "node reset-instances.js"
+    "fix-instances": "node reset-instances.js",
+    "ensure-nginx": "node scripts/ensure-nginx-config.js"
   },
   "keywords": [
     "sillytavern",

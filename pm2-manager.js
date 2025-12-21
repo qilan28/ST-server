@@ -7,7 +7,11 @@ import { updateUserStatus, updateUserPort } from './database.js';
 import { getSafeRandomPort } from './utils/port-helper.js';
 import { recordInstanceStart, removeInstanceStartTime } from './runtime-limiter.js';
 import { generateNginxConfig } from './scripts/generate-nginx-config.js';
-import { reloadNginx } from './utils/nginx-reload.js';
+import { reloadNginx, startNginx, getNginxConfigPath } from './utils/nginx-reload.js';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execPromise = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -168,15 +172,63 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
                     console.log(`[Instance] 由于端口变更，重新生成 Nginx 配置...`);
                     await generateNginxConfig();
                     console.log(`[Instance] 尝试重载 Nginx...`);
-                    const reloadResult = await reloadNginx();
-                    if (reloadResult.success) {
-                        console.log(`[Instance] Nginx 配置重载成功，方法: ${reloadResult.method}`);
-                    } else {
-                        console.warn(`[Instance] Nginx 重载失败: ${reloadResult.error}，可能需要手动重载`);
+                    
+                    // 获取正确的配置路径
+                    const configPath = getNginxConfigPath();
+                    
+                    // 尝试先停止 Nginx
+                    try {
+                        await execPromise('nginx -s stop');
+                        console.log(`[Instance] Nginx 已停止`);
+                    } catch (stopError) {
+                        console.log(`[Instance] Nginx 可能未运行: ${stopError.message}`);
+                    }
+                    
+                    // 等待一秒确保完全停止
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // 使用自定义配置启动 Nginx
+                    try {
+                        await execPromise(`nginx -c "${configPath}"`);
+                        console.log(`[Instance] Nginx 配置重载成功，使用配置文件: ${configPath}`);
+                    } catch (startError) {
+                        console.error(`[Instance] Nginx 启动失败: ${startError.message}`);
+                        // 尝试标准重载方法作为备份
+                        const reloadResult = await reloadNginx();
+                        if (reloadResult.success) {
+                            console.log(`[Instance] Nginx 配置重载成功，方法: ${reloadResult.method}`);
+                        } else {
+                            console.warn(`[Instance] Nginx 重载失败: ${reloadResult.error}，可能需要手动重载`);
+                        }
                     }
                 } catch (nginxError) {
                     console.error(`[Instance] Nginx 配置更新失败:`, nginxError);
                     // 继续启动实例，不要因为 Nginx 问题中断
+                }
+            } else {
+                // 即使端口没变，也确保 Nginx 使用正确配置
+                try {
+                    // 获取正确的配置路径
+                    const configPath = getNginxConfigPath();
+                    
+                    // 尝试重新加载 Nginx 配置
+                    console.log(`[Instance] 确保 Nginx 使用正确配置...`);
+                    try {
+                        await execPromise(`nginx -s reload`);
+                        console.log(`[Instance] Nginx 配置重载成功（信号方式）`);
+                    } catch (reloadError) {
+                        console.log(`[Instance] 尝试使用配置文件重启 Nginx...`);
+                        try {
+                            await execPromise('nginx -s stop').catch(() => {});
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            await execPromise(`nginx -c "${configPath}"`);
+                            console.log(`[Instance] Nginx 已使用正确配置启动`);
+                        } catch (startError) {
+                            console.warn(`[Instance] Nginx 配置加载警告: ${startError.message}`);
+                        }
+                    }
+                } catch (nginxError) {
+                    console.warn(`[Instance] Nginx 操作警告:`, nginxError.message);
                 }
             }
             
