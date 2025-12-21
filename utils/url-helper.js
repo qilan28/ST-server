@@ -11,7 +11,9 @@ export function generateAccessUrl(username, port) {
     let mainUrl = ''; // 主访问地址
     let alternativeUrls = []; // 备用访问地址列表
     
-    // 优先检查转发配置
+    // 只使用 Nginx 配置，忽略转发服务器配置
+    // 注释掉下面代码，不再使用实例转发配置
+    /*
     try {
         const forwardingConfig = getForwardingConfig();
         
@@ -46,6 +48,7 @@ export function generateAccessUrl(username, port) {
     } catch (error) {
         console.error('获取转发配置失败:', error.message);
     }
+    */
     
     // 默认回退到原有的 Nginx 配置
     const nginxConfig = getNginxConfig();
@@ -59,9 +62,10 @@ export function generateAccessUrl(username, port) {
         mainUrl = `http://localhost:${port}`;
     }
     
+    // 只返回 Nginx 配置生成的地址，不包含备用地址
     return {
         mainUrl,
-        alternativeUrls
+        alternativeUrls: [] // 空数组，不提供备用地址
     };
 }
 
