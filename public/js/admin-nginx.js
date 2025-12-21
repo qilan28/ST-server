@@ -105,7 +105,7 @@ async function loadNginxConfig() {
             document.getElementById('nginxPort').value = data.nginx.port || 80;
             
             // 新增字段
-            const cloudflareInput = document.getElementById('cloudflareEnabled');
+            const cloudflareInput = document.getElementById('cloudflareTunnelDomain');
             if (cloudflareInput) {
                 cloudflareInput.value = data.nginx.cloudflare_tunnel_domain || '';
             }
@@ -200,7 +200,7 @@ async function testNginxConfig() {
         const template = document.getElementById('nginxTemplate').value || 'basic';
         
         // 获取 Cloudflare 隧道域名和访问控制设置
-        const cloudflareInput = document.getElementById('cloudflareEnabled');
+        const cloudflareInput = document.getElementById('cloudflareTunnelDomain');
         const cloudflare_tunnel_domain = cloudflareInput ? cloudflareInput.value.trim() : '';
         
         const accessControlInput = document.getElementById('nginxAccessControl');
@@ -270,7 +270,7 @@ async function saveNginxConfig() {
         const template = document.getElementById('nginxTemplate').value || 'basic';
         
         // 获取Cloudflare隧道配置与访问控制
-        const cloudflare_tunnel_domain = document.getElementById('cloudflareEnabled').value.trim();
+        const cloudflare_tunnel_domain = document.getElementById('cloudflareTunnelDomain').value.trim();
         const enableAccessControl = document.getElementById('nginxAccessControl').checked;
         
         // 验证输入
