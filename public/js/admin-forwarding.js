@@ -4,8 +4,8 @@
 
 // 全局变量
 let forwardingConfig = {
-    enabled: false,
-    main_port: 7091
+    enabled: false
+    // main_port字段已移除
 };
 
 let forwardingServers = [];
@@ -62,14 +62,14 @@ function loadForwardingConfig() {
 function updateForwardingConfigUI() {
     // 更新配置字段
     document.getElementById('forwardingEnabled').checked = forwardingConfig.enabled === 1;
-    document.getElementById('mainForwardingPort').value = forwardingConfig.main_port;
+    // 主转发端口字段已移除
     
     // 更新访问示例
     const exampleText = document.getElementById('forwardingExampleText');
     if (forwardingConfig.enabled === 1) {
         exampleText.innerHTML = `
-            <p style="margin: 5px 0; font-family: monospace;">http://localhost:${forwardingConfig.main_port}/用户名/st/</p>
-            <p style="margin: 5px 0; color: #718096;">* 可以用实际IP地址或域名替换 localhost</p>
+            <p style="margin: 5px 0; font-family: monospace;">http://服务器地址:端口/用户名/st/</p>
+            <p style="margin: 5px 0; color: #718096;">* 使用转发服务器中配置的地址和端口</p>
         `;
     } else {
         exampleText.innerHTML = `
@@ -81,12 +81,7 @@ function updateForwardingConfigUI() {
 // 保存转发配置
 function saveForwardingConfig() {
     const enabled = document.getElementById('forwardingEnabled').checked;
-    const mainPort = parseInt(document.getElementById('mainForwardingPort').value) || 7091;
-    
-    if (mainPort < 1000 || mainPort > 65535) {
-        showMessage('error', '端口必须在 1000-65535 之间');
-        return;
-    }
+    // 主转发端口字段已移除
     
     showLoading(true);
     
@@ -97,8 +92,8 @@ function saveForwardingConfig() {
             'Authorization': 'Bearer ' + localStorage.getItem('token')
         },
         body: JSON.stringify({
-            enabled: enabled,
-            main_port: mainPort
+            enabled: enabled
+            // main_port字段已移除
         })
     })
     .then(response => {

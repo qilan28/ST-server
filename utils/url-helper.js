@@ -31,7 +31,7 @@ export function generateAccessUrl(username, port) {
         // 如果有服务器，生成备用地址
         if (servers && servers.length > 0) {
             servers.forEach(server => {
-                // 简化生成备用地址的URL
+                // 生成备用地址的URL，使用服务器自身的端口
                 const hasProtocol = /^https?:\/\//i.test(server.address);
                 const address = hasProtocol ? server.address : `http://${server.address}`;
                 const backupUrl = `${address}:${server.port}/${username}/st/`;

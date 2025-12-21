@@ -35,20 +35,14 @@ router.get('/config', (req, res) => {
 // 更新转发配置
 router.put('/config', (req, res) => {
     try {
-        const { enabled, main_port } = req.body;
+        const { enabled } = req.body;
         
-        // 验证参数
-        if (main_port !== undefined) {
-            const portNum = parseInt(main_port);
-            if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
-                return res.status(400).json({ error: '端口必须在 1-65535 之间' });
-            }
-        }
+        // 移除对main_port的验证
         
         // 更新配置
         const config = {
-            enabled: enabled !== undefined ? (enabled === true || enabled === 'true' || enabled === 1) : undefined,
-            main_port: main_port !== undefined ? parseInt(main_port) : undefined
+            enabled: enabled !== undefined ? (enabled === true || enabled === 'true' || enabled === 1) : undefined
+            // main_port字段已移除
         };
         
         updateForwardingConfig(config);

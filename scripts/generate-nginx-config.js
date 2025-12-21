@@ -25,7 +25,6 @@ async function generateNginxConfig() {
         
         // 读取实例转发配置
         let FORWARDING_ENABLED = false;
-        let FORWARDING_MAIN_PORT = 7091;
         let forwardingServers = [];
         
         try {
@@ -33,7 +32,7 @@ async function generateNginxConfig() {
             const { getForwardingConfig, getActiveForwardingServers } = await import('../database-instance-forwarding.js');
             const forwardingConfig = getForwardingConfig();
             FORWARDING_ENABLED = forwardingConfig && forwardingConfig.enabled === 1;
-            FORWARDING_MAIN_PORT = forwardingConfig ? (forwardingConfig.main_port || 7091) : 7091;
+            // 获取转发服务器列表
             forwardingServers = FORWARDING_ENABLED ? getActiveForwardingServers() : [];
         } catch (err) {
             console.error('警告: 获取转发配置失败, 可能是数据库未初始化:', err.message);
@@ -41,7 +40,7 @@ async function generateNginxConfig() {
         }
         
         console.log(`域名: ${MAIN_DOMAIN}, 端口: ${NGINX_PORT}`);
-        console.log(`实例转发: ${FORWARDING_ENABLED ? '启用' : '禁用'}, 主端口: ${FORWARDING_MAIN_PORT}, 转发服务器数量: ${forwardingServers.length}`);
+        console.log(`实例转发: ${FORWARDING_ENABLED ? '启用' : '禁用'}, 转发服务器数量: ${forwardingServers.length}`);
         
         // 读取所有用户（排除管理员和没有端口的用户）
         // 使用动态导入避免循环依赖
@@ -131,50 +130,11 @@ map $user $user_port {
     // 生成外部转发配置
     let externalForwardingConfig = '';
     if (FORWARDING_ENABLED && forwardingServers.length > 0) {
-        // 主转发服务器配置
-        externalForwardingConfig += `
-# =================================================
-# 外部实例转发配置 - 主转发端口 ${FORWARDING_MAIN_PORT}
-# =================================================
-${userPortMappings}
-server {
-    listen ${FORWARDING_MAIN_PORT};
-    server_name _;
-
-    # 所有实例路径的通用处理
-    location ~ ^/([^/]+)/st/(.*)$ {
-        # 提取用户名并设置变量
-        set $user $1;
-        
-        # 检查映射端口是否有效
-        if ($user_port = 0) {
-            return 404 "User not found or invalid instance";
-        }
-        
-        # 转发到相应实例
-        proxy_pass http://127.0.0.1:$user_port/$2;
-        
-        # 代理设置
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # WebSocket 支持
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-    }
-
-    # 默认响应 404
-    location / {
-        return 404;
-    }
-}
-`;
-
-        // 每个外部转发服务器配置
         forwardingServers.forEach(server => {
+            // 生成每个转发服务器的配置
+            console.log(`生成转发服务器配置: ${server.address}:${server.port}`);
+            
+            // 生成nginx配置内容
             externalForwardingConfig += `
 # =================================================
 # 外部转发服务器 ${server.address}:${server.port}
@@ -411,8 +371,9 @@ server {
         
         // 添加外部转发访问地址示例
         if (FORWARDING_ENABLED) {
-            console.log(`\n外部转发访问地址示例:`);
-            console.log(`   主转发地址: http://localhost:${FORWARDING_MAIN_PORT}/${exampleUser.username}/st/`);
+            console.log(`
+外部转发访问地址示例:`);
+            console.log(`   转发地址: http://转发服务器地址:端口/${exampleUser.username}/st/`);
             
             // 如果有外部服务器
             if (forwardingServers.length > 0) {
