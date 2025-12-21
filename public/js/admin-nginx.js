@@ -104,17 +104,6 @@ async function loadNginxConfig() {
             document.getElementById('nginxDomain').value = data.nginx.domain || '';
             document.getElementById('nginxPort').value = data.nginx.port || 80;
             
-            // 新增字段
-            const cloudflareInput = document.getElementById('cloudflareTunnelDomain');
-            if (cloudflareInput) {
-                cloudflareInput.value = data.nginx.cloudflare_tunnel_domain || '';
-            }
-            
-            const accessControlInput = document.getElementById('nginxAccessControl');
-            if (accessControlInput) {
-                accessControlInput.checked = !!data.nginx.enableAccessControl;
-            }
-            
             // 高级设置
             if (data.nginx.template) {
                 const templateSelect = document.getElementById('nginxTemplate');
@@ -199,21 +188,12 @@ async function testNginxConfig() {
         const enabled = document.getElementById('nginxEnabled').checked;
         const template = document.getElementById('nginxTemplate').value || 'basic';
         
-        // 获取 Cloudflare 隧道域名和访问控制设置
-        const cloudflareInput = document.getElementById('cloudflareTunnelDomain');
-        const cloudflare_tunnel_domain = cloudflareInput ? cloudflareInput.value.trim() : '';
-        
-        const accessControlInput = document.getElementById('nginxAccessControl');
-        const enableAccessControl = accessControlInput ? accessControlInput.checked : false;
-        
         // 高级配置
         const config = {
             enabled,
             domain,
             port,
             template,
-            cloudflare_tunnel_domain,
-            enableAccessControl,
         };
         
         // SSL证书路径(如果适用)
@@ -269,10 +249,6 @@ async function saveNginxConfig() {
         const enabled = document.getElementById('nginxEnabled').checked;
         const template = document.getElementById('nginxTemplate').value || 'basic';
         
-        // 获取Cloudflare隧道配置与访问控制
-        const cloudflare_tunnel_domain = document.getElementById('cloudflareTunnelDomain').value.trim();
-        const enableAccessControl = document.getElementById('nginxAccessControl').checked;
-        
         // 验证输入
         if (port < 1 || port > 65535) {
             showMessage('端口必须在1-65535之间', 'error', 'nginxConfigMessage');
@@ -285,8 +261,6 @@ async function saveNginxConfig() {
             domain,
             port,
             template,
-            cloudflare_tunnel_domain,
-            enableAccessControl,
         };
         
         // SSL证书路径(如果适用)

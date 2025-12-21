@@ -128,7 +128,7 @@ router.post('/start', async (req, res) => {
             port: actualPort, // 返回实际使用的端口
             originalPort: user.port, // 返回原始端口
             portChanged: actualPort !== user.port, // 指示端口是否发生变化
-            accessUrl: generateAccessUrl(username, actualPort)
+            accessUrl: `http://localhost:${actualPort}`
         });
     } catch (error) {
         console.error('[API] 启动实例错误:', error);
@@ -231,7 +231,7 @@ router.post('/restart', async (req, res) => {
             port: actualPort, // 返回实际使用的端口
             originalPort: originalPort, // 返回原始端口
             portChanged: actualPort !== originalPort, // 指示端口是否发生变化
-            accessUrl: generateAccessUrl(username, actualPort)
+            accessUrl: `http://localhost:${actualPort}`
         });
     } catch (error) {
         console.error('[API] 重启实例错误:', error);
