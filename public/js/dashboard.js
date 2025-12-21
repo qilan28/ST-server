@@ -382,16 +382,29 @@ async function loadUserInfo() {
                 alternativeUrlsContainer.appendChild(alternativesLabel);
                 
                 // 为每个备用地址创建链接
-                data.accessUrls.alternativeUrls.forEach((url, index) => {
+                data.accessUrls.alternativeUrls.forEach((urlInfo, index) => {
+                    // 兼容性处理，旧格式的 URL 直接是字符串
+                    const isOldFormat = typeof urlInfo === 'string';
+                    const urlString = isOldFormat ? urlInfo : urlInfo.url;
+                    const isActive = isOldFormat ? true : urlInfo.isActive;
+                    
                     const linkContainer = document.createElement('div');
                     linkContainer.className = 'alternative-url-item';
                     
+                    // 添加服务器状态标记
+                    if (!isOldFormat) {
+                        const statusBadge = document.createElement('span');
+                        statusBadge.className = isActive ? 'server-status active' : 'server-status inactive';
+                        statusBadge.textContent = isActive ? '• 已启用' : '• 未启用';
+                        linkContainer.appendChild(statusBadge);
+                    }
+                    
                     const link = document.createElement('a');
-                    link.href = url;
-                    link.textContent = url;
-                    link.title = url;
-                    link.className = 'access-link';
-                    link.onclick = createUrlClickHandler(url);
+                    link.href = urlString;
+                    link.textContent = urlString;
+                    link.title = urlString + (isOldFormat ? '' : (isActive ? ' (已启用)' : ' (未启用)'));
+                    link.className = 'access-link' + (isActive ? '' : ' inactive-link');
+                    link.onclick = createUrlClickHandler(urlString);
                     
                     linkContainer.appendChild(link);
                     alternativeUrlsContainer.appendChild(linkContainer);

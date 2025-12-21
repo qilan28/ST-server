@@ -1,5 +1,5 @@
 import { getNginxConfig } from './config-manager.js';
-import { getForwardingConfig, getActiveForwardingServers } from '../database-instance-forwarding.js';
+import { getForwardingConfig, getAllForwardingServers } from '../database-instance-forwarding.js';
 
 /**
  * 生成用户的 SillyTavern 访问地址
@@ -23,31 +23,29 @@ export function generateAccessUrl(username, port) {
         mainUrl = `http://localhost:${port}`;
     }
     
-    // 然后获取转发服务器地址作为备用地址
+    // 获取转发服务器地址作为备用地址，仅用于显示
     try {
-        const forwardingConfig = getForwardingConfig();
+        // 获取所有转发服务器列表，包括非活跃的
+        const servers = getAllForwardingServers();
         
-        // 如果启用了转发
-        if (forwardingConfig.enabled === 1) {
-            // 获取活跃的转发服务器
-            const servers = getActiveForwardingServers();
-            
-            // 生成转发服务器的访问地址作为备用地址
-            if (servers && servers.length > 0) {
-                servers.forEach(server => {
-                    const hasProtocol = /^https?:\/\//i.test(server.address);
-                    const address = hasProtocol ? server.address : `http://${server.address}`;
-                    const url = `${address}:${forwardingConfig.main_port}/${username}/st/`;
-                    
-                    // 如果该地址与主地址不同，则添加为备用地址
-                    if (url !== mainUrl) {
-                        alternativeUrls.push(url);
-                    }
+        // 如果有服务器，生成备用地址
+        if (servers && servers.length > 0) {
+            servers.forEach(server => {
+                // 简化生成备用地址的URL
+                const hasProtocol = /^https?:\/\//i.test(server.address);
+                const address = hasProtocol ? server.address : `http://${server.address}`;
+                const backupUrl = `${address}:${server.port}/${username}/st/`;
+                
+                // 添加到备用地址列表，带上服务器状态信息
+                alternativeUrls.push({
+                    url: backupUrl,
+                    isActive: server.is_active === 1,
+                    serverId: server.id
                 });
-            }
+            });
         }
     } catch (error) {
-        console.error('获取转发配置失败:', error.message);
+        console.error('获取转发服务器失败:', error.message);
     }
     
     // 返回主访问地址和备用地址列表

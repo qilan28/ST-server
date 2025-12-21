@@ -37,6 +37,28 @@
             font-size: 0.9em;
             word-break: break-all;
         }
+        
+        .server-status {
+            display: inline-block;
+            margin-right: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .server-status.active {
+            color: #48bb78; /* 绿色 */
+        }
+        
+        .server-status.inactive {
+            color: #a0aec0; /* 灰色 */
+        }
+        
+        .inactive-link {
+            color: #a0aec0; /* 灰色 */
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
     </style>
     <script src="/js/fix-site-settings.js"></script>
 </head>
