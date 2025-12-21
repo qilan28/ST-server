@@ -10,9 +10,11 @@ import { createInstanceForwardingConfigTable } from './database-instance-forward
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// 初始化数据库连接
 const dbPath = path.join(__dirname, 'database.sqlite');
-// 导出db变量以便其他模块使用
-export const db = new Database(dbPath);
+const db = new Database(dbPath);
+
+// 函数声明必须在这里，先于导出
 
 // 启用外键约束
 db.pragma('foreign_keys = ON');
@@ -607,7 +609,8 @@ export const getUserAutoBackupPreference = (username) => {
     return result ? Boolean(result.auto_backup_enabled) : false;
 };
 
-// 数据库实例已在文件头部导出
-
 // 初始化数据库
 initDatabase();
+
+// 初始化完成后再导出数据库实例
+export { db };

@@ -2,8 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getNginxConfig } from '../utils/config-manager.js';
-import { getForwardingConfig, getActiveForwardingServers } from '../database-instance-forwarding.js';
 // 避免循环依赖，使用动态导入
+// 注意：不要静态导入数据库相关模块，可能会在初始化前被调用
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,10 +24,21 @@ async function generateNginxConfig() {
         const ENABLE_ACCESS_CONTROL = nginxConfig.enableAccessControl !== false; // 默认启用
         
         // 读取实例转发配置
-        const forwardingConfig = getForwardingConfig();
-        const FORWARDING_ENABLED = forwardingConfig.enabled === 1;
-        const FORWARDING_MAIN_PORT = forwardingConfig.main_port || 7091;
-        const forwardingServers = FORWARDING_ENABLED ? getActiveForwardingServers() : [];
+        let FORWARDING_ENABLED = false;
+        let FORWARDING_MAIN_PORT = 7091;
+        let forwardingServers = [];
+        
+        try {
+            // 动态导入转发配置相关函数
+            const { getForwardingConfig, getActiveForwardingServers } = await import('../database-instance-forwarding.js');
+            const forwardingConfig = getForwardingConfig();
+            FORWARDING_ENABLED = forwardingConfig && forwardingConfig.enabled === 1;
+            FORWARDING_MAIN_PORT = forwardingConfig ? (forwardingConfig.main_port || 7091) : 7091;
+            forwardingServers = FORWARDING_ENABLED ? getActiveForwardingServers() : [];
+        } catch (err) {
+            console.error('警告: 获取转发配置失败, 可能是数据库未初始化:', err.message);
+            console.log('将使用默认转发设置');
+        }
         
         console.log(`域名: ${MAIN_DOMAIN}, 端口: ${NGINX_PORT}`);
         console.log(`实例转发: ${FORWARDING_ENABLED ? '启用' : '禁用'}, 主端口: ${FORWARDING_MAIN_PORT}, 转发服务器数量: ${forwardingServers.length}`);

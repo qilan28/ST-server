@@ -115,10 +115,48 @@ async function autoCreateAdmin() {
     }
 }
 
-// 调用自动创建管理员
-console.log('='.repeat(60));
-autoCreateAdmin();
-console.log('='.repeat(60));
+// 启动时创建管理员
+async function startServer() {
+    try {
+        // 首先确保数据库已初始化
+        console.log('[Database] 等待数据库初始化...');
+        
+        console.log('='.repeat(60));
+        await autoCreateAdmin();
+        console.log('='.repeat(60));
+        
+        // 启动服务器
+        app.listen(PORT, () => {
+            console.log('='.repeat(60));
+            console.log('SillyTavern Multi-Instance Manager');
+            console.log('='.repeat(60));
+            console.log(`Server running on http://localhost:${PORT}`);
+            console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+            console.log(`Database: ${path.join(__dirname, 'database.sqlite')}`);
+            console.log('='.repeat(60));
+            
+            // 启动自动备份调度器
+            try {
+                startAutoBackupScheduler();
+            } catch (error) {
+                console.error('[自动备份] ❗ 启动失败:', error.message);
+            }
+            
+            // 初始化运行时长限制
+            try {
+                initRuntimeLimiter();
+                console.log('[运行时长限制] ✅ 初始化成功');
+            } catch (error) {
+                console.error('[运行时长限制] ❗ 初始化失败:', error.message);
+            }
+        });
+    } catch (error) {
+        console.error('启动失败:', error);
+    }
+}
+
+// 启动服务器
+startServer();
 
 // 中间件
 app.use(cors({ credentials: true }));
@@ -167,31 +205,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// 启动服务器
-app.listen(PORT, () => {
-    console.log('='.repeat(60));
-    console.log('SillyTavern Multi-Instance Manager');
-    console.log('='.repeat(60));
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Database: ${path.join(__dirname, 'database.sqlite')}`);
-    console.log('='.repeat(60));
-    
-    // 启动自动备份调度器
-    try {
-        startAutoBackupScheduler();
-    } catch (error) {
-        console.error('[自动备份] ❗ 启动失败:', error.message);
-    }
-    
-    // 初始化运行时长限制
-    try {
-        initRuntimeLimiter();
-        console.log('[运行时长限制] ✅ 初始化成功');
-    } catch (error) {
-        console.error('[运行时长限制] ❗ 初始化失败:', error.message);
-    }
-});
+// 服务器在 startServer 函数中启动
 
 // 优雅关闭
 process.on('SIGTERM', () => {

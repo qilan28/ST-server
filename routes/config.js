@@ -85,6 +85,20 @@ router.post('/nginx/generate', async (req, res) => {
         
         // 生成配置文件
         try {
+            // 确保数据库已初始化
+            console.log('[Config] 检查数据库连接...');
+            
+            // 使用动态导入来测试数据库
+            try {
+                const { db } = await import('../database.js');
+                if (!db) {
+                    throw new Error('数据库对象不可用');
+                }
+                console.log('[Config] 数据库连接正常');
+            } catch (dbError) {
+                throw new Error(`数据库连接错误: ${dbError.message}`);
+            }
+            
             await generateNginxConfig();
             console.log('[Config] Nginx 配置文件已生成');
         } catch (genError) {

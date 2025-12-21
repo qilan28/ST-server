@@ -42,8 +42,14 @@ export const createInstanceForwardingConfigTable = () => {
  * 获取转发配置
  */
 export const getForwardingConfig = () => {
-    const stmt = db.prepare('SELECT * FROM instance_forwarding_config WHERE id = 1');
-    return stmt.get();
+    try {
+        const stmt = db.prepare('SELECT * FROM instance_forwarding_config WHERE id = 1');
+        return stmt.get() || { enabled: 1, main_port: 7091 };
+    } catch (err) {
+        console.error('警告: 获取转发配置失败:', err.message);
+        // 返回默认配置
+        return { enabled: 1, main_port: 7091 };
+    }
 };
 
 /**
@@ -82,13 +88,19 @@ export const getAllForwardingServers = () => {
  * 获取活跃的转发服务器
  */
 export const getActiveForwardingServers = () => {
-    const stmt = db.prepare(`
-        SELECT id, address, port
-        FROM instance_forwarding_servers
-        WHERE is_active = 1
-        ORDER BY created_at DESC
-    `);
-    return stmt.all();
+    try {
+        const stmt = db.prepare(`
+            SELECT id, address, port
+            FROM instance_forwarding_servers
+            WHERE is_active = 1
+            ORDER BY created_at DESC
+        `);
+        return stmt.all();
+    } catch (err) {
+        console.error('警告: 获取转发服务器失败:', err.message);
+        // 返回空列表
+        return [];
+    }
 };
 
 /**
