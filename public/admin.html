@@ -401,23 +401,8 @@
                         正在加载实例转发配置...
                     </div>
                     
-                    <!-- 基本设置 -->
-                    <div style="display: grid; gap: 15px; margin-bottom: 15px;">
-                        <div>
-                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
-                                启用实例转发
-                            </label>
-                            <label class="switch">
-                                <input type="checkbox" id="forwardingEnabled">
-                                <span class="slider"></span>
-                            </label>
-                            <small style="display: block; margin-top: 5px; color: #718096;">
-                                启用后，可通过 http://IP:端口/用户名/st/ 访问用户实例
-                            </small>
-                        </div>
-                        
-                        <!-- 主转发端口已移除 -->
-                    </div>
+                    <!-- 基本设置已移除 -->
+                    <!-- 转发服务器功能已启用，无需手动开关 -->
                     
                     <!-- 服务器列表 -->
                     <div style="margin-bottom: 15px;">
@@ -457,9 +442,7 @@
                     
                     <!-- 按钮组 -->
                     <div style="display: flex; gap: 10px;">
-                        <button id="saveForwardingConfigBtn" class="btn btn-primary">保存配置</button>
                         <button id="refreshForwardingListBtn" class="btn btn-secondary">刷新列表</button>
-                        <button id="generateForwardingNginxBtn" class="btn btn-secondary">重新生成配置</button>
                     </div>
                 </div>
             </div>

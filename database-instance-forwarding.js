@@ -44,9 +44,11 @@ export const createInstanceForwardingConfigTable = () => {
 export const getForwardingConfig = () => {
     try {
         const stmt = db.prepare('SELECT * FROM instance_forwarding_config WHERE id = 1');
-        return stmt.get() || { enabled: 1, main_port: 7091 };
-    } catch (err) {
-        console.error('警告: 获取转发配置失败:', err.message);
+        const config = stmt.get();
+        // 强制返回启用状态
+        return {...config, enabled: 1};
+    } catch (error) {
+        console.error('获取转发配置失败:', error.message);
         // 返回默认配置
         return { enabled: 1, main_port: 7091 };
     }
@@ -60,8 +62,8 @@ export const updateForwardingConfig = (config) => {
     // 获取当前配置
     const current = getForwardingConfig();
     
-    // 只更新提供的字段
-    const newEnabled = config.enabled !== undefined ? (config.enabled ? 1 : 0) : current.enabled;
+    // 忽略启用/禁用状态，始终强制为启用
+    const newEnabled = 1; // 始终为启用状态
     const newMainPort = config.main_port !== undefined ? config.main_port : current.main_port;
     
     const stmt = db.prepare(`

@@ -4,8 +4,7 @@
 
 // 全局变量
 let forwardingConfig = {
-    enabled: false
-    // main_port字段已移除
+    enabled: true  // 默认启用实例转发
 };
 
 let forwardingServers = [];
@@ -14,109 +13,14 @@ let isLoading = false;
 // DOM 加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
     // 绑定事件
-    document.getElementById('saveForwardingConfigBtn').addEventListener('click', saveForwardingConfig);
     document.getElementById('refreshForwardingListBtn').addEventListener('click', loadForwardingServers);
-    document.getElementById('generateForwardingNginxBtn').addEventListener('click', generateNginxConfig);
     document.getElementById('addServerBtn').addEventListener('click', showAddServerModal);
     // 注释掉这个监听器，因为已在HTML中使用了onsubmit
     // document.getElementById('serverForm').addEventListener('submit', handleServerSubmit);
     
-    // 加载配置
-    loadForwardingConfig();
+    // 直接加载服务器列表，不再加载配置
     loadForwardingServers();
 });
-
-// 加载转发配置
-function loadForwardingConfig() {
-    showLoading(true);
-    
-    fetch('/api/instance-forwarding/config', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + localStorage.getItem('token')
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('获取配置失败，HTTP 状态码: ' + response.status);
-        }
-        return response.json();
-    })
-    .then(data => {
-        showLoading(false);
-        if (data.success) {
-            forwardingConfig = data.config;
-            updateForwardingConfigUI();
-        } else {
-            showMessage('error', '获取配置失败: ' + data.error);
-        }
-    })
-    .catch(error => {
-        showLoading(false);
-        showMessage('error', '获取配置出错: ' + error.message);
-    });
-}
-
-// 更新转发配置 UI
-function updateForwardingConfigUI() {
-    // 更新配置字段
-    document.getElementById('forwardingEnabled').checked = forwardingConfig.enabled === 1;
-    // 主转发端口字段已移除
-    
-    // 更新访问示例
-    const exampleText = document.getElementById('forwardingExampleText');
-    if (forwardingConfig.enabled === 1) {
-        exampleText.innerHTML = `
-            <p style="margin: 5px 0; font-family: monospace;">http://服务器地址:端口/用户名/st/</p>
-            <p style="margin: 5px 0; color: #718096;">* 使用转发服务器中配置的地址和端口</p>
-        `;
-    } else {
-        exampleText.innerHTML = `
-            <p style="margin: 5px 0; color: #718096;">转发功能已禁用</p>
-        `;
-    }
-}
-
-// 保存转发配置
-function saveForwardingConfig() {
-    const enabled = document.getElementById('forwardingEnabled').checked;
-    // 主转发端口字段已移除
-    
-    showLoading(true);
-    
-    fetch('/api/instance-forwarding/config', {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + localStorage.getItem('token')
-        },
-        body: JSON.stringify({
-            enabled: enabled
-            // main_port字段已移除
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('保存配置失败，HTTP 状态码: ' + response.status);
-        }
-        return response.json();
-    })
-    .then(data => {
-        showLoading(false);
-        if (data.success) {
-            forwardingConfig = data.config;
-            updateForwardingConfigUI();
-            showMessage('success', '配置已保存');
-        } else {
-            showMessage('error', '保存配置失败: ' + data.error);
-        }
-    })
-    .catch(error => {
-        showLoading(false);
-        showMessage('error', '保存配置出错: ' + error.message);
-    });
-}
 
 // 加载转发服务器列表
 function loadForwardingServers() {
@@ -401,36 +305,7 @@ function deleteServer(id) {
     });
 }
 
-// 重新生成Nginx配置
-function generateNginxConfig() {
-    showLoading(true);
-    
-    fetch('/api/config/nginx/generate', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + localStorage.getItem('token')
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('生成配置失败，HTTP 状态码: ' + response.status);
-        }
-        return response.json();
-    })
-    .then(data => {
-        showLoading(false);
-        if (data.success) {
-            showMessage('success', 'Nginx 配置已重新生成');
-        } else {
-            showMessage('error', '生成配置失败: ' + data.error);
-        }
-    })
-    .catch(error => {
-        showLoading(false);
-        showMessage('error', '生成配置出错: ' + error.message);
-    });
-}
+// 重新生成Nginx配置函数已移除 - 配置将自动生成
 
 // 显示消息
 function showMessage(type, message) {

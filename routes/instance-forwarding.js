@@ -21,7 +21,8 @@ router.use(requireAdmin);
 // 获取转发配置
 router.get('/config', (req, res) => {
     try {
-        const config = getForwardingConfig();
+        // 确保始终返回启用状态
+        const config = {...getForwardingConfig(), enabled: true};
         res.json({ 
             success: true,
             config
@@ -35,14 +36,9 @@ router.get('/config', (req, res) => {
 // 更新转发配置
 router.put('/config', (req, res) => {
     try {
-        const { enabled } = req.body;
-        
-        // 移除对main_port的验证
-        
-        // 更新配置
+        // 忽略请求中的启用/禁用状态，始终强制启用
         const config = {
-            enabled: enabled !== undefined ? (enabled === true || enabled === 'true' || enabled === 1) : undefined
-            // main_port字段已移除
+            enabled: true
         };
         
         updateForwardingConfig(config);
@@ -50,8 +46,8 @@ router.put('/config', (req, res) => {
         const updatedConfig = getForwardingConfig();
         res.json({
             success: true,
-            message: '转发配置已更新',
-            config: updatedConfig
+            message: '转发始终保持启用状态',
+            config: {...updatedConfig, enabled: true}
         });
     } catch (error) {
         console.error('Update forwarding config error:', error);
