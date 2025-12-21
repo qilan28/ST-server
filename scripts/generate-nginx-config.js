@@ -127,53 +127,11 @@ map $user $user_port {
     userPortMappings += `}
 `;
 
-    // 生成外部转发配置
-    let externalForwardingConfig = '';
+    // 不再生成外部转发配置，因为这些只用于显示备用地址
     if (FORWARDING_ENABLED && forwardingServers.length > 0) {
+        console.log(`实例转发已启用，共有 ${forwardingServers.length} 台转发服务器`);
         forwardingServers.forEach(server => {
-            // 生成每个转发服务器的配置
-            console.log(`生成转发服务器配置: ${server.address}:${server.port}`);
-            
-            // 生成nginx配置内容
-            externalForwardingConfig += `
-# =================================================
-# 外部转发服务器 ${server.address}:${server.port}
-# =================================================
-server {
-    listen ${server.port};
-    server_name ${server.address};
-
-    # 所有实例路径的通用处理
-    location ~ ^/([^/]+)/st/(.*)$ {
-        # 提取用户名并设置变量
-        set $user $1;
-        
-        # 检查映射端口是否有效
-        if ($user_port = 0) {
-            return 404 "User not found or invalid instance";
-        }
-        
-        # 转发到相应实例
-        proxy_pass http://127.0.0.1:$user_port/$2;
-        
-        # 代理设置
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # WebSocket 支持
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-    }
-
-    # 默认响应 404
-    location / {
-        return 404;
-    }
-}
-`;
+            console.log(`  - 转发服务器: ${server.address}:${server.port}`);
         });
     }
 
@@ -331,17 +289,8 @@ server {
     template = template.replace(/server_name localhost;/g, `server_name ${MAIN_DOMAIN};`);
     template = template.replace(/listen 80;/g, `listen ${NGINX_PORT};`);
     
-    // 添加外部转发配置 - 确保其位于http块内
-    if (FORWARDING_ENABLED && externalForwardingConfig) {
-        // 将模板分割为两部分，找到HTTP块的结束位置
-        const httpEndPos = template.lastIndexOf('}')
-        if (httpEndPos !== -1) {
-            // 插入外部转发配置到HTTP块内
-            template = template.substring(0, httpEndPos) + 
-                     externalForwardingConfig +
-                     template.substring(httpEndPos);
-        }
-    }
+    // 实例转发配置不需要加到Nginx配置中
+    // 它们是作为备用地址显示给用户，而不是由当前系统的Nginx处理
     
     // 写入生成的配置文件
     const outputPath = path.join(__dirname, '../nginx/nginx.conf');
