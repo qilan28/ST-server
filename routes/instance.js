@@ -26,6 +26,10 @@ router.get('/info', (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
+        // 获取多访问地址数据
+        const accessUrlData = generateAccessUrl(user.username, user.port);
+        
+        // 组装完整的响应
         res.json({
             id: user.id,
             username: user.username,
@@ -38,7 +42,8 @@ router.get('/info', (req, res) => {
             stSetupStatus: user.st_setup_status,
             status: user.status,
             createdAt: user.created_at,
-            accessUrl: generateAccessUrl(user.username, user.port)
+            accessUrl: accessUrlData.mainUrl,     // 主访问地址
+            accessUrls: accessUrlData            // 包含所有访问地址的对象
         });
     } catch (error) {
         console.error('Get user info error:', error);
@@ -126,7 +131,7 @@ router.post('/start', async (req, res) => {
         const { generateAccessUrl } = await import('../utils/url-helper.js');
         
         // 获取多个访问地址
-        const accessUrls = generateAccessUrl(username, actualPort);
+        const accessUrlData = generateAccessUrl(username, actualPort);
         
         res.json({
             success: true,
@@ -134,8 +139,8 @@ router.post('/start', async (req, res) => {
             port: actualPort, // 返回实际使用的端口
             originalPort: user.port, // 返回原始端口
             portChanged: actualPort !== user.port, // 指示端口是否发生变化
-            accessUrl: accessUrls.mainUrl, // 为了兼容性保留一个主地址
-            accessUrls: accessUrls // 新增字段，包含主地址和备用地址列表
+            accessUrl: accessUrlData.mainUrl, // 为了兼容性保留一个主地址字符串
+            accessUrls: accessUrlData // 新增字段，包含主地址和备用地址列表
         });
     } catch (error) {
         console.error('[API] 启动实例错误:', error);
@@ -236,7 +241,7 @@ router.post('/restart', async (req, res) => {
         const { generateAccessUrl } = await import('../utils/url-helper.js');
         
         // 获取多个访问地址
-        const accessUrls = generateAccessUrl(username, actualPort);
+        const accessUrlData = generateAccessUrl(username, actualPort);
         
         res.json({
             success: true,
@@ -244,8 +249,8 @@ router.post('/restart', async (req, res) => {
             port: actualPort, // 返回实际使用的端口
             originalPort: originalPort, // 返回原始端口
             portChanged: actualPort !== originalPort, // 指示端口是否发生变化
-            accessUrl: accessUrls.mainUrl, // 为了兼容性保留一个主地址
-            accessUrls: accessUrls // 新增字段，包含主地址和备用地址列表
+            accessUrl: accessUrlData.mainUrl, // 为了兼容性保留一个主地址字符串
+            accessUrls: accessUrlData // 新增字段，包含主地址和备用地址列表
         });
     } catch (error) {
         console.error('[API] 重启实例错误:', error);

@@ -54,7 +54,9 @@ router.get('/users', async (req, res) => {
             stVersion: user.st_version,
             stSetupStatus: user.st_setup_status,
             createdAt: user.created_at,
-            accessUrl: user.role === 'admin' ? null : generateAccessUrl(user.username, user.port)
+            // 管理员不需要访问地址，非管理员生成多访问地址
+            accessUrl: user.role === 'admin' ? null : generateAccessUrl(user.username, user.port).mainUrl,
+            accessUrls: user.role === 'admin' ? null : generateAccessUrl(user.username, user.port)
         }));
         
         res.json({ users: safeUsers });
