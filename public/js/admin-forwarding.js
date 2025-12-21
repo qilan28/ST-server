@@ -18,7 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('refreshForwardingListBtn').addEventListener('click', loadForwardingServers);
     document.getElementById('generateForwardingNginxBtn').addEventListener('click', generateNginxConfig);
     document.getElementById('addServerBtn').addEventListener('click', showAddServerModal);
-    document.getElementById('serverForm').addEventListener('submit', handleServerSubmit);
+    // 注释掉这个监听器，因为已在HTML中使用了onsubmit
+    // document.getElementById('serverForm').addEventListener('submit', handleServerSubmit);
     
     // 加载配置
     loadForwardingConfig();
@@ -245,9 +246,21 @@ function closeServerModal() {
     document.getElementById('serverModal').style.display = 'none';
 }
 
+// 防止重复提交的标志
+let isSubmitting = false;
+
 // 处理服务器表单提交
 function handleServerSubmit(event) {
     event.preventDefault();
+    
+    // 如果正在提交，则忽略该请求
+    if (isSubmitting) {
+        console.log('防止重复提交');
+        return;
+    }
+    
+    // 设置标志为正在提交
+    isSubmitting = true;
     
     const id = document.getElementById('serverId').value.trim();
     const address = document.getElementById('serverAddress').value.trim();
@@ -296,6 +309,9 @@ function handleServerSubmit(event) {
     })
     .then(data => {
         showLoading(false);
+        // 重置提交标志
+        isSubmitting = false;
+        
         if (data.success) {
             showMessage('success', id ? '服务器已更新' : '服务器已添加');
             loadForwardingServers(); // 重新加载列表
@@ -305,6 +321,9 @@ function handleServerSubmit(event) {
     })
     .catch(error => {
         showLoading(false);
+        // 重置提交标志
+        isSubmitting = false;
+        
         console.error('转发服务器操作失败:', error);
         
         // 显示友好的错误消息
@@ -312,7 +331,7 @@ function handleServerSubmit(event) {
         
         // 针对常见错误提供更有用的提示
         if (errorMsg.includes('Invalid address format')) {
-            errorMsg = '无效的服务器地址格式，请使用有效的 IP 地址、域名或 localhost';
+            errorMsg = '无效的服务器地址格式，请使用有效的 URL、IP 地址、域名或 localhost';
         }
         
         showMessage('error', '操作出错: ' + errorMsg);

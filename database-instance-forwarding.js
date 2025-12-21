@@ -115,10 +115,9 @@ export const findForwardingServerById = (id) => {
  * 添加新的转发服务器
  */
 export const addForwardingServer = (address, port) => {
-    // 去除地址中的协议前缀和尾部斜杠
+    // 去除地址尾部斜杠，但保留协议前缀
     const cleanAddress = address
-        .replace(/^https?:\/\//, '') // 移除 http:// 或 https://
-        .replace(/\/$/, '');         // 移除尾部斜杠
+        .replace(/\/$/, ''); // 只移除尾部斜杠
     
     const stmt = db.prepare(`
         INSERT INTO instance_forwarding_servers (address, port, is_active)
@@ -132,10 +131,9 @@ export const addForwardingServer = (address, port) => {
  * 更新转发服务器
  */
 export const updateForwardingServer = (id, address, port, isActive) => {
-    // 去除地址中的协议前缀和尾部斜杠
+    // 去除地址尾部斜杠，但保留协议前缀
     const cleanAddress = address
-        .replace(/^https?:\/\//, '') // 移除 http:// 或 https://
-        .replace(/\/$/, '');         // 移除尾部斜杠
+        .replace(/\/$/, ''); // 只移除尾部斜杠
 
     const stmt = db.prepare(`
         UPDATE instance_forwarding_servers

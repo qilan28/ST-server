@@ -105,7 +105,16 @@ router.post('/servers', (req, res) => {
         
         // 验证地址格式
         // 先清理地址，去除首尾空格
-        const cleanAddress = address.trim();
+        let cleanAddress = address.trim();
+        let originalAddress = cleanAddress; // 保存原始地址用于显示错误
+        
+        // 如果地址包含http://或https://前缀，这是有效的，但在存储前会被移除
+        const hasHttpPrefix = /^https?:\/\//i.test(cleanAddress);
+        
+        // 移除http(s)://前缀用于验证
+        if (hasHttpPrefix) {
+            cleanAddress = cleanAddress.replace(/^https?:\/\//i, '');
+        }
         
         // 验证是否是有效的 IP 地址
         const ipRegex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
@@ -127,8 +136,8 @@ router.post('/servers', (req, res) => {
         const isLocalhost = cleanAddress === 'localhost';
         
         if (!isValidIp && !isValidDomain && !isLocalhost) {
-            console.log('无效的地址格式:', address);
-            return res.status(400).json({ error: 'Invalid address format. Must be a valid IP address, domain name, or localhost' });
+            console.log('无效的地址格式:', originalAddress);
+            return res.status(400).json({ error: 'Invalid address format. Must be a valid URL (http/https), IP address, domain name, or localhost' });
         }
         
         // 验证端口
@@ -164,7 +173,16 @@ router.put('/servers/:id', (req, res) => {
         
         // 验证地址格式
         // 先清理地址，去除首尾空格
-        const cleanAddress = address.trim();
+        let cleanAddress = address.trim();
+        let originalAddress = cleanAddress; // 保存原始地址用于显示错误
+        
+        // 如果地址包含http://或https://前缀，这是有效的，但在存储前会被移除
+        const hasHttpPrefix = /^https?:\/\//i.test(cleanAddress);
+        
+        // 移除http(s)://前缀用于验证
+        if (hasHttpPrefix) {
+            cleanAddress = cleanAddress.replace(/^https?:\/\//i, '');
+        }
         
         // 验证是否是有效的 IP 地址
         const ipRegex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
@@ -186,8 +204,8 @@ router.put('/servers/:id', (req, res) => {
         const isLocalhost = cleanAddress === 'localhost';
         
         if (!isValidIp && !isValidDomain && !isLocalhost) {
-            console.log('无效的地址格式:', address);
-            return res.status(400).json({ error: 'Invalid address format. Must be a valid IP address, domain name, or localhost' });
+            console.log('无效的地址格式:', originalAddress);
+            return res.status(400).json({ error: 'Invalid address format. Must be a valid URL (http/https), IP address, domain name, or localhost' });
         }
         
         // 验证端口
