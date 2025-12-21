@@ -109,16 +109,28 @@ upstream st_${user.username} {
         
         locationBlocks += `
     # ${user.username} 的 SillyTavern 实例
-    location /${user.username}/st {
+    location = /${user.username}/st {
         # 添加尾部斜杠重定向
         return 301 /${user.username}/st/;
     }
     
-    location /${user.username}/st/ {${accessControl}
+    # 精确匹配用户实例路径 (修复 Cloudflare Tunnel 路由问题)
+    location ~ ^/${user.username}/st/?$ {
+        return 301 /${user.username}/st/;
+    }
+    
+    location ~ ^/${user.username}/st/(.*)$ {${accessControl}
+        # 高优先级路由规则，确保访问正确转发到用户实例
+        set $st_instance "http://st_${user.username}"; # 设置用户实例目标
+
+        # 打印调试日志
+        access_log /var/log/nginx/${user.username}_access.log;
+        error_log /var/log/nginx/${user.username}_error.log debug;
+
         # 路径重写：去除 /${user.username}/st/ 前缀
         rewrite ^/${user.username}/st/(.*)$ /$1 break;
         
-        proxy_pass http://st_${user.username};
+        proxy_pass $st_instance;
         proxy_http_version 1.1;
         
         # 设置 Cookie 标记用户上下文，用于救援模式
@@ -134,6 +146,7 @@ upstream st_${user.username} {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Original-URI $request_uri;
         
         # 超时设置
         proxy_connect_timeout 60s;
@@ -214,6 +227,20 @@ upstream st_${user.username} {
         proxy_cache_bypass $http_upgrade;
     }
     
+    # ${user.username} - WebSocket 路由专门处理
+    location ~ ^/${user.username}/st/api/ws(.*)$ {
+        # 精确转发 WebSocket 连接
+        rewrite ^/${user.username}/st/(.*)$ /$1 break;
+        proxy_pass http://st_${user.username};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 3600s; # WebSocket 需要更长的超时时间
+    }
+    
     # ${user.username} - 静态资源专门处理（优化性能）
     location ~ ^/${user.username}/st/(scripts|css|lib|img|assets|public|data|uploads|locales)/ {
         rewrite ^/${user.username}/st/(.*)$ /$1 break;
@@ -250,6 +277,18 @@ upstream st_${user.username} {
     template = template.replace('# {{LOCATION_BLOCKS}}', locationBlocks.trim());
     template = template.replace(/server_name localhost;/g, `server_name ${MAIN_DOMAIN};`);
     template = template.replace(/listen 80;/g, `listen ${NGINX_PORT};`);
+    
+    // 根据当前系统环境确定日志路径
+    if (isWindows) {
+        template = template.replace(/\/var\/log\/nginx\/access\.log/g, path.join(__dirname, '../logs/nginx_access.log').replace(/\\/g, '/'));
+        template = template.replace(/\/var\/log\/nginx\/error\.log/g, path.join(__dirname, '../logs/nginx_error.log').replace(/\\/g, '/'));
+        template = template.replace(/\/var\/log\/nginx\/(.*?)_access\.log/g, (match, username) => {
+            return path.join(__dirname, `../logs/nginx_${username}_access.log`).replace(/\\/g, '/');
+        });
+        template = template.replace(/\/var\/log\/nginx\/(.*?)_error\.log/g, (match, username) => {
+            return path.join(__dirname, `../logs/nginx_${username}_error.log`).replace(/\\/g, '/');
+        });
+    }
     
     // 写入生成的配置文件
     const outputPath = path.join(__dirname, '../nginx/nginx.conf');
