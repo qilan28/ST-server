@@ -104,9 +104,31 @@ router.post('/servers', (req, res) => {
         }
         
         // 验证地址格式
-        if (!address.match(/^[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9](\.[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9])*$/) && 
-            !address.match(/^([0-9]{1,3}\.){3}[0-9]{1,3}$/)) {
-            return res.status(400).json({ error: 'Invalid address format' });
+        // 先清理地址，去除首尾空格
+        const cleanAddress = address.trim();
+        
+        // 验证是否是有效的 IP 地址
+        const ipRegex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+        const ipMatch = cleanAddress.match(ipRegex);
+        let isValidIp = false;
+        
+        if (ipMatch) {
+            isValidIp = ipMatch.slice(1).every(octet => {
+                const num = parseInt(octet, 10);
+                return num >= 0 && num <= 255;
+            });
+        }
+        
+        // 验证是否是有效的域名
+        const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9](\.[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9])*$/;
+        const isValidDomain = domainRegex.test(cleanAddress);
+        
+        // 验证是否是 localhost
+        const isLocalhost = cleanAddress === 'localhost';
+        
+        if (!isValidIp && !isValidDomain && !isLocalhost) {
+            console.log('无效的地址格式:', address);
+            return res.status(400).json({ error: 'Invalid address format. Must be a valid IP address, domain name, or localhost' });
         }
         
         // 验证端口
@@ -141,9 +163,31 @@ router.put('/servers/:id', (req, res) => {
         }
         
         // 验证地址格式
-        if (!address.match(/^[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9](\.[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9])*$/) && 
-            !address.match(/^([0-9]{1,3}\.){3}[0-9]{1,3}$/)) {
-            return res.status(400).json({ error: 'Invalid address format' });
+        // 先清理地址，去除首尾空格
+        const cleanAddress = address.trim();
+        
+        // 验证是否是有效的 IP 地址
+        const ipRegex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+        const ipMatch = cleanAddress.match(ipRegex);
+        let isValidIp = false;
+        
+        if (ipMatch) {
+            isValidIp = ipMatch.slice(1).every(octet => {
+                const num = parseInt(octet, 10);
+                return num >= 0 && num <= 255;
+            });
+        }
+        
+        // 验证是否是有效的域名
+        const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9](\.[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9])*$/;
+        const isValidDomain = domainRegex.test(cleanAddress);
+        
+        // 验证是否是 localhost
+        const isLocalhost = cleanAddress === 'localhost';
+        
+        if (!isValidIp && !isValidDomain && !isLocalhost) {
+            console.log('无效的地址格式:', address);
+            return res.status(400).json({ error: 'Invalid address format. Must be a valid IP address, domain name, or localhost' });
         }
         
         // 验证端口

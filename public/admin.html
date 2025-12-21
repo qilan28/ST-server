@@ -752,7 +752,10 @@
                 <input type="hidden" id="serverId">
                 <div class="form-group">
                     <label for="serverAddress">服务器地址 *</label>
-                    <input type="text" id="serverAddress" class="form-input" required placeholder="例如：example.com 或 IP地址">
+                    <input type="text" id="serverAddress" class="form-input" required pattern="^([a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9](\.[a-zA-Z0-9][-a-zA-Z0-9.]*[a-zA-Z0-9])*|localhost|(\d{1,3}\.){3}\d{1,3})$" title="请输入有效的 IP 地址（如 8.210.210.211）、域名或 localhost" placeholder="例如：localhost，8.210.210.211 或 example.com">
+                    <small style="display: block; margin-top: 5px; color: #718096;">
+                        支持 IP 地址（如 8.210.210.211）、域名或 localhost
+                    </small>
                 </div>
                 <div class="form-group">
                     <label for="serverPort">端口 *</label>

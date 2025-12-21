@@ -285,11 +285,14 @@ function handleServerSubmit(event) {
             is_active: isActive
         })
     })
-    .then(response => {
+    .then(async response => {
+        const responseData = await response.json();
         if (!response.ok) {
-            throw new Error('操作失败，HTTP 状态码: ' + response.status);
+            // 从响应中提取错误消息
+            const errorMessage = responseData.error || '操作失败，HTTP 状态码: ' + response.status;
+            throw new Error(errorMessage);
         }
-        return response.json();
+        return responseData;
     })
     .then(data => {
         showLoading(false);
@@ -302,7 +305,17 @@ function handleServerSubmit(event) {
     })
     .catch(error => {
         showLoading(false);
-        showMessage('error', '操作出错: ' + error.message);
+        console.error('转发服务器操作失败:', error);
+        
+        // 显示友好的错误消息
+        let errorMsg = error.message;
+        
+        // 针对常见错误提供更有用的提示
+        if (errorMsg.includes('Invalid address format')) {
+            errorMsg = '无效的服务器地址格式，请使用有效的 IP 地址、域名或 localhost';
+        }
+        
+        showMessage('error', '操作出错: ' + errorMsg);
     });
 }
 
