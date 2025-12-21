@@ -20,7 +20,7 @@ const connectPM2 = () => {
         try {
             // 如果已经连接，直接返回
             if (pm2Connected) {
-                // console.log('[PM2] 已存在连接，直接使用');
+                console.log('[PM2] 已存在连接，直接使用');
                 resolve();
                 return;
             }
@@ -30,11 +30,11 @@ const connectPM2 = () => {
             
             // 使用超时保护
             const timeoutId = setTimeout(() => {
-                // console.error('[PM2] 连接超时');
+                console.error('[PM2] 连接超时');
                 reject(new Error('PM2 connection timeout'));
             }, 5000);
             
-            // console.log('[PM2] 尝试连接到 PM2...');
+            console.log('[PM2] 尝试连接到 PM2...');
             try {
                 pm2.connect((err) => {
                     clearTimeout(timeoutId);
@@ -44,7 +44,7 @@ const connectPM2 = () => {
                         pm2Connected = false;
                         reject(new Error(`无法连接到 PM2: ${err.message || '未知错误'}`));
                     } else {
-                        // console.log('[PM2] 连接成功');
+                        console.log('[PM2] 连接成功');
                         pm2Connected = true;
                         resolve();
                     }
@@ -67,7 +67,7 @@ const connectPM2 = () => {
 const disconnectPM2 = () => {
     try {
         if (pm2Connected) {
-            // console.log('[PM2] 断开连接');
+            console.log('[PM2] 断开连接');
             pm2.disconnect();
             pm2Connected = false;
             return true;
@@ -112,9 +112,9 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
     try {
         // 连接PM2
         try {
-            // console.log(`[Instance] 连接PM2...`);
+            console.log(`[Instance] 连接PM2...`);
             await connectPM2();
-            // console.log(`[Instance] PM2连接成功`);
+            console.log(`[Instance] PM2连接成功`);
         } catch (error) {
             console.error(`[Instance] PM2连接失败:`, error);
             throw new Error(`Failed to connect to PM2: ${error.message}`);
