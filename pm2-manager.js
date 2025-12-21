@@ -8,7 +8,6 @@ import { getSafeRandomPort } from './utils/port-helper.js';
 import { recordInstanceStart, removeInstanceStartTime } from './runtime-limiter.js';
 import { generateNginxConfig } from './scripts/generate-nginx-config.js';
 import { reloadNginx, startNginx, getNginxConfigPath } from './utils/nginx-reload.js';
-import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execPromise = promisify(exec);
