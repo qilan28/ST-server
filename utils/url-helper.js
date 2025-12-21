@@ -1,4 +1,5 @@
 import { getNginxConfig } from './config-manager.js';
+import { getForwardingConfig, getActiveForwardingServers } from '../database-instance-forwarding.js';
 
 /**
  * 生成用户的 SillyTavern 访问地址
@@ -7,6 +8,29 @@ import { getNginxConfig } from './config-manager.js';
  * @returns {string} 访问地址
  */
 export function generateAccessUrl(username, port) {
+    // 优先检查转发配置
+    try {
+        const forwardingConfig = getForwardingConfig();
+        
+        // 如果启用了转发
+        if (forwardingConfig.enabled === 1) {
+            // 获取活跃的转发服务器
+            const servers = getActiveForwardingServers();
+            
+            // 如果有活跃的转发服务器，使用第一个
+            if (servers && servers.length > 0) {
+                const server = servers[0];
+                const hasProtocol = /^https?:\/\//i.test(server.address);
+                const address = hasProtocol ? server.address : `http://${server.address}`;
+                return `${address}:${forwardingConfig.main_port}/${username}/st/`;
+            }
+        }
+    } catch (error) {
+        console.error('获取转发配置失败:', error.message);
+        // 如果出错则继续使用正常的 Nginx 配置
+    }
+    
+    // 默认回退到原有的 Nginx 配置
     const nginxConfig = getNginxConfig();
     
     if (nginxConfig.enabled) {
