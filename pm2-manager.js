@@ -244,6 +244,48 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
                 }
             }
             
+            // 确保SillyTavern所需的关键子目录都存在
+            const requiredDirs = [
+                path.join(dataDir, 'User Avatars'),
+                path.join(dataDir, 'backgrounds'),
+                path.join(dataDir, 'group chats'),
+                path.join(dataDir, 'chats'),
+                path.join(dataDir, 'characters'),
+                path.join(dataDir, 'groups'),
+                path.join(dataDir, 'settings'),
+                path.join(dataDir, 'worlds'),
+                path.join(dataDir, 'themes'),
+                path.join(dataDir, 'NovelAI Settings'),
+                path.join(dataDir, 'uploads')
+            ];
+            
+            for (const dir of requiredDirs) {
+                if (!fs.existsSync(dir)) {
+                    try {
+                        fs.mkdirSync(dir, { recursive: true });
+                        console.log(`[Instance] 创建必要子目录: ${dir}`);
+                    } catch (mkdirError) {
+                        console.warn(`[Instance] 创建子目录失败: ${dir} - ${mkdirError.message}`);
+                    }
+                }
+            }
+            
+            // 确保设置文件存在
+            const settingsFile = path.join(dataDir, 'settings.json');
+            if (!fs.existsSync(settingsFile)) {
+                try {
+                    fs.writeFileSync(settingsFile, JSON.stringify({
+                        "theme": "Default",
+                        "fast_ui_mode": true,
+                        "chat_display": "bubbles",
+                        "last_migration": 0
+                    }, null, 4));
+                    console.log(`[Instance] 创建基本设置文件: ${settingsFile}`);
+                } catch (writeError) {
+                    console.warn(`[Instance] 创建设置文件失败: ${writeError.message}`);
+                }
+            }
+            
             // 获取 Node.js 可执行文件路径
             const nodePath = process.execPath || 'node';
             console.log(`[Instance] 使用 Node.js 路径: ${nodePath}`);

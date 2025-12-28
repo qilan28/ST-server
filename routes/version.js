@@ -92,6 +92,48 @@ router.post('/setup', authenticateToken, async (req, res) => {
         if (!fs.existsSync(dataDir)) {
             fs.mkdirSync(dataDir, { recursive: true });
             console.log(`[${user.username}] 创建数据目录: ${dataDir}`);
+            
+            // 创建必要的子目录
+            const requiredDirs = [
+                path.join(dataDir, 'User Avatars'),
+                path.join(dataDir, 'backgrounds'),
+                path.join(dataDir, 'group chats'),
+                path.join(dataDir, 'chats'),
+                path.join(dataDir, 'characters'),
+                path.join(dataDir, 'groups'),
+                path.join(dataDir, 'settings'),
+                path.join(dataDir, 'worlds'),
+                path.join(dataDir, 'themes'),
+                path.join(dataDir, 'NovelAI Settings'),
+                path.join(dataDir, 'uploads')
+            ];
+            
+            for (const dir of requiredDirs) {
+                try {
+                    if (!fs.existsSync(dir)) {
+                        fs.mkdirSync(dir, { recursive: true });
+                        console.log(`[${user.username}] 创建必要子目录: ${dir}`);
+                    }
+                } catch (dirError) {
+                    console.warn(`[${user.username}] 创建子目录失败: ${dirError.message}`);
+                }
+            }
+            
+            // 创建基本设置文件
+            try {
+                const settingsFile = path.join(dataDir, 'settings.json');
+                if (!fs.existsSync(settingsFile)) {
+                    fs.writeFileSync(settingsFile, JSON.stringify({
+                        "theme": "Default",
+                        "fast_ui_mode": true,
+                        "chat_display": "bubbles",
+                        "last_migration": 0
+                    }, null, 4));
+                    console.log(`[${user.username}] 创建基本设置文件`);
+                }
+            } catch (settingError) {
+                console.warn(`[${user.username}] 创建设置文件失败: ${settingError.message}`);
+            }
         }
         
         // 更新状态为安装中
@@ -325,6 +367,48 @@ router.post('/switch', authenticateToken, async (req, res) => {
         if (!fs.existsSync(dataDir)) {
             fs.mkdirSync(dataDir, { recursive: true });
             console.log(`[${user.username}] 创建数据目录: ${dataDir}`);
+            
+            // 创建必要的子目录
+            const requiredDirs = [
+                path.join(dataDir, 'User Avatars'),
+                path.join(dataDir, 'backgrounds'),
+                path.join(dataDir, 'group chats'),
+                path.join(dataDir, 'chats'),
+                path.join(dataDir, 'characters'),
+                path.join(dataDir, 'groups'),
+                path.join(dataDir, 'settings'),
+                path.join(dataDir, 'worlds'),
+                path.join(dataDir, 'themes'),
+                path.join(dataDir, 'NovelAI Settings'),
+                path.join(dataDir, 'uploads')
+            ];
+            
+            for (const dir of requiredDirs) {
+                try {
+                    if (!fs.existsSync(dir)) {
+                        fs.mkdirSync(dir, { recursive: true });
+                        console.log(`[${user.username}] 创建必要子目录: ${dir}`);
+                    }
+                } catch (dirError) {
+                    console.warn(`[${user.username}] 创建子目录失败: ${dirError.message}`);
+                }
+            }
+            
+            // 创建基本设置文件
+            try {
+                const settingsFile = path.join(dataDir, 'settings.json');
+                if (!fs.existsSync(settingsFile)) {
+                    fs.writeFileSync(settingsFile, JSON.stringify({
+                        "theme": "Default",
+                        "fast_ui_mode": true,
+                        "chat_display": "bubbles",
+                        "last_migration": 0
+                    }, null, 4));
+                    console.log(`[${user.username}] 创建基本设置文件`);
+                }
+            } catch (settingError) {
+                console.warn(`[${user.username}] 创建设置文件失败: ${settingError.message}`);
+            }
         }
         
         // 删除旧版本（如果存在）
