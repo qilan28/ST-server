@@ -122,7 +122,7 @@ export const startInstance = async (username, originalPort, stDir, dataDir) => {
     } catch (error) {
         console.log(`[Instance] 检查实例状态时出错，忽略并继续:`, error);
         
-        // 尝试强制删除可能存在的进程
+        // 尝试强制删除可能存在的进程 
         try {
             await forcefullyDeleteProcess(`st-${username}`);
         } catch (deleteError) {
