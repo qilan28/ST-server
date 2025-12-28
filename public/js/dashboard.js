@@ -811,6 +811,42 @@ async function showVersionSelector() {
     const selector = document.getElementById('versionSelector');
     selector.style.display = 'block';
     
+    // 检查ST目录是否存在，如果不存在则显示提示信息
+    const setupStatus = document.getElementById('setupStatus').textContent.trim();
+    const currentVersion = document.getElementById('currentVersion').textContent.trim();
+    
+    if (setupStatus === '未安装' || currentVersion === '-' || currentVersion === '') {
+        // 在选择器顶部添加提示信息
+        const infoBox = document.createElement('div');
+        infoBox.className = 'info-box';
+        infoBox.style.cssText = 'background-color: #ebf8ff; border: 1px solid #4299e1; border-radius: 5px; padding: 15px; margin-bottom: 15px; color: #2b6cb0;';
+        infoBox.innerHTML = `
+            <h4 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                首次安装SillyTavern实例
+            </h4>
+            <p style="margin-bottom: 5px;">检测到您正在首次安装SillyTavern实例。系统将自动为您：</p>
+            <ul style="margin-top: 5px; margin-bottom: 5px; padding-left: 20px;">
+                <li>创建必要的数据目录结构</li>
+                <li>安装您选择的SillyTavern版本</li>
+                <li>配置基本运行环境</li>
+            </ul>
+            <p style="margin-top: 5px; margin-bottom: 0;">请选择一个版本开始安装。安装完成后，您将可以通过控制台启动实例。</p>
+        `;
+        
+        // 将信息框添加到选择器的开头
+        const firstChild = selector.firstChild;
+        if (firstChild) {
+            selector.insertBefore(infoBox, firstChild);
+        } else {
+            selector.appendChild(infoBox);
+        }
+    }
+    
     // 加载版本列表（如果还没加载）
     if (availableVersions.releases.length === 0 && availableVersions.branches.length === 0) {
         await loadVersionList();
@@ -877,12 +913,34 @@ async function loadVersionList() {
 
 // 切换版本
 async function handleSwitchVersion(version) {
-    if (!await showConfirm(`确定要切换到版本 ${version} 吗？\n\n这将删除当前版本并安装新版本。\n\n如果实例正在运行，系统会自动尝试停止实例再进行切换操作。`, '切换版本', { type: 'danger' })) {
+    // 检查是否是首次安装
+    const setupStatus = document.getElementById('setupStatus').textContent.trim();
+    const currentVersion = document.getElementById('currentVersion').textContent.trim();
+    const isFirstInstall = setupStatus === '未安装' || currentVersion === '-' || currentVersion === '';
+    
+    // 根据是否首次安装显示不同的确认提示
+    let confirmMessage;
+    let confirmTitle;
+    if (isFirstInstall) {
+        confirmMessage = `您即将首次安装 SillyTavern ${version} 版本\n\n系统将自动为您创建所需的数据目录结构。\n\n安装完成后，您可以通过控制台启动实例。`;
+        confirmTitle = '安装 SillyTavern';
+    } else {
+        confirmMessage = `确定要切换到版本 ${version} 吗？\n\n这将删除当前版本并安装新版本。\n\n如果实例正在运行，系统会自动尝试停止实例再进行切换操作。`;
+        confirmTitle = '切换版本';
+    }
+    
+    if (!await showConfirm(confirmMessage, confirmTitle, { type: 'danger' })) {
         return;
     }
     
     hideVersionSelector();
-    showMessage(`正在切换到版本 ${version}，请稍候...`, 'info', 'versionMessage');
+    
+    // 根据是否首次安装显示不同的消息
+    if (isFirstInstall) {
+        showMessage(`正在安装 SillyTavern ${version} 版本，请稍候...`, 'info', 'versionMessage');
+    } else {
+        showMessage(`正在切换到版本 ${version}，请稍候...`, 'info', 'versionMessage');
+    }
     
     try {
         const response = await apiRequest(`${API_BASE}/version/switch`, {
@@ -895,7 +953,16 @@ async function handleSwitchVersion(version) {
         const data = await response.json();
         
         if (response.ok) {
-            showMessage(`版本切换已开始，请等待安装完成（约3-5分钟）`, 'success', 'versionMessage');
+            // 检查是否是首次安装
+            const setupStatus = document.getElementById('setupStatus').textContent.trim();
+            const currentVersion = document.getElementById('currentVersion').textContent.trim();
+            const isFirstInstall = setupStatus === '未安装' || currentVersion === '-' || currentVersion === '';
+            
+            if (isFirstInstall) {
+                showMessage(`SillyTavern 版本安装已开始，请等待安装完成（约3-5分钟）`, 'success', 'versionMessage');
+            } else {
+                showMessage(`版本切换已开始，请等待安装完成（约3-5分钟）`, 'success', 'versionMessage');
+            }
             
             // 定期检查安装状态
             const checkInterval = setInterval(async () => {
@@ -904,10 +971,21 @@ async function handleSwitchVersion(version) {
                 
                 if (statusEl.textContent === '已完成') {
                     clearInterval(checkInterval);
-                    showMessage('版本切换完成！', 'success', 'versionMessage');
+                    
+                    // 根据是否为首次安装显示不同的成功消息
+                    if (isFirstInstall) {
+                        showMessage('恭喜！SillyTavern安装完成！现在您可以点击“启动实例”按钮开始使用。', 'success', 'versionMessage');
+                    } else {
+                        showMessage('版本切换完成！', 'success', 'versionMessage');
+                    }
                 } else if (statusEl.textContent === '失败') {
                     clearInterval(checkInterval);
-                    showMessage('版本切换失败，请查看日志', 'error', 'versionMessage');
+                    
+                    if (isFirstInstall) {
+                        showMessage('SillyTavern安装失败，请查看日志或联系管理员', 'error', 'versionMessage');
+                    } else {
+                        showMessage('版本切换失败，请查看日志', 'error', 'versionMessage');
+                    }
                 }
             }, 5000);
         } else {
