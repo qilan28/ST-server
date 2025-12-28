@@ -1,0 +1,239 @@
+/* 运行时长限制样式 */
+
+/* 状态概览卡片 */
+.status-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.status-item {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.status-label {
+    color: #718096;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.status-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+/* 实例列表组样式 */
+.instance-group {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.instance-group h6 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #4a5568;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 5px;
+}
+
+/* 文字状态样式 */
+.warning-text {
+    color: #dd6b20;
+    font-weight: 600;
+}
+
+.notice-text {
+    color: #3182ce;
+    font-weight: 600;
+}
+
+/* 无数据提示 */
+.no-instances, .no-exemptions {
+    text-align: center;
+    padding: 30px;
+    background: #f7fafc;
+    border-radius: 8px;
+    color: #718096;
+}
+
+/* 表单配置区域 */
+.config-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.config-form h3 {
+    margin-top: 0;
+    color: #2d3748;
+    font-size: 18px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 10px;
+}
+
+/* 谁免用户列表样式 */
+.exemptions-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.exemptions-list th {
+    background-color: #f7fafc;
+    color: #4a5568;
+    text-align: left;
+    padding: 10px;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.exemptions-list td {
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #2d3748;
+}
+
+.add-exemption-form h5 {
+    color: #4a5568;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+/* 按钮样式 */
+.btn-action {
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    font-size: 12px;
+}
+
+.btn-danger {
+    background-color: #fed7d7;
+    color: #c53030;
+}
+
+.btn-danger:hover {
+    background-color: #feb2b2;
+}
+
+.btn-stop {
+    background-color: #e2e8f0;
+    color: #2d3748;
+    font-size: 14px;
+}
+
+.btn-stop:hover {
+    background-color: #cbd5e0;
+}
+
+/* 状态标签 */
+.status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-running {
+    background-color: #c6f6d5;
+    color: #276749;
+}
+
+.status-stopped {
+    background-color: #fed7d7;
+    color: #c53030;
+}
+
+/* 统计数据区域 */
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stats-item {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.stats-label {
+    color: #718096;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.stats-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.stats-details {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stats-detail-item {
+    padding: 10px;
+    background: #f7fafc;
+    border-radius: 6px;
+}
+
+.stats-detail-label {
+    color: #4a5568;
+    font-size: 0.85rem;
+    margin-bottom: 3px;
+}
+
+.stats-detail-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+/* 表单控件样式 */
+.form-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 5px;
+    color: #4a5568;
+    font-weight: 600;
+}
+
+.help-text {
+    margin-top: 5px;
+    font-size: 0.85rem;
+    color: #718096;
+}

@@ -1,0 +1,29 @@
+/* 表格修复样式 */
+.users-table, .instances-table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.users-table tr, .instances-table tr {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.users-table td, .instances-table td {
+    vertical-align: middle;
+}
+
+/* 用户名单元格中的内容样式 */
+.user-cell-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    object-fit: cover;
+}

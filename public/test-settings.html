@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点设置测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .message.success {
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+        .message.error {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #f87171;
+        }
+        .message.info {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
+        }
+        .debug {
+            margin-top: 30px;
+            padding: 10px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>站点设置测试页面</h1>
+        
+        <div id="message" class="message" style="display: none;"></div>
+        
+        <div class="form-group">
+            <label for="projectName">项目名称</label>
+            <input type="text" id="projectName" value="公益云酒馆多开管理平台" placeholder="请输入项目名称">
+        </div>
+        
+        <div class="form-group">
+            <label for="siteName">网站名称</label>
+            <input type="text" id="siteName" value="SillyTavern 多开管理平台" placeholder="请输入网站名称">
+        </div>
+        
+        <button id="saveButton" type="button" onclick="saveSettings()">保存设置</button>
+        <button id="testAuthButton" type="button" onclick="testAuth()">测试认证</button>
+        <button id="checkTokenButton" type="button" onclick="checkToken()">检查令牌</button>
+        
+        <div id="debug" class="debug"></div>
+    </div>
+
+    <script>
+        // 显示消息
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type || 'info'}`;
+            messageEl.style.display = 'block';
+        }
+        
+        // 显示调试信息
+        function showDebug(text) {
+            const debugEl = document.getElementById('debug');
+            debugEl.textContent += text + '\n';
+        }
+        
+        // 保存设置
+        function saveSettings() {
+            showDebug('保存按钮被点击');
+            
+            // 获取表单数据
+            const projectName = document.getElementById('projectName').value.trim();
+            const siteName = document.getElementById('siteName').value.trim();
+            
+            if (!projectName || !siteName) {
+                showMessage('项目名称和网站名称不能为空', 'error');
+                return;
+            }
+            
+            showDebug(`将要保存的数据: projectName=${projectName}, siteName=${siteName}`);
+            
+            // 获取认证令牌
+            const token = localStorage.getItem('token');
+            showDebug(`Token存在: ${!!token}`);
+            
+            if (!token) {
+                showMessage('未找到认证令牌，请先登录管理员账户', 'error');
+                return;
+            }
+            
+            // 禁用按钮
+            const saveButton = document.getElementById('saveButton');
+            saveButton.disabled = true;
+            saveButton.textContent = '保存中...';
+            
+            showMessage('正在保存设置...', 'info');
+            showDebug('开始保存过程');
+            
+            // 发送API请求
+            // 用相对路径自动适应当前协议
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const apiUrl = '/api/site-settings';
+            
+            showDebug(`当前环境: 协议=${protocol}, 主机=${host}, API路径=${apiUrl}`);
+            
+            fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    project_name: projectName,
+                    site_name: siteName
+                })
+            })
+            .then(response => {
+                showDebug(`收到响应: 状态=${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                showDebug(`响应数据: ${JSON.stringify(data)}`);
+                if (data.success) {
+                    showMessage('设置保存成功！', 'success');
+                } else {
+                    showMessage(`保存失败: ${data.error || '未知错误'}`, 'error');
+                }
+            })
+            .catch(error => {
+                showDebug(`错误: ${error.message}`);
+                showMessage(`保存时发生错误: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                // 恢复按钮
+                saveButton.disabled = false;
+                saveButton.textContent = '保存设置';
+            });
+        }
+        
+        // 测试认证
+        function testAuth() {
+            const token = localStorage.getItem('token');
+            showDebug(`测试认证 - Token存在: ${!!token}`);
+            
+            if (!token) {
+                showMessage('未找到认证令牌', 'error');
+                return;
+            }
+            
+            const authApiUrl = '/api/auth-check';
+            showDebug(`开始认证测试: ${authApiUrl}`);
+            
+            fetch(authApiUrl, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                cache: 'no-cache' // 避免缓存
+            })
+            .then(response => response.json())
+            .then(data => {
+                showDebug(`认证结果: ${JSON.stringify(data)}`);
+                showMessage(`认证状态: ${data.authenticated ? '成功' : '失败'} - 角色: ${data.role || '未知'}`, data.authenticated ? 'success' : 'error');
+            })
+            .catch(error => {
+                showDebug(`认证错误: ${error.message}`);
+                showMessage(`认证测试错误: ${error.message}`, 'error');
+            });
+        }
+        
+        // 检查令牌
+        function checkToken() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showMessage('未找到认证令牌', 'error');
+                return;
+            }
+            
+            try {
+                // 简单解析JWT令牌（不验证签名）
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    showMessage('令牌格式无效', 'error');
+                    return;
+                }
+                
+                const payload = JSON.parse(atob(parts[1]));
+                showDebug(`令牌payload: ${JSON.stringify(payload, null, 2)}`);
+                
+                const expTime = new Date(payload.exp * 1000);
+                const now = new Date();
+                const isExpired = now > expTime;
+                
+                showMessage(
+                    `用户名: ${payload.username || '未知'}\n` +
+                    `角色: ${payload.role || '未知'}\n` +
+                    `过期时间: ${expTime.toLocaleString()}\n` +
+                    `状态: ${isExpired ? '已过期' : '有效'}`,
+                    isExpired ? 'error' : 'info'
+                );
+            } catch (e) {
+                showMessage(`令牌解析错误: ${e.message}`, 'error');
+                showDebug(`令牌解析错误: ${e.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

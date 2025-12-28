@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>访问被拒绝 - SillyTavern</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 60px 40px;
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #2d3748;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .error-code {
+            font-size: 18px;
+            color: #718096;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.8;
+            margin-bottom: 40px;
+        }
+
+        .message strong {
+            color: #e53e3e;
+            font-weight: 600;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            display: inline-block;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            transform: translateY(-2px);
+        }
+
+        .info-box {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .info-box h3 {
+            color: #2d3748;
+            font-size: 16px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-box li {
+            color: #4a5568;
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .info-box li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #48bb78;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .icon {
+                font-size: 60px;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🚫</div>
+        <h1>访问被拒绝</h1>
+        <div class="error-code">Error 403 - Forbidden</div>
+        
+        <div class="message">
+            <p>抱歉，您无权访问此 SillyTavern 实例。</p>
+            <p style="margin-top: 15px;">此实例属于 <strong id="username">其他用户</strong>，仅限该用户访问。</p>
+        </div>
+
+        <div class="buttons">
+            <a href="/dashboard.html" class="btn btn-primary">返回控制台</a>
+            <a href="javascript:location.reload()" class="btn btn-secondary">重新尝试</a>
+        </div>
+
+        <div class="info-box">
+            <h3>💡 可能的原因：</h3>
+            <ul>
+                <li>您没有登录</li>
+                <li>您访问的不是自己的实例</li>
+                <li>您的登录已过期</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 从 URL 中提取用户名并显示
+        const path = window.location.pathname;
+        const match = path.match(/\/(\w+)\/st/);
+        let targetUsername = null;
+        if (match && match[1]) {
+            targetUsername = match[1];
+            document.getElementById('username').textContent = targetUsername;
+        }
+
+        // 如果在 Nginx 错误页面中，从 query 参数获取用户名
+        const urlParams = new URLSearchParams(window.location.search);
+        const usernameParam = urlParams.get('username');
+        if (usernameParam) {
+            targetUsername = usernameParam;
+            document.getElementById('username').textContent = usernameParam;
+        }
+
+        // 智能处理：检测问题并通过中转页面修复
+        function tryAutoFix() {
+            const token = localStorage.getItem('token');
+            const currentUsername = localStorage.getItem('username');
+            
+            console.log('\n========== [Access Denied] 智能诊断 ==========');
+            console.log('[诊断] 当前登录用户:', currentUsername || '未登录');
+            console.log('[诊断] 目标访问用户:', targetUsername || '未知');
+            console.log('[诊断] localStorage token:', token ? '存在' : '不存在');
+            console.log('[诊断] Cookie st_token:', document.cookie.includes('st_token') ? '存在' : '不存在');
+            
+            if (token && currentUsername && targetUsername && currentUsername === targetUsername) {
+                console.log('[诊断] ⚠️  检测到用户已登录但权限验证失败');
+                console.log('[诊断] 💡 可能是 Cookie 问题，使用中转页面修复...');
+                
+                // 更新页面提示
+                const messageEl = document.querySelector('.message');
+                messageEl.innerHTML = `
+                    <p style="color: #48bb78; font-weight: 600;">✅ 检测到身份验证问题，正在自动修复...</p>
+                    <p style="margin-top: 15px;">正在通过中转页面设置身份验证信息...</p>
+                `;
+                
+                // 使用中转页面，确保 Cookie 被正确设置
+                const targetUrl = `/${targetUsername}/st/`;
+                const redirectUrl = `/redirect-with-auth.html?url=${encodeURIComponent(targetUrl)}`;
+                
+                console.log('[诊断] 🔄 重定向到中转页:', redirectUrl);
+                console.log('[诊断] 📍 最终目标:', targetUrl);
+                console.log('==========================================\n');
+                
+                // 延迟 1 秒后跳转，让用户看到提示
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 1000);
+                return;
+            } else if (!token) {
+                console.log('[诊断] ℹ️  用户未登录，需要重新登录');
+            } else if (currentUsername !== targetUsername) {
+                console.log('[诊断] ℹ️  用户尝试访问其他用户的实例');
+            }
+            
+            console.log('==========================================\n');
+        }
+
+        // 页面加载后执行诊断
+        tryAutoFix();
+    </script>
+</body>
+</html>

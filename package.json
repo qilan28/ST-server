@@ -1,0 +1,60 @@
+{
+  "name": "sillytavern-multi-instance-manager",
+  "version": "1.0.0",
+  "description": "SillyTavern多开管理平台 - 让用户注册后能使用独立的SillyTavern实例",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/auto-fix-nginx-title.js && node scripts/ensure-nginx-config.js && node server.js",
+    "dev": "node --watch server.js",
+    "setup": "node setup.js",
+    "create-admin": "node scripts/create-admin.js",
+    "check-database": "node scripts/check-database.js",
+    "check-config": "node scripts/check-config.js",
+    "fix-online-status": "node scripts/fix-online-status.js",
+    "force-update-login": "node scripts/force-update-login.js",
+    "fix-site-settings": "node scripts/fix-site-settings.js",
+    "set-default-favicon": "node scripts/set-default-favicon.js",
+    "generate-nginx": "node scripts/generate-nginx-config.js",
+    "fix-nginx-title": "node scripts/auto-fix-nginx-title.js",
+    "deploy-nginx": "sudo bash scripts/deploy-nginx.sh",
+    "start-nginx": "sudo bash scripts/start-nginx-standalone.sh",
+    "diagnose-nginx": "sudo bash scripts/diagnose-nginx.sh",
+    "enable-access-control": "sudo bash scripts/enable-access-control-v2.sh",
+    "disable-access-control": "node scripts/disable-access-control.js",
+    "fix-nginx-400": "sudo bash scripts/fix-nginx-400.sh",
+    "fix-nginx-restart": "node scripts/fix-nginx-restart-issue.js",
+    "reset-pm2": "node scripts/reset-pm2.js",
+    "fix-instances": "node reset-instances.js",
+    "ensure-nginx": "node scripts/ensure-nginx-config.js",
+    "fix-nginx-duplicate": "node fix-nginx-duplicate.js",
+    "check-nginx": "node scripts/check-nginx-config.js"
+  },
+  "keywords": [
+    "sillytavern",
+    "multi-instance",
+    "manager",
+    "pm2"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cookie-parser": "^1.4.6",
+    "better-sqlite3": "^9.2.2",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "pm2": "^5.3.0",
+    "dotenv": "^16.3.1",
+    "archiver": "^6.0.1",
+    "extract-zip": "^2.0.1",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}

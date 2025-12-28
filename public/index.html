@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SillyTavern 多开管理平台</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- 预加载样式，防止闪烁 -->
+    <style>
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease-out;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 隐藏内容直到加载完成 */
+        .content-wrapper {
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        
+        .content-loaded .content-wrapper {
+            opacity: 1;
+        }
+        
+        .content-loaded .loading-overlay {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* 小型加载动画 */
+        .loading-spinner-small {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(113, 128, 150, 0.3);
+            border-radius: 50%;
+            border-top-color: #718096;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+    </style>
+    <!-- 在head中预加载站点设置 -->
+    <script>
+        window.siteSettings = {
+            loaded: false,
+            data: null
+        };
+    </script>
+</head>
+<body>
+    <!-- 加载叠加层 -->
+    <div class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- 内容包装器 -->
+    <div class="content-wrapper">
+    <div class="container">
+        <div class="auth-card">
+            <div class="logo">
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <img src="/logo.png" alt="Logo" style="max-width: 120px; height: auto;" class="site-logo">
+                </div>
+                <h1 class="site-name">SillyTavern</h1>
+                <p class="subtitle">多开管理平台</p>
+            </div>
+
+            <!-- 公告轮播区域 -->
+            <div id="announcementContainer" style="display: none; margin-bottom: 20px; position: relative;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 15px; color: white; position: relative;">
+                    <h3 style="margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        📢 <span id="announcementTitle"></span>
+                    </h3>
+                    <p id="announcementContent" style="margin: 0; line-height: 1.6; font-size: 14px; white-space: pre-wrap;"></p>
+                    <small id="announcementDate" style="display: block; margin-top: 10px; opacity: 0.8; font-size: 12px;"></small>
+                    
+                    <!-- 轮播控制 -->
+                    <div id="announcementControls" style="display: none; margin-top: 15px; display: flex; align-items: center; justify-content: space-between;">
+                        <button onclick="prevAnnouncement()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 18px;">❮</button>
+                        <div id="announcementIndicators" style="display: flex; gap: 8px;"></div>
+                        <button onclick="nextAnnouncement()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 18px;">❯</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 登录表单 -->
+            <div id="loginForm" class="form-container active">
+                <h2>登录</h2>
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group modern-input">
+                        <div class="input-container username-container styled-input">
+                            <span class="input-icon user-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </span>
+                            <input type="text" id="loginUsername" name="username" placeholder="请输入账号" required>
+                        </div>
+                    </div>
+                    <div class="form-group modern-input">
+                        <div class="input-container password-container styled-input">
+                            <span class="input-icon lock-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                            </span>
+                            <input type="password" id="loginPassword" name="password" placeholder="请输入密码" required>
+                            <span class="password-toggle" onclick="togglePasswordVisibility('loginPassword', this)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">登录</button>
+                </form>
+                <p class="switch-form">
+                    还没有账号？ <a href="#" onclick="switchToRegister()">立即注册</a>
+                </p>
+            </div>
+
+            <!-- 注册表单 -->
+            <div id="registerForm" class="form-container">
+                <h2>注册</h2>
+                <form onsubmit="handleRegister(event)">
+                    <div class="form-group modern-input">
+                        <div class="input-container username-container styled-input">
+                            <span class="input-icon user-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </span>
+                            <input type="text" id="registerUsername" name="username" required 
+                                  placeholder="请输入QQ账号" minlength="5" maxlength="13" pattern="[0-9]+" oninput="updateQQAvatar()">
+                        </div>
+                        <small class="form-tip">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 8v4"></path>
+                                <path d="M12 16h.01"></path>
+                            </svg>
+                            5-13个字符，仅限数字
+                        </small>
+                    </div>
+                    <!-- QQ头像预览 -->
+                    <div class="form-group" style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                        <div id="qqAvatarContainer" style="display: none; margin-top: 10px;">
+                            <img id="qqAvatar" src="" alt="QQ头像" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid #667eea; box-shadow: 0 3px 10px rgba(0,0,0,0.15);">
+                        </div>
+                    </div>
+                    <div class="form-group modern-input">
+                        <div class="input-container password-container styled-input">
+                            <span class="input-icon lock-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                            </span>
+                            <input type="password" id="registerPassword" name="password" placeholder="请输入密码" required minlength="6">
+                            <span class="password-toggle" onclick="togglePasswordVisibility('registerPassword', this)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </span>
+                        </div>
+                        <small class="form-tip">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 8v4"></path>
+                                <path d="M12 16h.01"></path>
+                            </svg>
+                            至少6个字符
+                        </small>
+                    </div>
+                    <div class="form-group modern-input">
+                        <div class="input-container password-container styled-input">
+                            <span class="input-icon lock-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                            </span>
+                            <input type="password" id="registerPasswordConfirm" name="passwordConfirm" placeholder="请再次输入密码" required>
+                            <span class="password-toggle" onclick="togglePasswordVisibility('registerPasswordConfirm', this)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">注册</button>
+                </form>
+                <p class="switch-form">
+                    已有账号？ <a href="#" onclick="switchToLogin()">立即登录</a>
+                </p>
+            </div>
+
+            <div id="message" class="message"></div>
+            
+            <!-- 用户统计信息 -->
+            <div id="userStatsContainer" class="user-stats-container" style="margin-top: 20px; text-align: center; font-size: 14px; color: #4a5568; border-top: 1px solid #e2e8f0; background-color: #f7fafc; padding: 12px 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2e8f0;">
+                <h3 style="margin: 0 0 10px 0; font-size: 15px; color: #2d3748; font-weight: 600;">用户注册状态</h3>
+                <div id="userStatsInfo" style="font-weight: 500;">
+                    当前注册用户: <span id="userCount" style="font-weight: 600; font-size: 16px; color: #3182ce;">0</span> / <span id="maxUsers" style="font-weight: 600; font-size: 16px; color: #3182ce;">0</span> 位
+                    <div style="margin-top: 8px;">
+                        <span id="registrationStatus" style="display: inline-block; margin-top: 5px; font-size: 13px; background-color: #e6fffa; padding: 3px 10px; border-radius: 20px; border: 1px solid #b2f5ea; font-weight: 500;">✔️ 可注册</span>
+                    </div>
+                </div>
+                <div id="userStatsLoading" style="display: none; padding: 10px 0;">
+                    <span class="loading-spinner-small"></span> 加载用户数据中...
+                </div>
+            </div>
+            
+            <!-- 友情链接区域 -->
+            <div id="friendsLinksContainer" class="friends-links-container" style="display: none;">
+                <h3>友情链接</h3>
+                <div id="friendsLinks" class="friends-links"></div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- 内容包装器结束 -->
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/apply-site-settings.js"></script>
+    
+    <!-- 确保用户统计信息显示 -->
+    <script>
+        // 直接将用户统计容器设置为可见
+        document.getElementById('userStatsContainer').style.display = 'block';
+        
+        // 添加延迟加载，确保 API 可用
+        setTimeout(function() {
+            if (typeof loadUserStats === 'function') {
+                loadUserStats();
+            }
+        }, 500);
+    </script>
+    <script src="/js/fix-site-settings.js"></script>
+    <script src="/js/friends-links.js"></script>
+</body>
+</html>

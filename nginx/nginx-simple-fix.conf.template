@@ -1,0 +1,194 @@
+# Nginx 简化配置 - 通过请求头识别用户
+# 适用于不想使用 sub_filter 的场景
+# 包含标题修复和静态文件404修复
+
+worker_processes 1;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    
+    # WebSocket 支持
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+    
+    # 允许大文件上传
+    client_max_body_size 100M;
+    
+    # 定义用户端口映射
+    map $http_referer $backend_port {
+        default 3000;  # 默认管理平台
+        "~*/123/st" 3001;
+        "~*/222/st" 3002;
+        "~*/333/st" 3003;
+        # 添加更多用户...
+    }
+
+    server {
+        listen 7092;
+        server_name _;
+
+        # =========================================================
+        # 管理平台（首页）
+        # =========================================================
+        location = / {
+            proxy_pass http://127.0.0.1:3000/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
+        }
+
+        # 管理平台的静态资源和API
+        location ~ ^/(api|css|js|admin\.html|login\.html|register\.html) {
+            proxy_pass http://127.0.0.1:3000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
+        }
+
+        # =========================================================
+        # 用户 SillyTavern 实例
+        # =========================================================
+        location /123/st/ {
+            proxy_pass http://127.0.0.1:3001/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
+            
+            # 添加WebSocket支持
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            
+            # 替换HTML标题
+            sub_filter '<title>SillyTavern</title>' '<title>公益云酒馆多开管理平台</title>';
+            sub_filter '<title>SillyTavern </title>' '<title>公益云酒馆多开管理平台</title>';
+            sub_filter '<title>SillyTavern - ' '<title>公益云酒馆多开管理平台 - ';
+            sub_filter_types text/html;
+            sub_filter_once off;
+        }
+
+        location /222/st/ {
+            proxy_pass http://127.0.0.1:3002/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
+            
+            # 添加WebSocket支持
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            
+            # 替换HTML标题
+            sub_filter '<title>SillyTavern</title>' '<title>公益云酒馆多开管理平台</title>';
+            sub_filter '<title>SillyTavern </title>' '<title>公益云酒馆多开管理平台</title>';
+            sub_filter '<title>SillyTavern - ' '<title>公益云酒馆多开管理平台 - ';
+            sub_filter_types text/html;
+            sub_filter_once off;
+        }
+
+        location /333/st/ {
+            proxy_pass http://127.0.0.1:3003/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
+            
+            # 添加WebSocket支持
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            
+            # 替换HTML标题
+            sub_filter '<title>SillyTavern</title>' '<title>公益云酒馆多开管理平台</title>';
+            sub_filter '<title>SillyTavern </title>' '<title>公益云酒馆多开管理平台</title>';
+            sub_filter '<title>SillyTavern - ' '<title>公益云酒馆多开管理平台 - ';
+            sub_filter_types text/html;
+            sub_filter_once off;
+        }
+
+        # =========================================================
+        # 静态文件404修复 - Cookie救援模式
+        # =========================================================
+        location ~ ^/(api|locales|lib|css|scripts|img|assets|public|data|uploads|fonts|icons|csrf-token|version|node_modules|script\.js|thumbnail|favicon.ico|site_settings\.js|site-settings|auto-backup|status) {
+            # 根据Referer决定转发到哪个端口
+            proxy_pass http://127.0.0.1:$backend_port;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
+            
+            # 确保保留请求参数
+            proxy_pass_request_headers on;
+            proxy_pass_request_body on;
+        }
+
+        # =========================================================
+        # 静态文件处理 - 针对各个用户实例的静态文件
+        # =========================================================
+        location ~ ^/([a-zA-Z0-9_-]+)/st/(scripts|css|lib|img|assets|public|data|uploads|locales|favicon.ico|site_settings\.js|site-settings|auto-backup|status)/ {
+            # 提取用户名并从路径中移除
+            rewrite ^/([a-zA-Z0-9_-]+)/st/(.+)$ /$2 break;
+            
+            # 使用Map设置的端口
+            proxy_pass http://127.0.0.1:$backend_port;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            
+            # 缓存设置
+            proxy_cache_bypass $http_upgrade;
+            expires 7d;
+        }
+        
+        # dashboard 特殊处理
+        location ~ ^/([a-zA-Z0-9_-]+)/st/dashboard\.html {    
+            # 路径重写
+            rewrite ^/([a-zA-Z0-9_-]+)/st/dashboard\.html$ /dashboard.html break;
+            
+            # 使用Map设置的端口
+            proxy_pass http://127.0.0.1:$backend_port;
+            proxy_http_version 1.1;
+            
+            # WebSocket 支持
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Host $host;
+            
+            # 代理头配置
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            # 确保正确传递Cookie
+            proxy_set_header Cookie $http_cookie;
+            
+            # 替换HTML标题
+            sub_filter '<title>SillyTavern</title>' '<title>公益云酒馆多开管理平台</title>';
+            sub_filter '<title>SillyTavern </title>' '<title>公益云酒馆多开管理平台</title>';
+            sub_filter '<title>SillyTavern - ' '<title>公益云酒馆多开管理平台 - ';
+            sub_filter_types text/html;
+            sub_filter_once off;
+        }
+    }
+}

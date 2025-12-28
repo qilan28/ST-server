@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动端适配测试</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .test-info {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #000;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            z-index: 9999;
+            font-size: 12px;
+        }
+        .test-content {
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        屏幕宽度: <span id="screenWidth"></span>px | 
+        视口宽度: <span id="viewportWidth"></span>px
+    </div>
+    
+    <div class="dashboard-container">
+        <div class="test-content">
+            <div class="container">
+                <div class="stats-card">
+                    <h2>📊 测试移动端适配</h2>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">测试1</div>
+                            <div class="stat-value">100</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">测试2</div>
+                            <div class="stat-value">200</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">测试3</div>
+                            <div class="stat-value">300</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-card">
+                    <h2>按钮测试</h2>
+                    <div class="control-buttons">
+                        <button class="btn btn-primary">主要按钮</button>
+                        <button class="btn btn-success">成功按钮</button>
+                        <button class="btn btn-danger">危险按钮</button>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <h2>响应式断点说明</h2>
+                    <div class="message success show">
+                        <strong>768px以下：</strong> 平板和大屏手机模式<br>
+                        - 统计网格变为2列<br>
+                        - 按钮堆叠显示<br>
+                        - 字体大小调整<br><br>
+                        
+                        <strong>480px以下：</strong> 小屏手机模式<br>
+                        - 统计网格变为1列<br>
+                        - 所有按钮全宽<br>
+                        - 更小的字体和间距
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateScreenInfo() {
+            document.getElementById('screenWidth').textContent = window.screen.width;
+            document.getElementById('viewportWidth').textContent = window.innerWidth;
+        }
+        
+        updateScreenInfo();
+        window.addEventListener('resize', updateScreenInfo);
+    </script>
+</body>
+</html>

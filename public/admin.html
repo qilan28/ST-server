@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员面板 - SillyTavern 管理平台</title>
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon">
+    <meta name="description" content="公益云酒馆多开管理平台 - SillyTavern实例管理系统">
+    <meta name="theme-color" content="#4a69bd">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/table-fix.css">
+    <link rel="stylesheet" href="/css/loading.css">
+    <link rel="stylesheet" href="/css/admin-runtime-limit.css">
+    <!-- 权限验证脚本 (必须放在最前面) -->
+    <script src="/js/auth-check.js"></script>
+    
+    <!-- 网络请求协议处理工具在head中先加载 -->
+    <script src="/js/protocol-helper.js"></script>
+    <script>
+        // 确保使用安全请求
+        if (window.protocolHelper) {
+            console.log('协议帮手加载成功，当前协议: ' + window.protocolHelper.detectCurrentProtocol());
+        } else {
+            console.warn('协议帮手未加载，可能存在协议不匹配问题');
+        }
+    </script>
+    <script src="/js/apply-site-settings.js"></script>
+    <script src="/js/fix-site-settings.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部导航区 -->
+        <div class="admin-header-buttons">
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <!-- 添加Logo -->
+                <div class="header-logo-container">
+                    <img src="/logo.png" alt="Logo" class="site-logo">
+                    <h2 style="color: #4a5568;">管理员面板</h2>
+                </div>
+                
+                <!-- 用户信息和操作按钮 -->
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img id="adminUserAvatar" src="" alt="头像" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                        <span id="adminUsername" style="color: #4a5568; font-weight: 600;"></span>
+                    </div>
+                    <a href="/dashboard.html" id="backToDashboard" class="btn btn-secondary" style="display: none;">返回用户面板</a>
+                    <button onclick="logout()" class="btn btn-danger">退出登录</button>
+                </div>
+            </div>
+        </div>
+        
+        <main class="main">
+            <!-- 刷新控制 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button onclick="manualRefresh()" class="btn btn-secondary" title="立即刷新数据">🔄 刷新</button>
+                    <div>
+                        <label for="refreshIntervalSelect" style="margin-right: 10px; white-space: nowrap;">自动刷新间隔：</label>
+                        <select id="refreshIntervalSelect" class="form-input" style="width: auto;" onchange="handleRefreshIntervalChange()">
+                            <option value="0">关闭</option>
+                            <option value="10000">10 秒</option>
+                            <option value="15000">15 秒</option>
+                            <option value="30000" selected>30 秒</option>
+                            <option value="60000">1 分钟</option>
+                            <option value="300000">5 分钟</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span>刷新状态：</span>
+                    <span id="refreshStatusIndicator" class="status-badge status-running">30秒</span>
+                </div>
+            </div>
+            <!-- 管理员说明 -->
+            <div class="info-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 4px solid #5a67d8; padding: 15px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <p style="margin: 0; color: #ffffff; font-size: 14px;">
+                    <strong>🔧 管理员面板说明：</strong> 此面板仅用于系统管理。管理员账户不包含 SillyTavern 实例。如需使用 SillyTavern，请注册一个普通用户账户。
+                </p>
+            </div>
+
+            <!-- 系统统计 -->
+            <div class="stats-card">
+                <h2>📊 系统统计</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">总用户数</div>
+                        <div class="stat-value" id="totalUsers">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">管理员</div>
+                        <div class="stat-value" id="adminUsers">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">普通用户</div>
+                        <div class="stat-value" id="regularUsers">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">运行中实例</div>
+                        <div class="stat-value" id="runningInstances">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">已停止实例</div>
+                        <div class="stat-value" id="stoppedInstances">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">总CPU使用</div>
+                        <div class="stat-value" id="totalCpu">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">总内存使用</div>
+                        <div class="stat-value" id="totalMemory">0 MB</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 配置管理 -->
+            <div class="stats-card">
+                <h2>⚙️ 系统配置</h2>
+                <div id="configMessage" class="message"></div>
+                
+                <!-- 站点设置 -->
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🌎 网站设置</h3>
+                    <div id="siteSettingsMessage" class="message" style="margin-bottom: 15px; display: block; padding: 10px;"></div>
+                    
+                    <!-- 添加动画样式 -->
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                        
+                        #saveSiteSettings:disabled {
+                            cursor: wait;
+                        }
+                        
+                        .message.success {
+                            background-color: #dcfce7;
+                            color: #15803d;
+                            border: 1px solid #86efac;
+                        }
+                        
+                        .message.error {
+                            background-color: #fee2e2;
+                            color: #b91c1c;
+                            border: 1px solid #f87171;
+                        }
+                        
+                        .message.info {
+                            background-color: #e0f2fe;
+                            color: #0369a1;
+                            border: 1px solid #7dd3fc;
+                        }
+                    </style>
+                    <div style="display: grid; gap: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                项目名称
+                            </label>
+                            <input type="text" id="projectName" class="form-input" placeholder="公益云酒馆多开管理平台">
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                显示在各个页面的标题、带宽等处
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                网站名称
+                            </label>
+                            <input type="text" id="siteName" class="form-input" placeholder="SillyTavern 多开管理平台">
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                显示在浏览器标签页等处
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                用户数量限制
+                            </label>
+                            <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                                <input type="number" id="maxUsers" class="form-input" placeholder="0" min="0" style="flex-grow: 1;">
+                                <button type="button" id="saveMaxUsers" class="btn btn-primary" onclick="saveMaxUsers()" style="white-space: nowrap;">仅保存此项</button>
+                            </div>
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                最大允许注册的用户数量，设置为 0 表示无限制
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                网站图标
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <img id="currentFavicon" src="/favicon.ico" alt="当前图标" style="width: 32px; height: 32px; border: 1px solid #e2e8f0;">
+                                <div style="flex-grow: 1;">
+                                    <!-- 本地文件上传 -->
+                                    <form id="faviconForm" enctype="multipart/form-data" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                        <input type="file" id="faviconFile" class="form-input" accept="image/png,image/jpeg,image/gif,image/x-icon" style="flex-grow: 1;">
+                                        <button type="button" id="uploadFavicon" class="btn btn-primary">上传</button>
+                                    </form>
+                                    <small style="display: block; margin-top: 5px; margin-bottom: 10px; color: #718096;">
+                                        支持 PNG, JPG, GIF, ICO 格式，最大 1MB
+                                    </small>
+                                    
+                                    <!-- URL图标设置 -->
+                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                        <input type="text" id="faviconUrl" class="form-input" placeholder="输入图标URL地址..." style="flex-grow: 1;">
+                                        <button type="button" id="setFaviconUrl" class="btn btn-primary">设置</button>
+                                    </div>
+                                    <small style="display: block; margin-top: 5px; color: #718096;">
+                                        也可以直接输入图标URL地址，如 https://example.com/favicon.ico
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button id="saveSiteSettings" type="button" class="btn btn-primary" onclick="directSaveSettings()">保存网站设置</button>
+                        </div>
+                        
+                        <script>
+                            // 直接保存函数，绕过复杂的事件处理
+                            function directSaveSettings() {
+                                try {
+                                    // 显示正在保存的消息
+                                    const message = document.getElementById('siteSettingsMessage');
+                                    message.textContent = '正在保存设置...';
+                                    message.style.backgroundColor = '#e0f2fe';
+                                    message.style.color = '#0369a1';
+                                    message.style.display = 'block';
+                                    
+                                    // 获取表单数据
+                                    const projectName = document.getElementById('projectName').value;
+                                    const siteName = document.getElementById('siteName').value;
+                                    
+                                    // 发送 AJAX 请求
+                                    const xhr = new XMLHttpRequest();
+                                    // 使用协议帮手获取安全的URL
+                                    const apiUrl = window.protocolHelper ? 
+                                        window.protocolHelper.getApiUrl('/api/site-settings') : 
+                                        '/api/site-settings';
+                                    console.log('发送请求到:', apiUrl, '当前协议:', window.location.protocol);
+                                    
+                                    xhr.open('PUT', apiUrl, true);
+                                    xhr.setRequestHeader('Content-Type', 'application/json');
+                                    xhr.setRequestHeader('Authorization', 'Bearer ' + localStorage.getItem('token'));
+                                    
+                                    xhr.onload = function() {
+                                        if (xhr.status === 200) {
+                                            message.textContent = '设置已保存成功!';
+                                            message.style.backgroundColor = '#dcfce7';
+                                            message.style.color = '#15803d';
+                                        } else {
+                                            message.textContent = '保存失败: ' + xhr.responseText;
+                                            message.style.backgroundColor = '#fee2e2';
+                                            message.style.color = '#b91c1c';
+                                        }
+                                    };
+                                    
+                                    xhr.onerror = function() {
+                                        message.textContent = '网络错误: 无法连接到服务器';
+                                        message.style.backgroundColor = '#fee2e2';
+                                        message.style.color = '#b91c1c';
+                                        message.style.display = 'block';
+                                    };
+                                    
+                                    xhr.send(JSON.stringify({
+                                        project_name: projectName,
+                                        site_name: siteName
+                                    }));
+                                } catch (e) {
+                                    console.error('保存过程发生错误:', e);
+                                    const message = document.getElementById('siteSettingsMessage');
+                                    if (message) {
+                                        message.textContent = '错误: ' + e.message;
+                                        message.style.backgroundColor = '#fee2e2';
+                                        message.style.color = '#b91c1c';
+                                        message.style.display = 'block';
+                                    }
+                                }
+                            }
+                        </script>
+                    </div>
+                </div>
+                
+                <!-- Nginx 配置 -->
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;" class="nginx-settings">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🌐 Nginx 反向代理配置</h3>
+                    <div id="nginxConfigMessage" class="message" style="margin-bottom: 10px; display: none;"></div>
+                    <div class="loading-indicator" style="margin-bottom: 10px; display: none; text-align: center; padding: 10px; background: #f7fafc; border-radius: 4px;">
+                        <div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(102, 126, 234, 0.3); border-radius: 50%; border-top-color: #667eea; animation: spin 1s linear infinite; margin-right: 8px;"></div>
+                        正在加载 Nginx 配置...
+                    </div>
+                    
+                    <!-- 基本设置 -->
+                    <div style="display: grid; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                启用 Nginx 模式
+                            </label>
+                            <label class="switch">
+                                <input type="checkbox" id="nginxEnabled">
+                                <span class="slider"></span>
+                            </label>
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                启用后，访问地址格式为：http://域名/用户名/st
+                            </small>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                域名
+                            </label>
+                            <input type="text" id="nginxDomain" class="form-input" placeholder="例如：yourdomain.com">
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                端口
+                            </label>
+                            <input type="number" id="nginxPort" class="form-input" placeholder="80" min="1" max="65535">
+                            <small style="display: block; margin-top: 5px; color: #718096;">
+                                默认 HTTP 端口为 80，HTTPS 端口为 443
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- 高级设置 -->
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 15px; color: #1e40af;">🔧 高级配置</h4>
+                            <button id="toggleAdvancedBtn" class="btn btn-sm btn-secondary" style="font-size: 12px; padding: 4px 8px;">显示高级选项</button>
+                        </div>
+                        
+                        <div id="advancedSettings" style="display: none;">
+                            <div style="display: grid; gap: 15px;">
+                                <!-- 配置模板选择 -->
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                        配置模板
+                                    </label>
+                                    <select id="nginxTemplate" class="form-input">
+                                        <option value="basic">基础反向代理</option>
+                                        <option value="advanced">高级反向代理(静态文件缓存)</option>
+                                        <option value="https">HTTPS 配置</option>
+                                        <option value="multiuser">多用户模式</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- SSL证书路径 -->
+                                <div id="sslCertOptions" style="display: none;">
+                                    <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                        SSL 证书路径
+                                    </label>
+                                    <input type="text" id="sslCertPath" class="form-input" placeholder="/etc/letsencrypt/live/yourdomain.com/fullchain.pem">
+                                    <small style="display: block; margin-top: 5px; color: #718096;">
+                                        Let's Encrypt 证书通常在 /etc/letsencrypt/live/域名/ 目录下
+                                    </small>
+                                </div>
+                                
+                                <!-- 日志目录 -->
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                        日志目录
+                                    </label>
+                                    <input type="text" id="nginxLogDir" class="form-input" placeholder="/var/log/nginx" value="/var/log/nginx">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 配置预览 -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 15px; color: #1e40af;">🔍 配置预览</h4>
+                            <button id="refreshPreviewBtn" class="btn btn-sm btn-secondary" style="font-size: 12px; padding: 4px 8px;">刷新预览</button>
+                        </div>
+                        <div style="background: #1a202c; border-radius: 6px; padding: 10px; overflow-x: auto;">
+                            <pre id="nginxConfigPreview" style="margin: 0; color: #e2e8f0; font-family: monospace; font-size: 12px; line-height: 1.4;">
+# 点击“刷新预览”按钮查看 Nginx 配置预览
+                            </pre>
+                        </div>
+                    </div>
+                    
+                    <!-- 按钮组 -->
+                    <div style="display: flex; gap: 10px;">
+                        <button id="saveNginxConfigBtn" onclick="saveNginxConfig()" class="btn btn-primary">保存配置</button>
+                        <button id="generateNginxConfigBtn" onclick="generateNginxConfig()" class="btn btn-secondary">生成配置文件</button>
+                        <button id="testNginxConfigBtn" onclick="testNginxConfig()" class="btn btn-secondary">测试配置</button>
+                    </div>
+                </div>
+                
+                <!-- 实例转发配置 -->
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;" class="forwarding-settings">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🔄 实例转发配置</h3>
+                    <div id="forwardingConfigMessage" class="message" style="margin-bottom: 10px; display: none;"></div>
+                    <div class="loading-indicator" style="margin-bottom: 10px; display: none; text-align: center; padding: 10px; background: #f7fafc; border-radius: 4px;">
+                        <div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(102, 126, 234, 0.3); border-radius: 50%; border-top-color: #667eea; animation: spin 1s linear infinite; margin-right: 8px;"></div>
+                        正在加载实例转发配置...
+                    </div>
+                    
+                    <!-- 基本设置已移除 -->
+                    <!-- 转发服务器功能已启用，无需手动开关 -->
+                    
+                    <!-- 服务器列表 -->
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; font-size: 15px; color: #1e40af;">📋 转发服务器列表</h4>
+                            <button id="addServerBtn" class="btn btn-sm btn-primary" style="font-size: 12px; padding: 4px 8px;">添加服务器</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="users-table" id="forwardingServersTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>服务器地址</th>
+                                        <th>端口</th>
+                                        <th>状态</th>
+                                        <th>添加时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="forwardingServersTableBody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 30px;">加载中...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 访问示例 -->
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 15px; color: #1e40af;">💡 访问示例</h4>
+                        <div id="forwardingExampleText">
+                            <p style="margin: 5px 0; font-family: monospace;">http://localhost:7091/用户名/st/</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 按钮组 -->
+                    <div style="display: flex; gap: 10px;">
+                        <button id="refreshForwardingListBtn" class="btn btn-secondary">刷新列表</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户管理 -->
+            <div class="users-card">
+                <h2>👥 用户管理</h2>
+                <div id="adminMessage" class="message"></div>
+                
+                <!-- 搜索工具栏 -->
+                <div class="search-container" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                    <div style="position: relative; flex-grow: 1;">
+                        <input type="text" id="userSearchInput" class="form-input" placeholder="搜索用户名/QQ、邮箱或端口..." style="padding-left: 35px; padding-right: 35px; width: 100%;" title="支持搜索用户名、QQ号、邮箱或端口号">
+                        <span style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #718096;">🔍</span>
+                        <button id="clearSearchBtn" type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #718096; cursor: pointer; display: none; font-size: 16px;">✕</button>
+                    </div>
+                    <div id="searchResultCount" style="white-space: nowrap; color: #718096; font-size: 0.9rem;"></div>
+                    <select id="userRoleFilter" class="form-input" style="width: auto;">
+                        <option value="all">所有角色</option>
+                        <option value="user">只显示用户</option>
+                        <option value="admin">只显示管理员</option>
+                    </select>
+                    <select id="userStatusFilter" class="form-input" style="width: auto;">
+                        <option value="all">所有状态</option>
+                        <option value="running">运行中</option>
+                        <option value="stopped">已停止</option>
+                    </select>
+                </div>
+                
+                <div class="table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>邮箱</th>
+                                <th>角色</th>
+                                <th>端口</th>
+                                <th>最后登录</th>
+                                <th>实例状态</th>
+                                <th>ST版本</th>
+                                <th>安装状态</th>
+                                <th>注册时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="10" style="text-align: center; padding: 30px;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 公告管理 -->
+            <div class="users-card">
+                <h2>📢 公告管理</h2>
+                <div style="margin-bottom: 20px;">
+                    <button onclick="showCreateAnnouncementModal()" class="btn btn-primary">➡ 创建新公告</button>
+                </div>
+                <div class="table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>类型</th>
+                                <th>标题</th>
+                                <th>内容</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="announcementsTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 30px;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 友情链接管理 -->
+            <div class="users-card" id="friendsLinksManagementTab">
+                <h2>🔗 友情链接管理</h2>
+                <div id="friendsLinkMessage" class="message" style="display: none;"></div>
+                <div style="margin-bottom: 20px;">
+                    <button id="addFriendLinkBtn" class="btn btn-primary">✚ 添加友情链接</button>
+                </div>
+                <div id="friendsLinksTableContainer" class="table-container loading">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>名称</th>
+                                <th>链接</th>
+                                <th>描述</th>
+                                <th>排序</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="friendsLinksTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 30px;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 实例监控 -->
+            <div class="instances-card">
+                <h2>🖥️ 实例监控</h2>
+                <div class="table-container">
+                    <table class="instances-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>状态</th>
+                                <th>CPU</th>
+                                <th>内存</th>
+                                <th>运行时间</th>
+                                <th>重启次数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="instancesTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 30px;">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 运行时长限制配置 -->
+            <div class="users-card">
+                <h2>⏱ 运行时长限制</h2>
+                <div id="runtimeLimitConfig">
+                    <div class="loading-indicator">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 自动备份配置 -->
+            <div class="users-card">
+                <h2>⏰ 自动备份配置</h2>
+                <div id="autoBackupMessage" class="message" style="display: none;"></div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="autoBackupEnabled">
+                        <span>启用自动备份</span>
+                    </label>
+                    <small style="color: #718096; margin-left: 30px;">定时自动备份所有符合条件的用户数据</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="backupIntervalHours">备份间隔（小时）*</label>
+                    <input type="number" id="backupIntervalHours" class="form-input" min="1" max="168" value="24" placeholder="1-168小时">
+                    <small style="color: #718096;">最小1小时，最大168小时（7天）</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="backupType">备份类型 *</label>
+                    <select id="backupType" class="form-input">
+                        <option value="all">所有用户</option>
+                        <option value="logged_in_today">当日登录过的用户</option>
+                        <option value="running">运行中的实例</option>
+                    </select>
+                    <small style="color: #718096;">只会备份已配置HF且启用自动备份的用户</small>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button onclick="saveAutoBackupConfig()" class="btn btn-primary">💾 保存配置</button>
+                    <button onclick="showAutoBackupUsers()" class="btn btn-secondary">👥 查看备份用户</button>
+                    <button onclick="triggerAutoBackup()" class="btn btn-warning">⚡ 立即执行</button>
+                </div>
+
+                <div id="autoBackupStatus" style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px; display: none;">
+                    <h3 style="margin: 0 0 10px 0; font-size: 16px;">📊 备份状态</h3>
+                    <div id="autoBackupStatusContent"></div>
+                </div>
+
+                <div id="autoBackupUsersList" style="margin-top: 20px; display: none;">
+                    <h3 style="margin: 0 0 10px 0;">符合备份条件的用户</h3>
+                    <div id="autoBackupUsersContent"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 公告创建/编辑模态框 -->
+    <div id="announcementModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2 id="modalTitle">创建公告</h2>
+            <form id="announcementForm" onsubmit="handleAnnouncementSubmit(event)">
+                <input type="hidden" id="announcementId">
+                <div class="form-group">
+                    <label for="announcementType">公告类型 *</label>
+                    <select id="announcementType" class="form-input" required>
+                        <option value="">请选择</option>
+                        <option value="login">登录页公告</option>
+                        <option value="dashboard">用户面板公告</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="announcementTitle">标题 *</label>
+                    <input type="text" id="announcementTitle" class="form-input" required placeholder="输入公告标题" maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="announcementContent">内容 *</label>
+                    <textarea id="announcementContent" class="form-input" required placeholder="输入公告内容" rows="6" maxlength="500"></textarea>
+                    <small style="color: #718096;">最多500字</small>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="announcementIsActive" checked>
+                        <span>立即启用</span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" onclick="closeAnnouncementModal()" class="btn btn-secondary">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 友情链接添加/编辑模态框 -->
+    <div id="friendLinkModal" class="custom-modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="friendLinkModalTitle" class="modal-title">添加友情链接</h3>
+                <span class="modal-close" onclick="hideModal('friendLinkModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="friendLinkForm">
+                    <div class="form-group">
+                        <label for="friendLinkName">名称 *</label>
+                        <input type="text" id="friendLinkName" class="form-input" required placeholder="输入网站名称">
+                    </div>
+                    <div class="form-group">
+                        <label for="friendLinkUrl">URL *</label>
+                        <input type="url" id="friendLinkUrl" class="form-input" required placeholder="输入网站URL (以http://或https://开头)">
+                    </div>
+                    <div class="form-group">
+                        <label for="friendLinkLogo">Logo URL</label>
+                        <input type="url" id="friendLinkLogo" class="form-input" placeholder="输入Logo图片URL (可选)">
+                        <div id="friendLinkLogoPreview" style="margin-top: 10px; min-height: 40px; display: flex; align-items: center; justify-content: center; border: 1px dashed #ddd; padding: 10px; border-radius: 6px;">
+                            <p class="text-muted">无Logo</p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="friendLinkDescription">描述</label>
+                        <textarea id="friendLinkDescription" class="form-input" placeholder="输入网站描述 (可选)" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="friendLinkSortOrder">排序顺序</label>
+                        <input type="number" id="friendLinkSortOrder" class="form-input" value="0" min="0">
+                        <small>数字越小排序越靠前，相同排序按ID升序排列</small>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="friendLinkIsActive" checked>
+                            <span>启用状态</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-secondary" onclick="hideModal('friendLinkModal')">取消</button>
+                <button id="friendLinkSaveBtn" class="modal-btn modal-btn-primary" onclick="document.getElementById('friendLinkForm').dispatchEvent(new Event('submit'))">添加</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 添加服务器模态框 -->
+    <div id="serverModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 id="serverModalTitle">添加转发服务器</h2>
+            <form id="serverForm" onsubmit="handleServerSubmit(event)">
+                <input type="hidden" id="serverId">
+                <div class="form-group">
+                    <label for="serverAddress">服务器地址 *</label>
+                    <input type="text" id="serverAddress" class="form-input" required placeholder="例如：http://localhost，https://8.210.210.211 或 example.com">
+                    <small style="display: block; margin-top: 5px; color: #718096;">
+                        支持 HTTP/HTTPS URL（如 http://8.210.210.211）、IP 地址、域名或 localhost
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="serverPort">端口 *</label>
+                    <input type="number" id="serverPort" class="form-input" required placeholder="例如：7092" min="1" max="65535">
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="serverIsActive" checked>
+                        <span>启用状态</span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary">保存</button>
+                    <button type="button" onclick="closeServerModal()" class="btn btn-secondary">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 协议检测与修复工具，放在最前面 -->
+    <script src="/js/protocol-helper.js"></script>
+    <!-- 强制刷新工具 -->
+    <script src="/js/force-refresh.js"></script>
+    <!-- 消息处理函数必须先加载 -->
+    <script src="/js/message-helpers.js"></script>
+    <!-- 管理面板辅助函数 -->
+    <script src="/js/admin-helpers.js"></script>
+    <script src="/js/loading-helpers.js"></script>
+    
+    <!-- 确保modal.js在前，showModal.js在后加载 -->
+    <script src="/js/modal.js"></script>
+    <script src="/js/modal-helpers.js"></script>
+    <script src="/js/showModal.js"></script>
+    <script src="/js/admin.js"></script>
+    <script src="/js/user-search.js"></script>
+    <script src="/js/site-settings.js"></script>
+    <script src="/js/admin-friends.js"></script>
+    <!-- Nginx配置相关脚本 -->
+    <script src="/js/nginx-templates.js"></script>
+    <script src="/js/admin-nginx.js"></script>
+    <!-- 实例转发相关脚本 -->
+    <script src="/js/admin-forwarding.js"></script>
+    <!-- 新增修复脚本 -->
+    <script src="/js/admin-fixes.js"></script>
+    <!-- 运行时长限制脚本 -->
+    <script src="/js/admin-runtime-limit.js"></script>
+    
+    <!-- 调试与诊断工具脚本已移除 -->
+</body>
+</html>

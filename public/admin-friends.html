@@ -1,0 +1,87 @@
+<!-- 友情链接管理模块 - 将此内容添加到admin.html页面中的适当位置 -->
+<div id="friendsLinksManagement" class="admin-section">
+    <h2>🔗 友情链接管理</h2>
+    
+    <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <p>管理站点友情链接，这些链接将显示在登录页面底部。</p>
+        </div>
+        <div>
+            <button id="addFriendLinkBtn" class="btn btn-primary">
+                ✚ 添加友情链接
+            </button>
+        </div>
+    </div>
+
+    <!-- 友情链接表格 -->
+    <div id="friendsLinksTableContainer" class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>名称</th>
+                    <th>链接</th>
+                    <th>描述</th>
+                    <th>排序</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="friendsLinksTableBody">
+                <!-- 表格行将由JavaScript动态生成 -->
+                <tr>
+                    <td colspan="7" class="text-center">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 友情链接添加/编辑模态框 -->
+<div id="friendLinkModal" class="custom-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3 id="friendLinkModalTitle" class="modal-title">添加友情链接</h3>
+            <span class="modal-close" onclick="hideModal('friendLinkModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="friendLinkForm">
+                <div class="form-group">
+                    <label for="friendLinkName">名称 *</label>
+                    <input type="text" id="friendLinkName" class="form-input" required placeholder="输入网站名称">
+                </div>
+                <div class="form-group">
+                    <label for="friendLinkUrl">URL *</label>
+                    <input type="url" id="friendLinkUrl" class="form-input" required placeholder="输入网站URL (以http://或https://开头)">
+                </div>
+                <div class="form-group">
+                    <label for="friendLinkLogo">Logo URL</label>
+                    <input type="url" id="friendLinkLogo" class="form-input" placeholder="输入Logo图片URL (可选)">
+                    <div id="friendLinkLogoPreview" style="margin-top: 10px; min-height: 40px; display: flex; align-items: center; justify-content: center; border: 1px dashed #ddd; padding: 10px; border-radius: 6px;">
+                        <p class="text-muted">无Logo</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="friendLinkDescription">描述</label>
+                    <textarea id="friendLinkDescription" class="form-input" placeholder="输入网站描述 (可选)" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="friendLinkSortOrder">排序顺序</label>
+                    <input type="number" id="friendLinkSortOrder" class="form-input" value="0" min="0">
+                    <small>数字越小排序越靠前，相同排序按ID升序排列</small>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="friendLinkIsActive" checked>
+                        <span>启用状态</span>
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-secondary" onclick="hideModal('friendLinkModal')">取消</button>
+            <button id="friendLinkSaveBtn" class="modal-btn modal-btn-primary" onclick="document.getElementById('friendLinkForm').dispatchEvent(new Event('submit'))">添加</button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>备份实时日志示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 24px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .backup-section {
+            margin-bottom: 24px;
+        }
+
+        #backup-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #backup-button:hover:not(:disabled) {
+            background: #45a049;
+        }
+
+        #backup-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .logs-container {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 16px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            padding: 4px 0;
+        }
+
+        .log-time {
+            color: #888;
+            margin-right: 8px;
+        }
+
+        .log-message {
+            color: #e0e0e0;
+        }
+
+        /* 不同类型的日志颜色 */
+        .log-start .log-message {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .log-info .log-message {
+            color: #2196F3;
+        }
+
+        .log-success .log-message {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .log-warning .log-message {
+            color: #FF9800;
+        }
+
+        .log-error .log-message {
+            color: #f44336;
+            font-weight: bold;
+        }
+
+        /* 滚动条样式 */
+        .logs-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .logs-container::-webkit-scrollbar-track {
+            background: #2e2e2e;
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        .empty-logs {
+            color: #666;
+            text-align: center;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .config-notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💾 备份实时日志</h1>
+        <p class="subtitle">Server-Sent Events (SSE) 实时显示备份进度</p>
+
+        <div class="config-notice">
+            ⚠️ 使用前请确保已配置 Hugging Face Token、仓库名和邮箱
+        </div>
+
+        <div class="backup-section">
+            <button id="backup-button">☁️ 立即备份</button>
+        </div>
+
+        <div class="logs-container" id="backup-logs">
+            <div class="empty-logs">点击"立即备份"开始...</div>
+        </div>
+    </div>
+
+    <script src="/js/backup-realtime-example.js"></script>
+</body>
+</html>

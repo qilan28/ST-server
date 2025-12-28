@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员面板移动端测试</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .test-info {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #000;
+            color: #fff;
+            padding: 8px;
+            text-align: center;
+            z-index: 9999;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        宽度: <span id="width"></span>px | 
+        断点: <span id="breakpoint"></span>
+    </div>
+    
+    <div class="container">
+        <!-- 顶部退出按钮 -->
+        <div class="admin-header-buttons">
+            <a href="#" class="btn btn-secondary">返回面板</a>
+            <button class="btn btn-danger">退出登录</button>
+        </div>
+        
+        <main class="main">
+            <!-- 管理员说明 -->
+            <div class="info-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 4px solid #5a67d8; padding: 15px 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <p style="margin: 0; color: #ffffff; font-size: 14px;">
+                    <strong>🔧 移动端适配测试：</strong> 调整浏览器宽度查看不同断点的布局变化
+                </p>
+            </div>
+
+            <!-- 系统统计 -->
+            <div class="stats-card">
+                <h2>📊 系统统计</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">总用户数</div>
+                        <div class="stat-value">10</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">管理员</div>
+                        <div class="stat-value">2</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">普通用户</div>
+                        <div class="stat-value">8</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">运行中</div>
+                        <div class="stat-value">5</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">已停止</div>
+                        <div class="stat-value">5</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 配置管理 -->
+            <div class="stats-card">
+                <h2>⚙️ 系统配置</h2>
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #2d3748; font-size: 16px;">🌐 Nginx 反向代理配置</h3>
+                    <div style="display: grid; gap: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                域名
+                            </label>
+                            <input type="text" class="form-input" placeholder="例如：yourdomain.com" value="localhost">
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #4a5568; font-weight: 600;">
+                                端口
+                            </label>
+                            <input type="number" class="form-input" placeholder="80" value="7091">
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary">保存配置</button>
+                            <button class="btn btn-secondary">生成配置文件</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 用户管理 -->
+            <div class="users-card">
+                <h2>👥 用户管理</h2>
+                <div class="table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>邮箱</th>
+                                <th>角色</th>
+                                <th>端口</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>admin</td>
+                                <td>admin@example.com</td>
+                                <td><span class="role-badge role-admin">管理员</span></td>
+                                <td>0</td>
+                                <td><span class="status-badge status-stopped">已停止</span></td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-action">👑</button>
+                                        <button class="btn-action">🗑️</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>user1</td>
+                                <td>user1@example.com</td>
+                                <td><span class="role-badge role-user">用户</span></td>
+                                <td>3001</td>
+                                <td><span class="status-badge status-running">运行中</span></td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-action">▶️</button>
+                                        <button class="btn-action">🔄</button>
+                                        <button class="btn-action">👤</button>
+                                        <button class="btn-action">🗑️</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h2>✅ 移动端适配说明</h2>
+                <div class="message success show">
+                    <strong>桌面 (>768px)：</strong><br>
+                    • 统计卡片多列显示<br>
+                    • 表格正常宽度<br>
+                    • 退出按钮在右上角<br><br>
+                    
+                    <strong>平板 (481-768px)：</strong><br>
+                    • 统计卡片2列显示<br>
+                    • 表格可横向滚动<br>
+                    • 按钮堆叠显示<br>
+                    • 字体和间距优化<br><br>
+                    
+                    <strong>手机 (≤480px)：</strong><br>
+                    • 统计卡片单列显示<br>
+                    • 表格横向滚动<br>
+                    • 所有按钮全宽<br>
+                    • 更紧凑的布局<br>
+                    • 退出按钮更小
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function updateInfo() {
+            const width = window.innerWidth;
+            document.getElementById('width').textContent = width;
+            
+            let breakpoint = '桌面版';
+            if (width <= 480) {
+                breakpoint = '手机版 (≤480px)';
+            } else if (width <= 768) {
+                breakpoint = '平板版 (≤768px)';
+            }
+            document.getElementById('breakpoint').textContent = breakpoint;
+        }
+        
+        updateInfo();
+        window.addEventListener('resize', updateInfo);
+    </script>
+</body>
+</html>

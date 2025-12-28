@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设置 SillyTavern - 多开管理平台</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- 权限验证脚本 -->
+    <script src="/js/auth-check.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1>🎭 设置 SillyTavern</h1>
+                <div class="user-info">
+                    <span id="currentUsername"></span>
+                    <button class="btn btn-secondary" onclick="handleLogout()">退出登录</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-main">
+            <!-- 版本选择卡片 -->
+            <div class="setup-card" id="versionSelectCard">
+                <h2>📦 选择 SillyTavern 版本</h2>
+                <p class="setup-description">
+                    请选择您想要安装的 SillyTavern 版本。系统将自动从 GitHub 拉取代码并安装依赖。
+                </p>
+
+                <div class="version-tabs">
+                    <button class="tab-btn active" onclick="switchTab('releases')">正式版本</button>
+                    <button class="tab-btn" onclick="switchTab('branches')">开发分支</button>
+                </div>
+
+                <div id="loading" class="loading-state">
+                    <div class="spinner"></div>
+                    <p>正在加载版本列表...</p>
+                </div>
+
+                <div id="versionList" class="version-list" style="display: none;">
+                    <!-- Releases -->
+                    <div id="releasesContent" class="tab-content active">
+                        <div id="releasesList"></div>
+                    </div>
+
+                    <!-- Branches -->
+                    <div id="branchesContent" class="tab-content">
+                        <div id="branchesList"></div>
+                    </div>
+                </div>
+
+                <div id="errorMessage" class="message error" style="display: none;"></div>
+            </div>
+
+            <!-- 安装进度卡片 -->
+            <div class="setup-card" id="installCard" style="display: none;">
+                <h2>⚙️ 正在安装 SillyTavern</h2>
+                <div class="install-progress">
+                    <div class="progress-info">
+                        <span>版本：</span>
+                        <strong id="installVersion">-</strong>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <p id="installStatus" class="install-status">正在初始化...</p>
+                    <p class="install-note">
+                        ⏱️ 首次安装可能需要几分钟，请耐心等待...
+                    </p>
+                </div>
+            </div>
+
+            <!-- 安装完成卡片 -->
+            <div class="setup-card" id="completeCard" style="display: none;">
+                <h2>✅ 安装完成！</h2>
+                <p class="success-message">
+                    SillyTavern 已成功安装，您现在可以启动实例了。
+                </p>
+                <button class="btn btn-primary btn-large" onclick="goToDashboard()">
+                    进入控制台 →
+                </button>
+            </div>
+
+            <!-- 提示信息 -->
+            <div class="tips-card">
+                <h3>💡 版本说明</h3>
+                <ul>
+                    <li><strong>正式版本 (Releases)</strong>：经过测试的稳定版本，推荐新用户使用</li>
+                    <li><strong>开发分支 (Branches)</strong>：包含最新功能，可能不稳定</li>
+                    <li><strong>release 分支</strong>：最新的稳定开发分支</li>
+                    <li><strong>staging 分支</strong>：预发布测试分支</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/modal.js"></script>
+    <script src="/js/setup.js"></script>
+</body>
+</html>

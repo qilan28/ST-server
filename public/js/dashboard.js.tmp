@@ -1,0 +1,1403 @@
+﻿const API_BASE = '/api';
+let statusCheckInterval = null;
+
+// 璁剧疆 Cookie
+function setCookie(name, value, days = 365) {
+    try {
+        // 鏂规硶 1锛氫娇鐢?max-age锛堟洿绠€鍗曘€佹洿鍙潬锛?        document.cookie = `${name}=${value}; path=/; max-age=${days * 24 * 60 * 60}`;
+        
+        // 楠岃瘉鏄惁璁剧疆鎴愬姛
+        if (document.cookie.includes(`${name}=`)) {
+
+            return true;
+        }
+        
+        // 鏂规硶 2锛氬鏋滄柟娉?1 澶辫触锛屽皾璇曟坊鍔?SameSite
+        document.cookie = `${name}=${value}; path=/; max-age=${days * 24 * 60 * 60}; SameSite=Lax`;
+        
+        if (document.cookie.includes(`${name}=`)) {
+
+            return true;
+        }
+        
+
+
+        return false;
+    } catch (error) {
+
+        return false;
+    }
+}
+
+// 鍒犻櫎 Cookie
+function deleteCookie(name) {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+}
+
+// 鍏憡杞挱鐩稿叧鍙橀噺
+let dashboardAnnouncements = [];
+let currentDashboardAnnouncementIndex = 0;
+let dashboardAnnouncementInterval = null;
+
+// 鍔犺浇鐢ㄦ埛闈㈡澘鍏憡
+async function loadDashboardAnnouncements() {
+    try {
+        const response = await fetch(`${API_BASE}/announcements/dashboard`);
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        dashboardAnnouncements = data.announcements;
+        
+        if (dashboardAnnouncements && dashboardAnnouncements.length > 0) {
+            document.getElementById('dashboardAnnouncementContainer').style.display = 'block';
+            showDashboardAnnouncement(0);
+            
+            // 濡傛灉鏈夊涓叕鍛婏紝鏄剧ず鎺у埗鎸夐挳骞跺惎鍔ㄨ嚜鍔ㄨ疆鎾?            if (dashboardAnnouncements.length > 1) {
+                document.getElementById('dashboardAnnouncementControls').style.display = 'flex';
+                createDashboardIndicators();
+                startDashboardAutoPlay();
+            }
+        }
+    } catch (error) {
+
+    }
+}
+
+// 鏄剧ず鎸囧畾绱㈠紩鐨勫叕鍛?function showDashboardAnnouncement(index) {
+    if (!dashboardAnnouncements || dashboardAnnouncements.length === 0) return;
+    
+    currentDashboardAnnouncementIndex = index;
+    const announcement = dashboardAnnouncements[index];
+    
+    document.getElementById('dashboardAnnouncementTitle').textContent = announcement.title;
+    document.getElementById('dashboardAnnouncementContent').textContent = announcement.content;
+    
+    const date = new Date(announcement.created_at);
+    const dateStr = date.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    document.getElementById('dashboardAnnouncementDate').textContent = `鍙戝竷浜?${dateStr}`;
+    
+    updateDashboardIndicators();
+}
+
+// 鍒涘缓鎸囩ず鍣?function createDashboardIndicators() {
+    const container = document.getElementById('dashboardAnnouncementIndicators');
+    container.innerHTML = '';
+    
+    for (let i = 0; i < dashboardAnnouncements.length; i++) {
+        const dot = document.createElement('span');
+        dot.style.cssText = 'width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.3s;';
+        dot.onclick = () => {
+            stopDashboardAutoPlay();
+            showDashboardAnnouncement(i);
+            startDashboardAutoPlay();
+        };
+        container.appendChild(dot);
+    }
+}
+
+// 鏇存柊鎸囩ず鍣?function updateDashboardIndicators() {
+    const dots = document.getElementById('dashboardAnnouncementIndicators').children;
+    for (let i = 0; i < dots.length; i++) {
+        dots[i].style.background = i === currentDashboardAnnouncementIndex ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.5)';
+        dots[i].style.transform = i === currentDashboardAnnouncementIndex ? 'scale(1.3)' : 'scale(1)';
+    }
+}
+
+// 涓婁竴涓叕鍛?function prevDashboardAnnouncement() {
+    stopDashboardAutoPlay();
+    const newIndex = (currentDashboardAnnouncementIndex - 1 + dashboardAnnouncements.length) % dashboardAnnouncements.length;
+    showDashboardAnnouncement(newIndex);
+    startDashboardAutoPlay();
+}
+
+// 涓嬩竴涓叕鍛?function nextDashboardAnnouncement() {
+    stopDashboardAutoPlay();
+    const newIndex = (currentDashboardAnnouncementIndex + 1) % dashboardAnnouncements.length;
+    showDashboardAnnouncement(newIndex);
+    startDashboardAutoPlay();
+}
+
+// 鍚姩鑷姩杞挱
+function startDashboardAutoPlay() {
+    stopDashboardAutoPlay();
+    if (dashboardAnnouncements.length > 1) {
+        dashboardAnnouncementInterval = setInterval(() => {
+            const newIndex = (currentDashboardAnnouncementIndex + 1) % dashboardAnnouncements.length;
+            showDashboardAnnouncement(newIndex);
+        }, 5000); // 姣?绉掑垏鎹?    }
+}
+
+// 鍋滄鑷姩杞挱
+function stopDashboardAutoPlay() {
+    if (dashboardAnnouncementInterval) {
+        clearInterval(dashboardAnnouncementInterval);
+        dashboardAnnouncementInterval = null;
+    }
+}
+
+// 鑾峰彇token
+function getToken() {
+    return localStorage.getItem('token');
+}
+
+// 鑾峰彇鐢ㄦ埛鍚?function getUsername() {
+    return localStorage.getItem('username');
+}
+
+// API璇锋眰杈呭姪鍑芥暟
+async function apiRequest(url, options = {}) {
+    const token = getToken();
+    
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...options.headers
+    };
+    
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
+    
+    if (response.status === 401 || response.status === 403) {
+        // Token鏃犳晥锛岃烦杞埌鐧诲綍椤?        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        window.location.href = '/';
+        return null;
+    }
+    
+    return response;
+}
+
+// 鏄剧ず娑堟伅
+function showMessage(text, type = 'error', elementId = 'controlMessage') {
+    const messageEl = document.getElementById(elementId);
+    if (!messageEl) return;
+    messageEl.textContent = text;
+    messageEl.className = `message show ${type}`;
+    
+    // 3绉掑悗鑷姩闅愯棌
+    setTimeout(() => {
+        messageEl.className = 'message';
+    }, 3000);
+}
+
+// 鏍煎紡鍖栨椂闂?function formatUptime(milliseconds) {
+    if (!milliseconds) return '0鍒嗛挓';
+    
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    const minutes = totalMinutes % 60;
+    const seconds = totalSeconds % 60;
+    
+    if (days > 0) {
+        return hours > 0 ? `${days}澶?{hours}灏忔椂` : `${days}澶ー;
+    }
+    if (totalHours > 0) {
+        return minutes > 0 ? `${totalHours}灏忔椂${minutes}鍒嗛挓` : `${totalHours}灏忔椂`;
+    }
+    if (totalMinutes > 0) return `${totalMinutes}鍒嗛挓`;
+    return `${seconds}绉抈;
+}
+
+// 鏍煎紡鍖栧唴瀛?function formatMemory(bytes) {
+    if (!bytes) return '0 MB';
+    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+}
+
+// 鏍煎紡鍖栨棩鏈?function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('zh-CN');
+}
+
+// 鍔犺浇鐢ㄦ埛淇℃伅
+async function loadUserInfo() {
+    try {
+        const response = await apiRequest(`${API_BASE}/instance/info`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // 濡傛灉鏄函绠＄悊鍛樼敤鎴凤紙娌℃湁 SillyTavern 瀹炰緥锛夛紝閲嶅畾鍚戝埌绠＄悊鍛橀潰鏉?            if (data.role === 'admin' && data.stSetupStatus === 'N/A') {
+                window.location.href = '/admin.html';
+                return;
+            }
+            
+            // 妫€鏌?ST 鏄惁宸茶缃?            if (data.stSetupStatus === 'pending') {
+                // 閲嶅畾鍚戝埌璁剧疆椤甸潰
+                window.location.href = '/setup.html';
+                return;
+            }
+            
+            // 鏇存柊椤甸潰淇℃伅
+            document.getElementById('currentUsername').textContent = data.username;
+            document.getElementById('username').textContent = data.username;
+            document.getElementById('email').textContent = data.email;
+            document.getElementById('port').textContent = data.port;
+            document.getElementById('createdAt').textContent = formatDate(data.createdAt);
+            
+            // 濡傛灉鏄鐞嗗憳锛屾樉绀虹鐞嗗憳闈㈡澘閾炬帴
+            if (data.role === 'admin') {
+                const adminLink = document.getElementById('adminLink');
+                if (adminLink) {
+                    adminLink.style.display = 'inline-block';
+                }
+            }
+            
+            const accessUrl = data.accessUrl;
+            const accessLink = document.getElementById('accessUrl');
+            accessLink.textContent = accessUrl;
+            accessLink.href = accessUrl;
+            accessLink.title = accessUrl; // 鎮仠鏄剧ず瀹屾暣URL
+            
+            // 澧炲姞鐐瑰嚮浜嬩欢鏃ュ織鍜?Cookie 妫€鏌?            accessLink.onclick = function(e) {
+                e.preventDefault(); // 闃绘榛樿琛屼负
+                
+                const token = localStorage.getItem('token');
+                const cookies = document.cookie;
+
+
+
+
+
+
+                
+                // 妫€鏌?token
+                if (!token) {
+
+                    alert('鐧诲綍鐘舵€佸凡澶辨晥锛岃閲嶆柊鐧诲綍');
+
+                    window.location.href = '/';
+                    return;
+                }
+                
+                // 浣跨敤涓浆椤甸潰鎵撳紑锛岀‘淇?Cookie 琚纭缃?                // 涓浆椤典細鍏堣缃?Cookie锛岀劧鍚庡啀璺宠浆鍒板疄渚?                const redirectUrl = `/redirect-with-auth.html?url=${encodeURIComponent(accessUrl)}`;
+
+
+
+                
+                // 鎵撳紑涓浆椤?                window.open(redirectUrl, '_blank');
+            };
+            
+            // 鏇存柊鐗堟湰绠＄悊鍖哄煙
+            updateVersionInfo(data);
+            
+            // 鏇存柊鐘舵€?            updateStatusUI(data.status);
+        }
+    } catch (error) {
+
+    }
+}
+
+// 鏇存柊鐘舵€乁I
+function updateStatusUI(status) {
+    const statusEl = document.getElementById('status');
+    const statusBadge = statusEl.querySelector('.status-badge');
+    
+    if (status === 'running' || status === 'online') {
+        statusBadge.textContent = '杩愯涓?;
+        statusBadge.className = 'status-badge status-running';
+    } else {
+        statusBadge.textContent = '宸插仠姝?;
+        statusBadge.className = 'status-badge status-stopped';
+    }
+    
+    // 鏇存柊鎸夐挳鐘舵€?    updateButtonStates(status);
+}
+
+// 鏇存柊鎸夐挳鐘舵€?function updateButtonStates(status) {
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    
+    if (status === 'running' || status === 'online') {
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        restartBtn.disabled = false;
+    } else {
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        restartBtn.disabled = true;
+    }
+}
+
+// 鍔犺浇瀹炰緥鐘舵€?async function loadInstanceStatus() {
+    try {
+        const response = await apiRequest(`${API_BASE}/instance/status`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // 鏇存柊鐘舵€?            updateStatusUI(data.status);
+            
+            // 鏇存柊璧勬簮浣跨敤
+            document.getElementById('cpuUsage').textContent = (data.cpu || 0).toFixed(1) + '%';
+            document.getElementById('memoryUsage').textContent = formatMemory(data.memory);
+            document.getElementById('uptime').textContent = formatUptime(data.uptime);
+            document.getElementById('restarts').textContent = data.restarts || 0;
+        }
+    } catch (error) {
+
+    }
+}
+
+// 鍚姩瀹炰緥
+async function handleStart() {
+    const startBtn = document.getElementById('startBtn');
+    startBtn.disabled = true;
+    startBtn.textContent = '鍚姩涓?..';
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/instance/start`, {
+            method: 'POST'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('瀹炰緥鍚姩鎴愬姛锛?, 'success');
+            await loadUserInfo();
+            await loadInstanceStatus();
+        } else {
+            showMessage(data.error || '鍚姩澶辫触');
+        }
+    } catch (error) {
+
+        showMessage('鍚姩澶辫触锛岃閲嶈瘯');
+    } finally {
+        startBtn.disabled = false;
+        startBtn.textContent = '鈻讹笍 鍚姩瀹炰緥';
+    }
+}
+
+// 鍋滄瀹炰緥
+async function handleStop() {
+    if (!await showConfirm('纭畾瑕佸仠姝㈠疄渚嬪悧锛?, '鍋滄瀹炰緥')) return;
+    
+    const stopBtn = document.getElementById('stopBtn');
+    stopBtn.disabled = true;
+    stopBtn.textContent = '鍋滄涓?..';
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/instance/stop`, {
+            method: 'POST'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('瀹炰緥宸插仠姝?, 'success');
+            await loadUserInfo();
+            await loadInstanceStatus();
+        } else {
+            showMessage(data.error || '鍋滄澶辫触');
+        }
+    } catch (error) {
+
+        showMessage('鍋滄澶辫触锛岃閲嶈瘯');
+    } finally {
+        stopBtn.disabled = false;
+        stopBtn.textContent = '鈴癸笍 鍋滄瀹炰緥';
+    }
+}
+
+// 閲嶅惎瀹炰緥
+async function handleRestart() {
+    if (!await showConfirm('纭畾瑕侀噸鍚疄渚嬪悧锛?, '閲嶅惎瀹炰緥')) return;
+    
+    const restartBtn = document.getElementById('restartBtn');
+    restartBtn.disabled = true;
+    restartBtn.textContent = '閲嶅惎涓?..';
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/instance/restart`, {
+            method: 'POST'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('瀹炰緥閲嶅惎鎴愬姛锛?, 'success');
+            await loadUserInfo();
+            await loadInstanceStatus();
+        } else {
+            showMessage(data.error || '閲嶅惎澶辫触');
+        }
+    } catch (error) {
+
+        showMessage('閲嶅惎澶辫触锛岃閲嶈瘯');
+    } finally {
+        restartBtn.disabled = false;
+        restartBtn.textContent = '馃攧 閲嶅惎瀹炰緥';
+    }
+}
+
+// 閫€鍑虹櫥褰?async function handleLogout() {
+    if (await showConfirm('纭畾瑕侀€€鍑虹櫥褰曞悧锛?, '閫€鍑虹櫥褰?)) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        // 鍚屾椂娓呴櫎 st_token cookie
+        deleteCookie('st_token');
+        window.location.href = '/';
+    }
+}
+
+// 寮€濮嬬姸鎬佹鏌?function startStatusCheck() {
+    // 绔嬪嵆鎵ц涓€娆?    loadInstanceStatus();
+    
+    // 姣?绉掓鏌ヤ竴娆?    statusCheckInterval = setInterval(loadInstanceStatus, 5000);
+}
+
+// 鍋滄鐘舵€佹鏌?function stopStatusCheck() {
+    if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+        statusCheckInterval = null;
+    }
+}
+
+// 妫€鏌ヨ璇佺姸鎬?function checkAuth() {
+    const token = getToken();
+    if (!token) {
+        window.location.href = '/';
+        return false;
+    }
+    return true;
+}
+
+// ==================== 鐗堟湰绠＄悊鍔熻兘 ====================
+
+let availableVersions = { releases: [], branches: [] };
+
+// 鏇存柊鐗堟湰淇℃伅鏄剧ず
+function updateVersionInfo(data) {
+    // 鏄剧ず褰撳墠鐗堟湰
+    const currentVersionEl = document.getElementById('currentVersion');
+    if (data.stVersion) {
+        currentVersionEl.textContent = data.stVersion;
+    } else {
+        currentVersionEl.textContent = '鏈畨瑁?;
+    }
+    
+    // 鏄剧ず瀹夎鐘舵€?    const setupStatusEl = document.getElementById('setupStatus').querySelector('.status-badge');
+    const statusMap = {
+        'pending': { text: '鏈畨瑁?, class: 'status-pending' },
+        'installing': { text: '瀹夎涓?, class: 'status-installing' },
+        'completed': { text: '宸插畬鎴?, class: 'status-completed' },
+        'failed': { text: '澶辫触', class: 'status-failed' }
+    };
+    
+    const statusInfo = statusMap[data.stSetupStatus] || statusMap['pending'];
+    setupStatusEl.textContent = statusInfo.text;
+    setupStatusEl.className = `status-badge ${statusInfo.class}`;
+    
+    // 妫€鏌ヤ緷璧栫姸鎬?    checkDependencies();
+}
+
+// 妫€鏌ヤ緷璧栫姸鎬?async function checkDependencies() {
+    try {
+        const response = await apiRequest(`${API_BASE}/version/check-dependencies`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        const depStatusEl = document.getElementById('dependencyStatus').querySelector('.status-badge');
+        if (data.installed) {
+            depStatusEl.textContent = '宸插畨瑁?;
+            depStatusEl.className = 'status-badge status-installed';
+        } else {
+            depStatusEl.textContent = '鏈畨瑁?;
+            depStatusEl.className = 'status-badge status-not-installed';
+        }
+    } catch (error) {
+
+    }
+}
+
+// 鏄剧ず鐗堟湰閫夋嫨鍣?async function showVersionSelector() {
+    const selector = document.getElementById('versionSelector');
+    selector.style.display = 'block';
+    
+    // 鍔犺浇鐗堟湰鍒楄〃锛堝鏋滆繕娌″姞杞斤級
+    if (availableVersions.releases.length === 0 && availableVersions.branches.length === 0) {
+        await loadVersionList();
+    }
+}
+
+// 闅愯棌鐗堟湰閫夋嫨鍣?function hideVersionSelector() {
+    const selector = document.getElementById('versionSelector');
+    selector.style.display = 'none';
+}
+
+// 鍔犺浇鐗堟湰鍒楄〃
+async function loadVersionList() {
+    try {
+        const response = await fetch(`${API_BASE}/version/list`);
+        if (!response.ok) {
+            throw new Error('Failed to load versions');
+        }
+        
+        const data = await response.json();
+        availableVersions = data;
+        
+        // 娓叉煋姝ｅ紡鐗堟湰
+        const releasesList = document.getElementById('releasesList');
+        if (data.releases.length > 0) {
+            releasesList.innerHTML = data.releases.map(version => `
+                <div class="version-item">
+                    <div>
+                        <div class="version-name">${version.name}</div>
+                        <div class="version-date">${new Date(version.published_at).toLocaleDateString('zh-CN')}</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="handleSwitchVersion('${version.name}')">
+                        閫夋嫨
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            releasesList.innerHTML = '<div style="padding: 15px; text-align: center; color: #718096;">鏆傛棤鐗堟湰</div>';
+        }
+        
+        // 娓叉煋寮€鍙戝垎鏀?        const branchesList = document.getElementById('branchesList');
+        if (data.branches.length > 0) {
+            branchesList.innerHTML = data.branches.map(branch => `
+                <div class="version-item">
+                    <div>
+                        <div class="version-name">${branch.name}</div>
+                        <div class="version-date">鏈€鏂版彁浜? ${new Date(branch.commit.date).toLocaleDateString('zh-CN')}</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="handleSwitchVersion('${branch.name}')">
+                        閫夋嫨
+                    </button>
+                </div>
+            `).join('');
+        } else {
+            branchesList.innerHTML = '<div style="padding: 15px; text-align: center; color: #718096;">鏆傛棤鍒嗘敮</div>';
+        }
+        
+    } catch (error) {
+
+        showMessage('鍔犺浇鐗堟湰鍒楄〃澶辫触', 'error', 'versionMessage');
+    }
+}
+
+// 鍒囨崲鐗堟湰
+async function handleSwitchVersion(version) {
+    if (!await showConfirm(`纭畾瑕佸垏鎹㈠埌鐗堟湰 ${version} 鍚楋紵\n\n杩欏皢鍒犻櫎褰撳墠鐗堟湰骞跺畨瑁呮柊鐗堟湰锛岃纭繚宸插仠姝㈠疄渚嬨€俙, '鍒囨崲鐗堟湰', { type: 'danger' })) {
+        return;
+    }
+    
+    hideVersionSelector();
+    showMessage(`姝ｅ湪鍒囨崲鍒扮増鏈?${version}锛岃绋嶅€?..`, 'info', 'versionMessage');
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/version/switch`, {
+            method: 'POST',
+            body: JSON.stringify({ version })
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage(`鐗堟湰鍒囨崲宸插紑濮嬶紝璇风瓑寰呭畨瑁呭畬鎴愶紙绾?-5鍒嗛挓锛塦, 'success', 'versionMessage');
+            
+            // 瀹氭湡妫€鏌ュ畨瑁呯姸鎬?            const checkInterval = setInterval(async () => {
+                await loadUserInfo();
+                const statusEl = document.getElementById('setupStatus').querySelector('.status-badge');
+                
+                if (statusEl.textContent === '宸插畬鎴?) {
+                    clearInterval(checkInterval);
+                    showMessage('鐗堟湰鍒囨崲瀹屾垚锛?, 'success', 'versionMessage');
+                } else if (statusEl.textContent === '澶辫触') {
+                    clearInterval(checkInterval);
+                    showMessage('鐗堟湰鍒囨崲澶辫触锛岃鏌ョ湅鏃ュ織', 'error', 'versionMessage');
+                }
+            }, 5000);
+        } else {
+            showMessage(data.error || '鍒囨崲鐗堟湰澶辫触', 'error', 'versionMessage');
+        }
+    } catch (error) {
+
+        showMessage('鍒囨崲鐗堟湰澶辫触锛岃閲嶈瘯', 'error', 'versionMessage');
+    }
+}
+
+// 閲嶈渚濊禆
+async function handleReinstallDependencies() {
+    if (!await showConfirm('纭畾瑕侀噸鏂板畨瑁呬緷璧栧悧锛焅n\n璇风‘淇濆凡鍋滄瀹炰緥銆傝繖鍙兘闇€瑕佸嚑鍒嗛挓鏃堕棿銆?, '閲嶈渚濊禆')) {
+        return;
+    }
+    
+    showMessage('姝ｅ湪閲嶆柊瀹夎渚濊禆...', 'info', 'versionMessage');
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/version/reinstall-dependencies`, {
+            method: 'POST'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('渚濊禆閲嶈宸插紑濮嬶紝璇风瓑寰呭畬鎴愶紙绾?-3鍒嗛挓锛?, 'success', 'versionMessage');
+            
+            // 5绉掑悗閲嶆柊妫€鏌ヤ緷璧栫姸鎬?            setTimeout(async () => {
+                await checkDependencies();
+            }, 5000);
+        } else {
+            showMessage(data.error || '閲嶈渚濊禆澶辫触', 'error', 'versionMessage');
+        }
+    } catch (error) {
+
+        showMessage('閲嶈渚濊禆澶辫触锛岃閲嶈瘯', 'error', 'versionMessage');
+    }
+}
+
+// 鍒犻櫎鐗堟湰
+async function handleDeleteVersion() {
+    if (!await showConfirm('纭畾瑕佸垹闄ゅ綋鍓嶇増鏈悧锛焅n\n杩欏皢鍒犻櫎鎵€鏈?SillyTavern 浠ｇ爜鏂囦欢锛屼絾涓嶄細鍒犻櫎鎮ㄧ殑鏁版嵁銆俓n璇风‘淇濆凡鍋滄瀹炰緥銆?, '鍒犻櫎鐗堟湰', { type: 'danger' })) {
+        return;
+    }
+    
+    showMessage('姝ｅ湪鍒犻櫎鐗堟湰...', 'info', 'versionMessage');
+    
+    try {
+        const response = await apiRequest(`${API_BASE}/version/delete`, {
+            method: 'POST'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('鐗堟湰宸插垹闄?, 'success', 'versionMessage');
+            await loadUserInfo();
+        } else {
+            showMessage(data.error || '鍒犻櫎鐗堟湰澶辫触', 'error', 'versionMessage');
+        }
+    } catch (error) {
+
+        showMessage('鍒犻櫎鐗堟湰澶辫触锛岃閲嶈瘯', 'error', 'versionMessage');
+    }
+}
+
+// ==================== 鏃ュ織鏌ョ湅鍔熻兘 ====================
+
+let currentLogType = 'out';
+let autoRefreshInterval = null;
+let isAutoRefreshing = false;
+
+// 鍔犺浇鏃ュ織
+async function loadLogs(type = currentLogType, lines = 100) {
+    try {
+        const response = await apiRequest(`${API_BASE}/instance/logs?type=${type}&lines=${lines}`);
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        const logsContent = document.getElementById('logsContent');
+        const logsStatus = document.getElementById('logsStatus');
+        const logsTotalLines = document.getElementById('logsTotalLines');
+        
+        if (!data.exists) {
+            logsContent.textContent = '鏃ュ織鏂囦欢涓嶅瓨鍦紙瀹炰緥鍙兘鏈惎鍔ㄨ繃锛?;
+            logsStatus.textContent = '鏃ュ織鐘舵€? 涓嶅瓨鍦?;
+            logsTotalLines.textContent = '';
+            return;
+        }
+        
+        if (data.logs.length === 0) {
+            logsContent.textContent = '鏆傛棤鏃ュ織鍐呭';
+            logsStatus.textContent = '鏃ュ織鐘舵€? 绌?;
+            logsTotalLines.textContent = '';
+            return;
+        }
+        
+        // 鏍煎紡鍖栨棩蹇楀唴瀹?        const formattedLogs = data.logs.map(line => {
+            // 绠€鍗曠殑鏃ュ織楂樹寒
+            if (line.toLowerCase().includes('error') || line.toLowerCase().includes('err')) {
+                return `<div class="log-line error">${escapeHtml(line)}</div>`;
+            } else if (line.toLowerCase().includes('warn') || line.toLowerCase().includes('warning')) {
+                return `<div class="log-line warn">${escapeHtml(line)}</div>`;
+            } else if (line.toLowerCase().includes('info')) {
+                return `<div class="log-line info">${escapeHtml(line)}</div>`;
+            }
+            return `<div class="log-line">${escapeHtml(line)}</div>`;
+        }).join('');
+        
+        logsContent.innerHTML = formattedLogs;
+        logsStatus.textContent = `鏃ュ織鐘舵€? ${type === 'out' ? '鏍囧噯杈撳嚭' : '閿欒鏃ュ織'}`;
+        logsTotalLines.textContent = `鎬昏鏁? ${data.totalLines} | 鏄剧ず: ${data.logs.length}`;
+        
+        // 鑷姩婊氬姩鍒板簳閮?        const container = document.getElementById('logsContainer');
+        container.scrollTop = container.scrollHeight;
+        
+    } catch (error) {
+
+        document.getElementById('logsContent').textContent = '鍔犺浇鏃ュ織澶辫触';
+    }
+}
+
+// HTML杞箟锛堥槻姝SS锛?function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 鍒囨崲鏃ュ織绫诲瀷
+function switchLogType(type) {
+    currentLogType = type;
+    
+    // 鏇存柊鎸夐挳鏍峰紡
+    const outBtn = document.getElementById('outLogBtn');
+    const errorBtn = document.getElementById('errorLogBtn');
+    
+    if (type === 'out') {
+        outBtn.className = 'btn btn-sm btn-primary';
+        errorBtn.className = 'btn btn-sm btn-secondary';
+    } else {
+        outBtn.className = 'btn btn-sm btn-secondary';
+        errorBtn.className = 'btn btn-sm btn-primary';
+    }
+    
+    loadLogs(type);
+}
+
+// 鍒锋柊鏃ュ織
+function refreshLogs() {
+    loadLogs(currentLogType);
+}
+
+// 娓呯┖鏃ュ織鏄剧ず
+function clearLogsDisplay() {
+    document.getElementById('logsContent').textContent = '宸叉竻绌烘樉绀猴紙鐐瑰嚮鍒锋柊閲嶆柊鍔犺浇锛?;
+    document.getElementById('logsStatus').textContent = '宸叉竻绌?;
+    document.getElementById('logsTotalLines').textContent = '';
+}
+
+// 鍒囨崲鑷姩鍒锋柊
+function toggleAutoRefresh() {
+    const btn = document.getElementById('autoRefreshBtn');
+    
+    if (isAutoRefreshing) {
+        // 鍋滄鑷姩鍒锋柊
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        isAutoRefreshing = false;
+        btn.textContent = '鈻讹笍 鑷姩鍒锋柊';
+        btn.className = 'btn btn-sm btn-success';
+    } else {
+        // 寮€濮嬭嚜鍔ㄥ埛鏂?        loadLogs(); // 绔嬪嵆鍔犺浇涓€娆?        autoRefreshInterval = setInterval(() => {
+            loadLogs(currentLogType);
+        }, 3000); // 姣?绉掑埛鏂颁竴娆?        isAutoRefreshing = true;
+        btn.textContent = '鈴革笍 鍋滄鍒锋柊';
+        btn.className = 'btn btn-sm btn-danger';
+    }
+}
+
+// 鍋滄鑷姩鍒锋柊
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        isAutoRefreshing = false;
+        const btn = document.getElementById('autoRefreshBtn');
+        if (btn) {
+            btn.textContent = '鈻讹笍 鑷姩鍒锋柊';
+            btn.className = 'btn btn-sm btn-success';
+        }
+    }
+}
+
+// ==================== 鍒犻櫎璐﹀彿 ====================
+
+// 鍒犻櫎璐﹀彿
+async function handleDeleteAccount() {
+    const username = getUsername();
+    
+    // 绗竴娆＄‘璁?    const confirmMessage1 = `鈿狅笍 鍗遍櫓鎿嶄綔锛乗n\n鎮ㄧ‘瀹氳鍒犻櫎璐﹀彿 "${username}" 鍚楋紵\n\n姝ゆ搷浣滃皢浼氾細\n鈥?鍒犻櫎鎮ㄧ殑 SillyTavern 瀹炰緥\n鈥?鍒犻櫎鎵€鏈夊璇濊褰曘€佽鑹插拰璁剧疆\n鈥?鍒犻櫎鐢ㄦ埛鏁版嵁鐩綍\n鈥?姝ゆ搷浣滀笉鍙仮澶嶏紒\n\n璇疯緭鍏?"DELETE" 浠ョ‘璁ゅ垹闄;
+    
+    const userInput = prompt(confirmMessage1);
+    
+    if (userInput !== 'DELETE') {
+        if (userInput !== null) {
+            alert('鉂?杈撳叆涓嶆纭紝鍒犻櫎宸插彇娑?);
+        }
+        return;
+    }
+    
+    // 绗簩娆＄‘璁?    const confirmMessage2 = `馃毃 鏈€鍚庣‘璁わ紒\n\n鎮ㄧ湡鐨勮鍒犻櫎璐﹀彿 "${username}" 鍚楋紵\n\n鐐瑰嚮"纭畾"灏嗙珛鍗冲垹闄よ处鍙凤紝姝ゆ搷浣滄棤娉曟挙閿€锛乣;
+    
+    if (!await showConfirm(confirmMessage2, '鈿狅笍 鍒犻櫎璐﹀彿', { type: 'danger', confirmText: '纭鍒犻櫎', cancelText: '鎴戝啀鎯虫兂' })) {
+        return;
+    }
+    
+    try {
+        // 鏄剧ず澶勭悊涓?        const deleteBtn = event.target;
+        const originalText = deleteBtn.textContent;
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = '鈴?鍒犻櫎涓?..';
+        
+        const response = await apiRequest(`${API_BASE}/auth/account`, {
+            method: 'DELETE'
+        });
+        
+        if (!response) return;
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // 娓呴櫎鏈湴瀛樺偍
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            
+            // 鏄剧ず鎴愬姛娑堟伅骞惰烦杞?            alert('鉁?璐﹀彿宸叉垚鍔熷垹闄わ紒\n\n鎰熻阿鎮ㄤ娇鐢?SillyTavern 澶氬紑绠＄悊骞冲彴銆?);
+            
+            // 璺宠浆鍒伴椤?            window.location.href = '/';
+        } else {
+            throw new Error(data.message || data.error || '鍒犻櫎澶辫触');
+        }
+    } catch (error) {
+
+        alert('鉂?鍒犻櫎璐﹀彿澶辫触锛? + error.message);
+        
+        // 鎭㈠鎸夐挳鐘舵€?        if (event.target) {
+            event.target.disabled = false;
+            event.target.textContent = '馃棏锔?鍒犻櫎鎴戠殑璐﹀彿';
+        }
+    }
+}
+
+// ==================== 澶囦唤鍔熻兘 ====================
+
+// 鍔犺浇澶囦唤閰嶇疆
+async function loadBackupConfig() {
+    try {
+        const response = await fetch(`${API_BASE}/backup/hf-config`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.config) {
+                document.getElementById('hfRepo').value = data.config.hfRepo || '';
+                document.getElementById('hfEmail').value = data.config.hfEmail || '';
+                // Token 涓嶆樉绀哄畬鏁村唴瀹癸紝鍙樉绀烘槸鍚﹀凡璁剧疆
+                if (data.config.hfTokenSet) {
+                    document.getElementById('hfToken').placeholder = `宸茶缃?(${data.config.hfTokenPreview})`;
+                }
+            }
+        }
+    } catch (error) {
+
+    }
+}
+
+// 淇濆瓨澶囦唤閰嶇疆
+async function handleSaveBackupConfig() {
+    const hfRepo = document.getElementById('hfRepo').value.trim();
+    const hfToken = document.getElementById('hfToken').value.trim();
+    const hfEmail = document.getElementById('hfEmail').value.trim();
+    const messageDiv = document.getElementById('backupMessage');
+    
+    if (!hfRepo || !hfToken || !hfEmail) {
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '鉂?璇峰～鍐欏畬鏁寸殑閰嶇疆淇℃伅锛圱oken銆佷粨搴撳悕銆侀偖绠憋級';
+        return;
+    }
+    
+    // 楠岃瘉浠撳簱鍚嶆牸寮?    if (!hfRepo.includes('/')) {
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '鉂?浠撳簱鍚嶆牸寮忛敊璇紝搴斾负: username/repo-name';
+        return;
+    }
+    
+    try {
+        messageDiv.className = 'message info';
+        messageDiv.textContent = '鈴?姝ｅ湪淇濆瓨閰嶇疆...';
+        
+        const response = await fetch(`${API_BASE}/backup/hf-config`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ hfToken, hfRepo, hfEmail })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            messageDiv.className = 'message success';
+            messageDiv.textContent = '鉁?閰嶇疆淇濆瓨鎴愬姛锛?;
+            
+            // 娓呯┖瀵嗙爜妗嗗苟鏇存柊鎻愮ず
+            document.getElementById('hfToken').value = '';
+            document.getElementById('hfToken').placeholder = '宸茶缃?;
+            document.getElementById('hfEmail').value = '';
+            document.getElementById('hfEmail').placeholder = '宸茶缃?;
+            
+            // 鏄剧ず鎴愬姛寮圭獥
+            await showAlert('Hugging Face 閰嶇疆宸叉垚鍔熶繚瀛橈紒', '鉁?淇濆瓨鎴愬姛', 'success');
+        } else {
+            throw new Error(data.error || '淇濆瓨澶辫触');
+        }
+    } catch (error) {
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '鉂?淇濆瓨澶辫触锛? + error.message;
+        // 鏄剧ず閿欒寮圭獥
+        await showAlert('閰嶇疆淇濆瓨澶辫触锛? + error.message, '鉂?淇濆瓨澶辫触', 'error');
+    }
+}
+
+// 娴嬭瘯杩炴帴
+async function handleTestConnection() {
+    const hfRepo = document.getElementById('hfRepo').value.trim();
+    const hfToken = document.getElementById('hfToken').value.trim();
+    const messageDiv = document.getElementById('backupMessage');
+    
+    try {
+        messageDiv.className = 'message info';
+        messageDiv.textContent = '鈴?姝ｅ湪娴嬭瘯杩炴帴...';
+        
+        const body = {};
+        if (hfRepo) body.hfRepo = hfRepo;
+        if (hfToken) body.hfToken = hfToken;
+        
+        const response = await fetch(`${API_BASE}/backup/test-connection`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(body)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            messageDiv.className = 'message success';
+            let message = '鉁?杩炴帴鎴愬姛锛?;
+            let alertMessage = '杩炴帴鎴愬姛锛乗n';
+            if (data.repoInfo) {
+                message += `\n\n浠撳簱: ${data.repoInfo.id || data.repoInfo.name}\n`;
+                message += `浣滆€? ${data.repoInfo.author}\n`;
+                message += `绫诲瀷: ${data.repoInfo.private ? '绉佹湁' : '鍏紑'}`;
+                
+                alertMessage += `\n浠撳簱: ${data.repoInfo.id || data.repoInfo.name}\n`;
+                alertMessage += `浣滆€? ${data.repoInfo.author}\n`;
+                alertMessage += `绫诲瀷: ${data.repoInfo.private ? '绉佹湁' : '鍏紑'}`;
+            }
+            messageDiv.textContent = message;
+            
+            // 鏄剧ず鎴愬姛寮圭獥
+            await showAlert(alertMessage, '鉁?杩炴帴鎴愬姛', 'success');
+        } else {
+            messageDiv.className = 'message error';
+            messageDiv.textContent = '鉂?' + (data.message || '杩炴帴澶辫触');
+            // 鏄剧ず閿欒寮圭獥
+            await showAlert(data.message || '杩炴帴澶辫触锛岃妫€鏌ラ厤缃?, '鉂?杩炴帴澶辫触', 'error');
+        }
+    } catch (error) {
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '鉂?杩炴帴娴嬭瘯澶辫触锛? + error.message;
+        // 鏄剧ず閿欒寮圭獥
+        await showAlert('杩炴帴娴嬭瘯澶辫触锛? + error.message, '鉂?娴嬭瘯澶辫触', 'error');
+    }
+}
+
+// 鎵ц澶囦唤锛堜娇鐢?SSE 瀹炴椂鏃ュ織锛?let backupEventSource = null;
+
+async function handleBackup() {
+    const messageDiv = document.getElementById('backupMessage');
+    const statusDiv = document.getElementById('backupStatus');
+    const statusContent = document.getElementById('backupStatusContent');
+    const logsContainer = document.getElementById('backupLogsContainer');
+    const logsDiv = document.getElementById('backupLogs');
+    
+    // 纭鎿嶄綔
+    if (!await showConfirm('纭畾瑕佺珛鍗冲浠芥偍鐨勬暟鎹埌 Hugging Face 鍚楋紵\n\n澶囦唤杩囩▼鍙兘闇€瑕佸嚑鍒嗛挓锛屽彇鍐充簬鏁版嵁澶у皬銆?, '绔嬪嵆澶囦唤')) {
+        return;
+    }
+    
+    try {
+        // 娓呯┖鏃ュ織
+        logsDiv.innerHTML = '';
+        logsContainer.style.display = 'block';
+        statusDiv.style.display = 'none';
+        
+        messageDiv.className = 'message info';
+        messageDiv.textContent = '馃殌 澶囦唤涓紝璇锋煡鐪嬩笅鏂瑰疄鏃舵棩蹇?..';
+        
+        // 鍏抽棴鏃х殑 EventSource
+        if (backupEventSource) {
+            backupEventSource.close();
+        }
+        
+        // 鍒涘缓 SSE 杩炴帴
+        backupEventSource = new EventSource(`${API_BASE}/backup/backup?token=${localStorage.getItem('token')}`);
+        
+        // 鐩戝惉娑堟伅
+        backupEventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                // 娣诲姞鏃ュ織
+                addBackupLog(data.message, data.type);
+                
+                // 妫€鏌ュ畬鎴愮姸鎬?                if (data.type === 'done') {
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = '鉁?澶囦唤瀹屾垚锛?;
+                    
+                    backupEventSource.close();
+                    backupEventSource = null;
+                    
+                    // 鏄剧ず澶囦唤璇︽儏
+                    if (data.result) {
+                        statusDiv.style.display = 'block';
+                        statusContent.innerHTML = `
+                            <p><strong>澶囦唤鏂囦欢:</strong> ${data.result.filename}</p>
+                            <p><strong>鏂囦欢澶у皬:</strong> ${(data.result.size / 1024 / 1024).toFixed(2)} MB</p>
+                            <p><strong>澶囦唤鏃堕棿:</strong> ${new Date(data.result.timestamp).toLocaleString()}</p>
+                            <p><strong>涓嬭浇鍦板潃:</strong> <a href="${data.result.url}" target="_blank">${data.result.url}</a></p>
+                        `;
+                    }
+                } else if (data.type === 'error') {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = '鉂?澶囦唤澶辫触锛? + data.error;
+                    
+                    backupEventSource.close();
+                    backupEventSource = null;
+                }
+            } catch (err) {
+
+            }
+        };
+        
+        // 鐩戝惉閿欒
+        backupEventSource.onerror = (error) => {
+
+            messageDiv.className = 'message error';
+            messageDiv.textContent = '鉂?杩炴帴澶辫触锛岃閲嶈瘯';
+            
+            addBackupLog('鉂?杩炴帴澶辫触锛岃閲嶈瘯', 'error');
+            
+            if (backupEventSource) {
+                backupEventSource.close();
+                backupEventSource = null;
+            }
+        };
+        
+    } catch (error) {
+
+        messageDiv.className = 'message error';
+        messageDiv.textContent = '鉂?澶囦唤澶辫触锛? + error.message;
+        logsContainer.style.display = 'none';
+    }
+}
+
+// 娣诲姞澶囦唤鏃ュ織
+function addBackupLog(message, type = 'info') {
+    const logsDiv = document.getElementById('backupLogs');
+    const logEntry = document.createElement('div');
+    logEntry.className = `log-entry log-${type}`;
+    
+    // 娣诲姞鏃堕棿鎴筹紙涓浗鏃跺尯锛?    const timestamp = new Date().toLocaleTimeString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    logEntry.innerHTML = `
+        <span class="log-time">[${timestamp}]</span>
+        <span class="log-message">${escapeHtml(message)}</span>
+    `;
+    
+    logsDiv.appendChild(logEntry);
+    
+    // 鑷姩婊氬姩鍒板簳閮?    logsDiv.scrollTop = logsDiv.scrollHeight;
+}
+
+// 杞箟 HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ==================== 鍒濆鍖?====================
+
+// 椤甸潰鍒濆鍖?async function init() {
+    if (!checkAuth()) return;
+    
+
+    
+    // 纭繚 cookie 涓篃鏈?token锛堢敤浜?Nginx 鏉冮檺楠岃瘉锛?    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+
+
+    
+    if (token) {
+
+        
+        const success = setCookie('st_token', token);
+        
+        // 绔嬪嵆璇诲彇楠岃瘉
+        const cookiesAfter = document.cookie;
+
+        
+        if (!success || !cookiesAfter.includes('st_token')) {
+
+
+
+
+            
+            // 灏濊瘯鏈€绠€鍗曠殑 Cookie 璁剧疆
+
+            document.cookie = 'test=1';
+
+            
+            if (!document.cookie.includes('test')) {
+
+
+
+
+
+            }
+        }
+    } else {
+
+    }
+
+    
+    await loadUserInfo();
+    await loadDashboardAnnouncements();
+    await loadBackupConfig();
+    startStatusCheck();
+    
+    // 鍒濆鍔犺浇鏃ュ織
+    loadLogs('out');
+}
+
+// 椤甸潰鍗歌浇鏃跺仠姝㈢姸鎬佹鏌ュ拰鑷姩鍒锋柊
+window.addEventListener('beforeunload', () => {
+    stopStatusCheck();
+    stopAutoRefresh();
+});
+
+// ==================== 鎭㈠澶囦唤鍔熻兘 ====================
+
+// 鏄剧ず/闅愯棌鎭㈠闈㈡澘骞跺姞杞藉浠藉垪琛?async function handleShowRestorePanel() {
+    const restorePanel = document.getElementById('restorePanel');
+    const restoreList = document.getElementById('restoreList');
+    const restoreMessage = document.getElementById('restoreMessage');
+    
+    // 鍒囨崲闈㈡澘鏄剧ず
+    if (restorePanel.style.display === 'none') {
+        restorePanel.style.display = 'block';
+        restoreMessage.className = 'message';
+        restoreMessage.textContent = '';
+        
+        // 鍔犺浇澶囦唤鍒楄〃
+        restoreList.innerHTML = '<div class="loading">鍔犺浇澶囦唤鍒楄〃涓?..</div>';
+        
+        try {
+            const response = await fetch(`${API_BASE}/backup/list`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.backups) {
+                if (data.backups.length === 0) {
+                    restoreList.innerHTML = '<div class="empty-logs">浠撳簱涓病鏈夊浠芥枃浠?/div>';
+                } else {
+                    // 鏄剧ず澶囦唤鍒楄〃
+                    let html = '<div class="backup-list-container">';
+                    html += '<table class="backup-table">';
+                    html += '<thead><tr><th>澶囦唤鏃堕棿</th><th>鏂囦欢澶у皬</th><th>鎿嶄綔</th></tr></thead>';
+                    html += '<tbody>';
+                    
+                    data.backups.forEach(backup => {
+                        const date = new Date(backup.timestamp);
+                        // 杞崲涓轰腑鍥芥椂鍖?(UTC+8)
+                        const dateStr = date.toLocaleString('zh-CN', { 
+                            timeZone: 'Asia/Shanghai',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        });
+                        const sizeMB = (backup.size / 1024 / 1024).toFixed(2);
+                        
+                        html += '<tr>';
+                        html += `<td>${dateStr}</td>`;
+                        html += `<td>${sizeMB} MB</td>`;
+                        html += `<td><button class="btn btn-sm btn-primary" onclick="handleRestore('${backup.filename}')">鎭㈠</button></td>`;
+                        html += '</tr>';
+                    });
+                    
+                    html += '</tbody></table>';
+                    html += '<div style="margin-top: 10px; color: #666;">';
+                    html += '馃挕 鎻愮ず锛氶粯璁ゆ仮澶嶆渶鏃╃殑澶囦唤銆傜偣鍑?鎭㈠"鎸夐挳灏嗚鐩栧綋鍓嶆暟鎹€?;
+                    html += '</div>';
+                    html += '</div>';
+                    
+                    restoreList.innerHTML = html;
+                }
+            } else {
+                restoreList.innerHTML = `<div class="message error">鍔犺浇澶辫触: ${data.error || '鏈煡閿欒'}</div>`;
+            }
+        } catch (error) {
+
+            restoreList.innerHTML = `<div class="message error">鉂?鍔犺浇澶囦唤鍒楄〃澶辫触: ${error.message}</div>`;
+        }
+    } else {
+        restorePanel.style.display = 'none';
+    }
+}
+
+// 鎭㈠澶囦唤锛堜娇鐢?SSE 瀹炴椂鏃ュ織锛?let restoreEventSource = null;
+
+async function handleRestore(filename = null) {
+    const restoreMessage = document.getElementById('restoreMessage');
+    const restoreLogsContainer = document.getElementById('restoreLogsContainer');
+    const restoreLogs = document.getElementById('restoreLogs');
+    
+    // 纭鎿嶄綔
+    let confirmMsg = '纭畾瑕佹仮澶嶅浠藉悧锛焅n\n鈿狅笍 璀﹀憡锛氭鎿嶄綔灏嗭細\n1. 娓呴櫎褰撳墠 st-data 鐩綍鐨勬墍鏈夋暟鎹甛n2. 鐢ㄥ浠芥枃浠舵浛鎹㈠綋鍓嶆暟鎹甛n3. 鑷姩閲嶅惎 SillyTavern 瀹炰緥\n\n鈿狅笍 鐜版湁鏁版嵁灏嗚姘镐箙鍒犻櫎锛屾棤娉曟仮澶嶏紒\n\n鏄惁缁х画锛?;
+    if (filename) {
+        confirmMsg = `纭畾瑕佹仮澶嶅浠?"${filename}" 鍚楋紵\n\n` + confirmMsg;
+    } else {
+        confirmMsg = '灏嗘仮澶嶆渶鏃╃殑澶囦唤銆俓n\n' + confirmMsg;
+    }
+    
+    if (!await showConfirm(confirmMsg, '鈿狅笍 鎭㈠澶囦唤', { type: 'danger', confirmText: '寮€濮嬫仮澶?, cancelText: '鍙栨秷' })) {
+        return;
+    }
+    
+    try {
+        // 娓呯┖鏃ュ織
+        restoreLogs.innerHTML = '';
+        restoreLogsContainer.style.display = 'block';
+        
+        restoreMessage.className = 'message info';
+        restoreMessage.textContent = '馃殌 鎭㈠涓紝璇锋煡鐪嬩笅鏂瑰疄鏃舵棩蹇?..';
+        
+        // 鍏抽棴鏃х殑 EventSource
+        if (restoreEventSource) {
+            restoreEventSource.close();
+        }
+        
+        // 鍒涘缓 SSE 杩炴帴
+        const url = filename 
+            ? `${API_BASE}/backup/restore?token=${localStorage.getItem('token')}&filename=${encodeURIComponent(filename)}`
+            : `${API_BASE}/backup/restore?token=${localStorage.getItem('token')}`;
+        
+        restoreEventSource = new EventSource(url);
+        
+        // 鐩戝惉娑堟伅
+        restoreEventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                // 娣诲姞鏃ュ織
+                addRestoreLog(data.message, data.type);
+                
+                // 妫€鏌ュ畬鎴愮姸鎬?                if (data.type === 'done') {
+                    restoreMessage.className = 'message success';
+                    restoreMessage.textContent = '鉁?鎭㈠瀹屾垚锛佹暟鎹凡鎭㈠骞跺疄渚嬪凡閲嶅惎銆?;
+                    
+                    restoreEventSource.close();
+                    restoreEventSource = null;
+                } else if (data.type === 'error') {
+                    restoreMessage.className = 'message error';
+                    restoreMessage.textContent = '鉂?鎭㈠澶辫触锛? + data.error;
+                    
+                    restoreEventSource.close();
+                    restoreEventSource = null;
+                }
+            } catch (err) {
+
+            }
+        };
+        
+        // 鐩戝惉閿欒
+        restoreEventSource.onerror = (error) => {
+
+            restoreMessage.className = 'message error';
+            restoreMessage.textContent = '鉂?杩炴帴澶辫触锛岃閲嶈瘯';
+            
+            addRestoreLog('鉂?杩炴帴澶辫触锛岃閲嶈瘯', 'error');
+            
+            if (restoreEventSource) {
+                restoreEventSource.close();
+                restoreEventSource = null;
+            }
+        };
+        
+    } catch (error) {
+
+        restoreMessage.className = 'message error';
+        restoreMessage.textContent = '鉂?鎭㈠澶辫触锛? + error.message;
+        restoreLogsContainer.style.display = 'none';
+    }
+}
+
+// 娣诲姞鎭㈠鏃ュ織
+function addRestoreLog(message, type = 'info') {
+    const logsDiv = document.getElementById('restoreLogs');
+    const logEntry = document.createElement('div');
+    logEntry.className = `log-entry log-${type}`;
+    
+    // 娣诲姞鏃堕棿鎴筹紙涓浗鏃跺尯锛?    const timestamp = new Date().toLocaleTimeString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    logEntry.innerHTML = `
+        <span class="log-time">[${timestamp}]</span>
+        <span class="log-message">${escapeHtml(message)}</span>
+    `;
+    
+    logsDiv.appendChild(logEntry);
+    
+    // 鑷姩婊氬姩鍒板簳閮?    logsDiv.scrollTop = logsDiv.scrollHeight;
+}
+
+// 椤甸潰鍔犺浇瀹屾垚鍚庡垵濮嬪寲
+init();
